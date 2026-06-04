@@ -1,0 +1,31 @@
+---
+description: V2 data mutation and security guardrails
+alwaysApply: true
+---
+
+# V2 Data + Security Guardrails
+
+Apply these rules for any data mutation scripts, SQL changes, or production-affecting updates.
+
+## Before Any Data Mutation
+- Always create a **before snapshot/backup** (temporary copy) first.
+- Apply the change with the smallest possible scope (targeted rows/records only).
+- Create an **after snapshot** and compare before/after results.
+- Continue only if diffs match intended fields/rows.
+- If verification fails, stop immediately and report unexpected changes.
+
+## Mutation Safety
+- Prefer guarded workflows (allowlists, scoped predicates, dry-runs).
+- Never run blind bulk updates/deletes.
+- Never run destructive commands without explicit user approval.
+- Keep correction steps reversible where possible.
+
+## Secrets and Access
+- Never commit secrets (`.env`, service keys, tokens, credentials).
+- Keep privileged keys server-side only; do not expose to client code.
+- Use least-privilege credentials for automation/scripts.
+
+## Auditability
+- Log what changed, why, and how it was verified.
+- Keep migration/backfill scripts idempotent when feasible.
+- For approved financial data, avoid direct edits; use controlled correction flow.
