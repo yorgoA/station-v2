@@ -26,7 +26,7 @@ export default function EmployeeCustomersPage() {
   const [monthKey, setMonthKey] = useState("2026-05");
   const [region, setRegion] = useState<"all" | EmployeeRegion>("all");
   const [status, setStatus] = useState<"all" | EmployeeStatus>("all");
-  const [billingType, setBillingType] = useState<"all" | EmployeeBillingType>("all");
+  const [billingType, setBillingType] = useState<"all" | EmployeeBillingType | "free">("all");
   const [paymentStatus, setPaymentStatus] = useState<"all" | "paid" | "unpaid">("all");
   const [balanceStatus, setBalanceStatus] = useState<"all" | "has-balance" | "no-balance">("all");
   const [building, setBuilding] = useState("all");
@@ -230,12 +230,15 @@ export default function EmployeeCustomersPage() {
                 id="customer-billing-type-filter"
                 value={billingType}
                 onChange={(e) =>
-                  setBillingType(e.target.value as "all" | "metered" | "fixed-monthly")
+                  setBillingType(e.target.value as "all" | EmployeeBillingType | "free")
                 }
               >
                 <option value="all">All</option>
-                <option value="metered">Metered</option>
+                <option value="both">Both</option>
                 <option value="fixed-monthly">Fixed Monthly</option>
+                <option value="free">Free</option>
+                <option value="metered">Metered</option>
+                <option value="amp-only">Amp Only</option>
               </select>
             </label>
             <label htmlFor="customer-building-filter">

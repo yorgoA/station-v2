@@ -1,4 +1,4 @@
-export type EmployeeBillingType = "metered" | "fixed-monthly";
+export type EmployeeBillingType = "metered" | "amp-only" | "both" | "fixed-monthly";
 export type EmployeeRegion = "mrah" | "printania";
 export type EmployeeStatus = "active" | "paused";
 export type EmployeeMonthlyPaymentStatus = "paid" | "unpaid";

@@ -210,12 +210,9 @@ export async function GET(request: Request) {
           monitorKwh,
           linkedIncludedKwh,
           monitorMatchKwh,
-          billingType:
-            isFree || billingTypeKey === "FREE"
-              ? "free"
-              : billingTypeKey === "FIXED_MONTHLY"
-                ? "fixed-monthly"
-                : "metered",
+          // billing_types.key is already the real lowercase-hyphenated key
+          // (metered/amp-only/both/fixed-monthly) — no remapping needed here.
+          billingType: isFree ? "free" : billingTypeKey || "metered",
           billEnteredThisMonth: hasBillThisMonth,
           paidThisMonth: hasBillThisMonth && remainingThisMonth <= 0,
           ongoingBalance: Math.max(0, ongoingBalance),
