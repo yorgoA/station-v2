@@ -34,16 +34,33 @@
   then re-enable — not something to do casually. Recommend just leaving it; it's obviously fake
   (fake month `2099-02`/`2099-04`, fake customer number) and harmless.
 
+## Also shipped this session (committed as `fc9549c`)
+
+4. **amp-only / both billing wired up end-to-end**
+   - Customer creation now actually persists `subscribed_ampere` / `fixed_monthly_amount`
+     (previously collected nowhere, or in `fixed-monthly`'s case just missing) and fixes a bug
+     where `'both'` was silently coerced to `metered` billing_type_id on create
+   - Add Customer form shows the ampere/fixed-monthly input conditionally, with validation
+   - Entry-rows API + the entry page's per-row billing type selector support all 4 real types
+     (`metered`/`amp-only`/`both`/`fixed-monthly`), with a visible warning if an amp-based
+     customer has no ampere set
+   - **Verified live**: created a real amp-only (10A) and a real `both` (15A + 40kWh) customer via
+     the actual employee-authenticated API, submitted readings, approved — bills came out to
+     exactly 685,000 and 1,385,000 LBP, matching hand-calculated tier math
+   - Test customers `C-0001`/`C-0002` (month `2099-06`) are additional permanent test artifacts,
+     same reasoning as `TEST-VERIFY-01` above (bills can't be deleted by design)
+
 ## Known gaps / next steps (not started)
 - No way to add a missed reading to an already-`approved_posted` batch (flagged earlier as an
   accepted gap, not yet built)
-- Employee entry UI still only supports `metered`/`fixed-monthly` billing types, even though
-  `amp-only`/`both` now exist as real DB rows and the calc engine supports them
 - Receipt/photo upload isn't wired to real storage (no `@vercel/blob`/`sharp` yet)
 - Settings → Accounts page is still local-state mock data, not real
 - No RLS policies on Supabase tables — everything currently relies on the app-layer `requireRole`
   guard + the service-role key; `SECURITY_CHECKLIST.md` still has this open
+- Manager has no way to *edit* a customer's `subscribed_ampere`/`fixed_monthly_amount` after
+  creation (only settable at creation time now) — the employee PATCH field-restriction added last
+  session doesn't include these fields, and no manager-side form exposes them yet either
 
 ## Where to pick up next session
-Just say "check HANDOFF.md and keep going" — the two natural next steps discussed were:
-(a) extend the entry UI for `amp-only`/`both`, or (b) wire the payments flow / receipt upload.
+Just say "check HANDOFF.md and keep going" — natural next step is the payments flow / receipt
+upload, or one of the gaps above.
