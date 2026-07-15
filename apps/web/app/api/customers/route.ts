@@ -15,6 +15,8 @@ type CreateCustomerBody = {
   monitorName?: string;
   linkedCustomerId?: string;
   monitorCategory?: "theft-controller" | "elevator";
+  subscribedAmpere?: number;
+  fixedMonthlyAmount?: number;
 };
 
 async function generateCustomerNumber(
@@ -246,17 +248,34 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    if (
+      (body.billingType === "amp-only" || body.billingType === "both") &&
+      (!Number.isFinite(body.subscribedAmpere) || (body.subscribedAmpere ?? 0) <= 0)
+    ) {
+      return NextResponse.json(
+        { error: "subscribedAmpere is required (and must be > 0) for amp-only/both billing." },
+        { status: 400 }
+      );
+    }
+    if (
+      body.billingType === "fixed-monthly" &&
+      (!Number.isFinite(body.fixedMonthlyAmount) || (body.fixedMonthlyAmount ?? 0) <= 0)
+    ) {
+      return NextResponse.json(
+        { error: "fixedMonthlyAmount is required (and must be > 0) for fixed-monthly billing." },
+        { status: 400 }
+      );
+    }
 
     const supabase = createSupabaseAdminClient();
     const prefix: "C" | "M" = body.mode === "monitor" ? "M" : "C";
     const customerNumber = await generateCustomerNumber(supabase, prefix);
     const fullName = body.fullName.trim();
-    const billingKey =
-      body.billingType === "both"
-        ? "metered"
-        : body.billingType === "free"
-          ? "metered"
-          : body.billingType;
+    // 'free' has no billing_types row of its own (it's the orthogonal is_free_customer
+    // flag) so it needs a real underlying key; 'metered' is a reasonable default since a
+    // free customer is still metered for loss-tracking. 'amp-only'/'both' now map to
+    // their own real billing_types rows instead of being silently downgraded to metered.
+    const billingKey = body.billingType === "free" ? "metered" : body.billingType;
 
     const [{ data: region, error: regionError }, { data: billingType, error: billingError }] =
       await Promise.all([
@@ -331,6 +350,9 @@ export async function POST(request: Request) {
         box_number: body.boxNumber?.trim() || null,
         building: body.building?.trim() || null,
         phone: body.phone?.trim() || null,
+        subscribed_ampere:
+          body.billingType === "amp-only" || body.billingType === "both" ? body.subscribedAmpere : null,
+        fixed_monthly_amount: body.billingType === "fixed-monthly" ? body.fixedMonthlyAmount : 0,
         is_free_customer: body.billingType === "free",
         status: body.status?.toLowerCase() === "paused" ? "paused" : "active",
         notes:

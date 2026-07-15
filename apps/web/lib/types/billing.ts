@@ -6,6 +6,7 @@ export type BillingEntryRow = {
   previousCounter: number;
   newCounter?: number;
   billingType: string;
+  subscribedAmpere?: number | null;
   isFreeCustomer: boolean;
   isMonitor: boolean;
   obligatoryLinkedToCustomerNumber?: string;

@@ -600,6 +600,19 @@ function BillingEntryContent() {
                 <p className="muted">
                   Region: {row.regionCode} | Billing type: {row.billingType} | Free:{" "}
                   {row.isFreeCustomer ? "yes" : "no"} | Monitor: {row.isMonitor ? "yes" : "no"}
+                  {row.billingType === "amp-only" || row.billingType === "both" ? (
+                    <>
+                      {" "}
+                      | Subscribed ampere:{" "}
+                      {row.subscribedAmpere ? (
+                        `${row.subscribedAmpere}A`
+                      ) : (
+                        <strong style={{ color: "var(--danger)" }}>
+                          not set — approval will fail until set on the customer profile
+                        </strong>
+                      )}
+                    </>
+                  ) : null}
                 </p>
                 <label>
                   Customer name:{" "}
@@ -643,6 +656,8 @@ function BillingEntryContent() {
                     }
                   >
                     <option value="metered">metered</option>
+                    <option value="amp-only">amp-only</option>
+                    <option value="both">both</option>
                     <option value="fixed-monthly">fixed-monthly</option>
                   </select>
                 </label>{" "}

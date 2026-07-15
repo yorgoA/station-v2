@@ -5,7 +5,7 @@ import { requireRole } from "../../../../lib/auth/require-role";
 type SubmissionRowInput = {
   customerNumber: string;
   customerName: string;
-  billingType: "metered" | "fixed-monthly";
+  billingType: "metered" | "amp-only" | "both" | "fixed-monthly";
   previousCounter: number;
   newCounter?: number;
   isFreeCustomer?: boolean;

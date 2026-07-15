@@ -13,6 +13,8 @@ export default function EmployeeAddCustomerPage() {
   const [billingType, setBillingType] = useState<"fixed-monthly" | "metered" | "amp-only" | "both" | "free">(
     "metered"
   );
+  const [subscribedAmpere, setSubscribedAmpere] = useState("");
+  const [fixedMonthlyAmount, setFixedMonthlyAmount] = useState("");
   const [phone, setPhone] = useState("");
   const [boxNumber, setBoxNumber] = useState("");
   const [building, setBuilding] = useState("");
@@ -48,6 +50,14 @@ export default function EmployeeAddCustomerPage() {
       setMessage("Full name is required.");
       return;
     }
+    if ((billingType === "amp-only" || billingType === "both") && !(Number(subscribedAmpere) > 0)) {
+      setMessage("Subscribed ampere must be a positive number for amp-only/both billing.");
+      return;
+    }
+    if (billingType === "fixed-monthly" && !(Number(fixedMonthlyAmount) > 0)) {
+      setMessage("Fixed monthly amount must be a positive number for fixed-monthly billing.");
+      return;
+    }
     setIsSubmitting(true);
     setMessage("");
     try {
@@ -63,6 +73,9 @@ export default function EmployeeAddCustomerPage() {
           building,
           status: "active",
           mode: "customer",
+          subscribedAmpere:
+            billingType === "amp-only" || billingType === "both" ? Number(subscribedAmpere) : undefined,
+          fixedMonthlyAmount: billingType === "fixed-monthly" ? Number(fixedMonthlyAmount) : undefined,
         }),
       });
       const payload = (await response.json()) as { error?: string };
@@ -111,6 +124,28 @@ export default function EmployeeAddCustomerPage() {
               <option value="metered">metered</option>
             </select>
           </label>
+          {billingType === "amp-only" || billingType === "both" ? (
+            <label>
+              Subscribed Ampere (A)
+              <input
+                type="number"
+                value={subscribedAmpere}
+                onChange={(e) => setSubscribedAmpere(e.target.value)}
+                placeholder="e.g. 10"
+              />
+            </label>
+          ) : null}
+          {billingType === "fixed-monthly" ? (
+            <label>
+              Fixed Monthly Amount (LBP)
+              <input
+                type="number"
+                value={fixedMonthlyAmount}
+                onChange={(e) => setFixedMonthlyAmount(e.target.value)}
+                placeholder="e.g. 500000"
+              />
+            </label>
+          ) : null}
           <label>
             Phone
             <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+961..." />

@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
     const { data: customers, error: customersError } = await supabase
       .from("customers")
-      .select("id, customer_number, full_name, billing_type_id, is_free_customer, monitor_id")
+      .select("id, customer_number, full_name, billing_type_id, is_free_customer, monitor_id, subscribed_ampere")
       .eq("region_id", region.id)
       .order("customer_number", { ascending: true });
     if (customersError) return NextResponse.json({ error: customersError.message }, { status: 500 });
@@ -82,7 +82,10 @@ export async function GET(request: Request) {
         previousCounter: latestCounterByCustomerId.get(customer.id as string) ?? 0,
         billingType: (billingTypeById.get(customer.billing_type_id as string) ?? "metered") as
           | "metered"
+          | "amp-only"
+          | "both"
           | "fixed-monthly",
+        subscribedAmpere: customer.subscribed_ampere != null ? Number(customer.subscribed_ampere) : null,
         isFreeCustomer: Boolean(customer.is_free_customer),
         isMonitor,
         obligatoryLinkedToCustomerNumber,
