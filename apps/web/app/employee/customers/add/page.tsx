@@ -11,7 +11,7 @@ export default function EmployeeAddCustomerPage() {
   const [fullName, setFullName] = useState("");
   const [region, setRegion] = useState<"mrah" | "printania">("mrah");
   const [billingType, setBillingType] = useState<"fixed-monthly" | "metered" | "amp-only" | "both" | "free">(
-    "metered"
+    "both"
   );
   const [subscribedAmpere, setSubscribedAmpere] = useState("");
   const [fixedMonthlyAmount, setFixedMonthlyAmount] = useState("");
@@ -117,11 +117,9 @@ export default function EmployeeAddCustomerPage() {
                 setBillingType(e.target.value as "fixed-monthly" | "metered" | "amp-only" | "both" | "free")
               }
             >
-              <option value="fixed-monthly">fixed-monthly</option>
               <option value="both">both</option>
+              <option value="fixed-monthly">fixed-monthly</option>
               <option value="free">free</option>
-              <option value="amp-only">amp-only</option>
-              <option value="metered">metered</option>
             </select>
           </label>
           {billingType === "amp-only" || billingType === "both" ? (

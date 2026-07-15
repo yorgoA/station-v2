@@ -655,8 +655,6 @@ function BillingEntryContent() {
                       updateRow(row.id, { billingType: e.target.value as BillingEntryRow["billingType"] })
                     }
                   >
-                    <option value="metered">metered</option>
-                    <option value="amp-only">amp-only</option>
                     <option value="both">both</option>
                     <option value="fixed-monthly">fixed-monthly</option>
                   </select>
