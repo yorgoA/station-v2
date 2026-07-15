@@ -50,17 +50,47 @@
    - Test customers `C-0001`/`C-0002` (month `2099-06`) are additional permanent test artifacts,
      same reasoning as `TEST-VERIFY-01` above (bills can't be deleted by design)
 
+## Real-data check (informational, no code change)
+Pulled the actual customer book from electricity-mvp's CSV import (`Worksheet-Table 1.csv`, 409
+rows) to check which billing types are actually used in this business: **98.3% `both`, 1.7%
+`fixed-monthly`, 0% pure `metered`, 0% pure `amp-only`** (plus a `free` flag on ~27 customers,
+layered on top). So `both` isn't an edge case — it's almost the entire book.
+
+Result: hid `metered`/`amp-only` from the Add Customer and entry-row dropdowns (employees can no
+longer accidentally pick a type nothing in the business uses) — underlying DB/calc support is
+untouched, just not offered as a choice. Committed as `af7374c`.
+
+## Also shipped this session (committed as `9534b85`)
+
+5. **Managers can now edit a customer's billing type/ampere/fixed-monthly after creation**
+   - This was gap #4 below — closing it. `GET`/`PATCH /api/customers/[customerId]` now
+     read/write `subscribedAmpere`/`fixedMonthlyAmount`; `billingPlan` accepts all 4 real types
+     (previously hardcoded to `metered`/`fixed-monthly`/`free` only — `both`, your dominant real
+     type, couldn't be set post-creation at all). Same `'both'`→`metered` coercion bug from
+     creation was present here too and is now fixed.
+   - Manager edit page dropdown offers the 3 real options (`both`/`fixed-monthly`/`free`) plus a
+     "(legacy)" fallback so an existing `metered`/`amp-only` customer doesn't lose its value just
+     from opening the edit form.
+   - **Verified live**: edited a real amp-only customer to `both` with a new ampere value via the
+     actual manager UI, confirmed both `billing_type_id` and `subscribed_ampere` persisted
+     correctly in Postgres.
+
 ## Known gaps / next steps (not started)
-- No way to add a missed reading to an already-`approved_posted` batch (flagged earlier as an
-  accepted gap, not yet built)
+- No way to add a missed reading to an already-`approved_posted` batch (accepted gap, not built)
 - Receipt/photo upload isn't wired to real storage (no `@vercel/blob`/`sharp` yet)
 - Settings → Accounts page is still local-state mock data, not real
 - No RLS policies on Supabase tables — everything currently relies on the app-layer `requireRole`
   guard + the service-role key; `SECURITY_CHECKLIST.md` still has this open
-- Manager has no way to *edit* a customer's `subscribed_ampere`/`fixed_monthly_amount` after
-  creation (only settable at creation time now) — the employee PATCH field-restriction added last
-  session doesn't include these fields, and no manager-side form exposes them yet either
+- **`GET /api/customers` (the list endpoint behind `/manager/customers` and `/employee/customers`)
+  mislabels every customer's billing type as either `free` or `metered`** — it has its own
+  primitive mapping (`isFree ? "free" : key === "FIXED_MONTHLY" ? "fixed-monthly" : "metered"`)
+  that doesn't know about `both`/`amp-only` at all. Confirmed live: `C-0001`/`C-0002` (real `both`/
+  `amp-only` customers) show as "metered" in the customer list table, even though the detail page
+  (`GET /api/customers/[customerId]`, already fixed) shows the correct type. Same file's filter
+  dropdown also only offers Metered/Fixed-monthly as filter options. Not fixed yet — same root
+  cause as the gap we just closed, different endpoint.
 
 ## Where to pick up next session
-Just say "check HANDOFF.md and keep going" — natural next step is the payments flow / receipt
-upload, or one of the gaps above.
+Just say "check HANDOFF.md and keep going" — natural next step is either the customers-list
+mislabeling bug above (quick, same shape as what we just fixed), the payments flow / receipt
+upload, or one of the other gaps.
