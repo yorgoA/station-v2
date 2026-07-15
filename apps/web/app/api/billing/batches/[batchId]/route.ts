@@ -24,12 +24,13 @@ export async function GET(_request: Request, context: Context) {
     if (batchError) return NextResponse.json({ error: batchError.message }, { status: 500 });
     if (!batch) return NextResponse.json({ error: "Batch not found." }, { status: 404 });
 
-    const itemsSelect = includeImages
-      ? "id, previous_counter, new_counter, counter_image_url, customers!inner(customer_number, full_name)"
-      : "id, previous_counter, new_counter, customers!inner(customer_number, full_name)";
+    // Always select counter_image_url (it's just a URL string, not the image itself) —
+    // `includeImages` only controls whether it's included in the response below. Using
+    // one literal select string (rather than a variable) keeps Supabase's generated
+    // types accurate; a non-literal select falls back to an untyped parser error.
     const { data: items, error: itemsError } = await supabase
       .from("billing_batch_items")
-      .select(itemsSelect)
+      .select("id, previous_counter, new_counter, counter_image_url, customers!inner(customer_number, full_name)")
       .eq("batch_id", batchId);
     if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
 

@@ -110,7 +110,7 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
     [allCustomers]
   );
   const linkableCustomerOptions = useMemo(
-    () => allCustomers.filter((candidate) => !candidate.isMonitor && candidate.id !== customer.id),
+    () => allCustomers.filter((candidate) => !candidate.isMonitor && candidate.id !== customer?.id),
     [allCustomers, customer?.id]
   );
 
@@ -135,7 +135,7 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
         customerNumber,
         boxNumber,
         building,
-        linkedCustomerId: customer.isMonitor ? linkedCustomerId : undefined,
+        linkedCustomerId: customer?.isMonitor ? linkedCustomerId : undefined,
       }),
     });
     const res = (await response.json()) as { error?: string };
@@ -153,8 +153,8 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
               customerNumber,
               boxNumber,
               building,
-              linkedCustomerId: customer.isMonitor ? linkedCustomerId : prev.customer.linkedCustomerId,
-              linkedCustomerName: customer.isMonitor
+              linkedCustomerId: customer?.isMonitor ? linkedCustomerId : prev.customer.linkedCustomerId,
+              linkedCustomerName: customer?.isMonitor
                 ? (linkableCustomerOptions.find((opt) => opt.id === linkedCustomerId)
                     ? `${linkableCustomerOptions.find((opt) => opt.id === linkedCustomerId)?.fullName ?? ""} (${linkableCustomerOptions.find((opt) => opt.id === linkedCustomerId)?.customerNumber ?? ""})`
                     : "Missing link")
