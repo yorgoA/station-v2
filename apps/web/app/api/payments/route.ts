@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../lib/supabase/server-admin";
+import { requireRole } from "../../../lib/auth/require-role";
 
 type CreatePaymentBody = {
   customerId: string;
@@ -13,6 +14,9 @@ type CreatePaymentBody = {
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const region = searchParams.get("region");
     const month = searchParams.get("month");
@@ -68,6 +72,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const body = (await request.json()) as CreatePaymentBody;
     if (!body.customerId || !body.regionCode || !body.monthKey || !body.amount) {
       return NextResponse.json({ error: "Invalid payment payload." }, { status: 400 });

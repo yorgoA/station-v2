@@ -7,7 +7,7 @@ import { managerNavItems } from "../../../_components/role-nav";
 import { KpiCard, KpiGrid } from "../_components/kpi-components";
 import { ReportTable } from "../_components/report-table";
 import { ReportScopeFilters, useReportScope } from "../_components/report-scope-controls";
-import { getKwhPriceForMonth } from "../../../../lib/reports/calculations";
+import type { MonthlyTariff } from "../../../../lib/reports/pricing";
 
 type MonitorRow = {
   customer: string;
@@ -20,8 +20,19 @@ type MonitorRow = {
 function ManagerMonitorsReportContent() {
   const searchParams = useSearchParams();
   const { monthKey, setMonthKey, region, setRegion } = useReportScope({ searchParams });
-  const kwhPrice = getKwhPriceForMonth(monthKey);
+  const [monthlyTariffs, setMonthlyTariffs] = useState<MonthlyTariff[]>([]);
+  const kwhPrice = monthlyTariffs.find((row) => row.monthKey === monthKey)?.kwhPrice ?? 0;
   const [baseRows, setBaseRows] = useState<MonitorRow[]>([]);
+
+  useEffect(() => {
+    fetch("/api/settings/pricing")
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json()) as { monthlyTariffs: MonthlyTariff[] };
+        setMonthlyTariffs(payload.monthlyTariffs ?? []);
+      })
+      .catch(() => setMonthlyTariffs([]));
+  }, []);
 
   useEffect(() => {
     fetch(`/api/reports/manager?month=${monthKey}&region=${region}`)
@@ -73,6 +84,12 @@ function ManagerMonitorsReportContent() {
           onRegionChange={setRegion}
         />
       </div>
+      {kwhPrice === 0 ? (
+        <p className="muted">
+          No kWh price is set for {monthKey} yet (Settings → Pricing) — linked included kWh below will show as 0
+          until it is.
+        </p>
+      ) : null}
       <KpiGrid>
         <KpiCard label="Total monitor customers" value={rows.length} />
         <KpiCard label="Unlinked obligatory monitors" value={unlinkedCount} />

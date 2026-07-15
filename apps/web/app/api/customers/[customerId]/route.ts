@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
+import { requireRole } from "../../../../lib/auth/require-role";
+
+const EMPLOYEE_EDITABLE_CUSTOMER_FIELDS = new Set(["phone", "boxNumber", "building", "status"]);
 
 type PatchBody =
   | {
@@ -36,6 +39,9 @@ export async function GET(
   { params }: { params: { customerId: string } }
 ) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const supabase = createSupabaseAdminClient();
     const customerId = params.customerId;
 
@@ -146,7 +152,31 @@ export async function PATCH(
   { params }: { params: { customerId: string } }
 ) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const body = (await request.json()) as PatchBody;
+
+    if (body.section === "bill" || body.section === "payment") {
+      if (auth.actor.role !== "manager") {
+        return NextResponse.json(
+          { error: "Only a manager can edit bill or payment records directly." },
+          { status: 403 }
+        );
+      }
+    }
+
+    if (body.section === "customer" && auth.actor.role === "employee") {
+      const requestedFields = Object.keys(body).filter((key) => key !== "section");
+      const disallowed = requestedFields.filter((key) => !EMPLOYEE_EDITABLE_CUSTOMER_FIELDS.has(key));
+      if (disallowed.length > 0) {
+        return NextResponse.json(
+          { error: `Employees can only edit phone, boxNumber, building, and status. Not allowed: ${disallowed.join(", ")}.` },
+          { status: 403 }
+        );
+      }
+    }
+
     const supabase = createSupabaseAdminClient();
     const customerId = params.customerId;
 

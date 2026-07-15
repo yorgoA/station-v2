@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../lib/supabase/server-admin";
+import { requireRole } from "../../../lib/auth/require-role";
 
 type RegionCode = "mrah" | "printania";
 type CreateCustomerBody = {
@@ -45,8 +46,26 @@ function normalizeView(value: string | null): "all" | "customers" | "monitors" {
   return "all";
 }
 
+function sumUnpaidRemaining(
+  unpaidBills: Array<{ customerId: string; monthKey: string; remainingAmount: number }>,
+  customerId: string,
+  throughMonthKey: string,
+  beforeMonthOnly: boolean
+) {
+  return unpaidBills.reduce((sum, bill) => {
+    if (bill.customerId !== customerId) return sum;
+    const inScope = beforeMonthOnly
+      ? bill.monthKey < throughMonthKey
+      : bill.monthKey <= throughMonthKey;
+    return inScope ? sum + bill.remainingAmount : sum;
+  }, 0);
+}
+
 export async function GET(request: Request) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const region = normalizeRegion(searchParams.get("region"));
     const view = normalizeView(searchParams.get("view"));
@@ -79,6 +98,21 @@ export async function GET(request: Request) {
         consumptionKwh: Number((bill as Record<string, unknown>).consumption_kwh ?? 0),
       });
     }
+
+    const { data: unpaidBillsRaw, error: unpaidBillsError } = customerIds.length
+      ? await supabase
+          .from("bills")
+          .select("customer_id, month_key, remaining_amount")
+          .in("customer_id", customerIds)
+          .gt("remaining_amount", 0)
+      : { data: [], error: null };
+    if (unpaidBillsError) return NextResponse.json({ error: unpaidBillsError.message }, { status: 500 });
+
+    const unpaidBills = (unpaidBillsRaw ?? []).map((bill) => ({
+      customerId: String((bill as Record<string, unknown>).customer_id ?? ""),
+      monthKey: String((bill as Record<string, unknown>).month_key ?? ""),
+      remainingAmount: Number((bill as Record<string, unknown>).remaining_amount ?? 0),
+    }));
 
     const { data: monthBatchItems, error: monthBatchItemsError } = customerIds.length
       ? await supabase
@@ -149,7 +183,9 @@ export async function GET(request: Request) {
         const monitorCategory = isMonitor ? readMonitorCategory(data.notes) : "-";
         const billInfo = billByCustomerId.get(id);
         const hasBillThisMonth = Boolean(billInfo);
-        const remaining = billInfo?.remainingAmount ?? 0;
+        const remainingThisMonth = billInfo?.remainingAmount ?? 0;
+        const ongoingBalanceCarryOver = sumUnpaidRemaining(unpaidBills, id, monthKey, true);
+        const ongoingBalance = sumUnpaidRemaining(unpaidBills, id, monthKey, false);
         const monitorKwh = monthConsumptionByCustomerId.get(id) ?? billInfo?.consumptionKwh ?? 0;
         const linkedIncludedKwh = linked
           ? (monthConsumptionByCustomerId.get(linked.id) ?? billByCustomerId.get(linked.id)?.consumptionKwh ?? 0)
@@ -179,8 +215,10 @@ export async function GET(request: Request) {
                 ? "fixed-monthly"
                 : "metered",
           billEnteredThisMonth: hasBillThisMonth,
-          paidThisMonth: hasBillThisMonth && remaining <= 0,
-          ongoingBalance: Math.max(0, remaining),
+          paidThisMonth: hasBillThisMonth && remainingThisMonth <= 0,
+          ongoingBalance: Math.max(0, ongoingBalance),
+          ongoingBalanceCarryOver: Math.max(0, ongoingBalanceCarryOver),
+          ongoingBalanceThisMonth: Math.max(0, remainingThisMonth),
         };
       })
       .filter((row) => (view === "all" ? true : view === "monitors" ? row.isMonitor : !row.isMonitor))
@@ -198,6 +236,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const body = (await request.json()) as CreateCustomerBody;
     if (!body.fullName?.trim() || !body.region) {
       return NextResponse.json(

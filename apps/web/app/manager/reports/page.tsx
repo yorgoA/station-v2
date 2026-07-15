@@ -75,6 +75,13 @@ export default function ManagerReportsPage() {
             Open Payments
           </Link>
         </div>
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Audit</h3>
+          <p className="muted">Approval/rejection lifecycle log for billing batches, with actor and note.</p>
+          <Link href={`/manager/reports/audit?${defaultScope}`} className="action-link-btn">
+            Open Audit
+          </Link>
+        </div>
       </div>
     </AppShell>
   );

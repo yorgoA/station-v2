@@ -8,7 +8,7 @@ import { managerNavItems } from "../../../_components/role-nav";
 import { KpiCard, KpiGrid } from "../_components/kpi-components";
 import { ReportTable } from "../_components/report-table";
 import { ReportScopeFilters, useReportScope } from "../_components/report-scope-controls";
-import { getAmperePriceForTier, getKwhPriceForMonth } from "../../../../lib/reports/calculations";
+import { resolveAmperePrice, type AmpereTier, type MonthlyTariff } from "../../../../lib/reports/pricing";
 
 type FreeCustomerRow = {
   customer: string;
@@ -21,8 +21,24 @@ type FreeCustomerRow = {
 function ManagerFreeCustomersReportContent() {
   const searchParams = useSearchParams();
   const { monthKey, setMonthKey, region, setRegion } = useReportScope({ searchParams });
-  const kwhPrice = getKwhPriceForMonth(monthKey);
+  const [ampereTiers, setAmpereTiers] = useState<AmpereTier[]>([]);
+  const [monthlyTariffs, setMonthlyTariffs] = useState<MonthlyTariff[]>([]);
+  const kwhPrice = monthlyTariffs.find((row) => row.monthKey === monthKey)?.kwhPrice ?? 0;
   const [baseRows, setBaseRows] = useState<FreeCustomerRow[]>([]);
+
+  useEffect(() => {
+    fetch("/api/settings/pricing")
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json()) as { ampereTiers: AmpereTier[]; monthlyTariffs: MonthlyTariff[] };
+        setAmpereTiers(payload.ampereTiers ?? []);
+        setMonthlyTariffs(payload.monthlyTariffs ?? []);
+      })
+      .catch(() => {
+        setAmpereTiers([]);
+        setMonthlyTariffs([]);
+      });
+  }, []);
 
   useEffect(() => {
     fetch(`/api/reports/manager?month=${monthKey}&region=${region}`)
@@ -39,7 +55,7 @@ function ManagerFreeCustomersReportContent() {
       baseRows
         .filter((row) => region === "all" || row.region === region)
         .map((row) => {
-          const ampereCharge = getAmperePriceForTier(row.subscribedAmpere);
+          const ampereCharge = resolveAmperePrice(ampereTiers, row.subscribedAmpere) ?? 0;
           const consumptionCharge = Math.round(row.consumedKwh * kwhPrice);
           const estimatedValue = ampereCharge + consumptionCharge;
           return {
@@ -49,7 +65,7 @@ function ManagerFreeCustomersReportContent() {
             estimatedValue,
           };
         }),
-    [baseRows, kwhPrice, region]
+    [baseRows, ampereTiers, kwhPrice, region]
   );
   const totalFreeKwh = rows.reduce((sum, row) => sum + row.consumedKwh, 0);
   const totalEstimatedValue = rows.reduce((sum, row) => sum + row.estimatedValue, 0);
@@ -72,6 +88,9 @@ function ManagerFreeCustomersReportContent() {
           onRegionChange={setRegion}
         />
       </div>
+      {kwhPrice === 0 ? (
+        <p className="muted">No kWh price is set for {monthKey} yet (Settings → Pricing) — estimated values below will show as 0 until it is.</p>
+      ) : null}
       <KpiGrid>
         <KpiCard label="Total free customers" value={rows.length} />
         <KpiCard label="Free customers kWh" value={`${totalFreeKwh.toLocaleString()} kWh`} />

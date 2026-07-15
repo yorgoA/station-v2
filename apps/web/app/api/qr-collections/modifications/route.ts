@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
+import { requireRole } from "../../../../lib/auth/require-role";
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireRole(["manager"]);
+    if ("response" in auth) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month");
     const region = searchParams.get("region");

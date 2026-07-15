@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
+import { requireRole } from "../../../../lib/auth/require-role";
 
 type RegionCode = "mrah" | "printania";
 
@@ -14,6 +15,9 @@ function billingTypeFromKey(key: string | null | undefined): "metered" | "fixed-
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireRole(["manager"]);
+    if ("response" in auth) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const monthKey = searchParams.get("month") ?? new Date().toISOString().slice(0, 7);
     const region = normalizeRegion(searchParams.get("region"));

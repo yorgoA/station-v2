@@ -18,14 +18,16 @@ export default function EmployeePaymentsPage() {
       fullName: string;
       region: EmployeeRegion;
       ongoingBalance: number;
+      ongoingBalanceCarryOver?: number;
+      ongoingBalanceThisMonth?: number;
     }>
   >([]);
   const [search, setSearch] = useState("");
   const [regionFilter, setRegionFilter] = useState<"all" | EmployeeRegion>("all");
-  const [monthFilter, setMonthFilter] = useState<"all" | "2026-05" | "2026-04">("all");
+  const [monthFilter, setMonthFilter] = useState<"all" | "2026-05" | "2026-04" | "2026-03">("all");
   const [message, setMessage] = useState("");
   useEffect(() => {
-    fetch("/api/customers?region=all")
+    fetch(`/api/customers?region=all&month=${encodeURIComponent(monthKey)}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed to load customers.");
         const payload = (await response.json()) as { customers: typeof customers };
@@ -35,7 +37,7 @@ export default function EmployeePaymentsPage() {
         }
       })
       .catch(() => setCustomers([]));
-  }, [selectedCustomerId]);
+  }, [selectedCustomerId, monthKey]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -72,7 +74,8 @@ export default function EmployeePaymentsPage() {
 
   const totalCollected = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
   const selectedCustomerBalance = selectedCustomer?.ongoingBalance ?? 0;
-  const selectedCustomerPreviousBalance = 0;
+  const selectedCustomerPreviousBalance = selectedCustomer?.ongoingBalanceCarryOver ?? 0;
+  const selectedCustomerThisMonthBalance = selectedCustomer?.ongoingBalanceThisMonth ?? 0;
 
   async function handleRecordPayment() {
     if (!selectedCustomer) {
@@ -150,6 +153,7 @@ export default function EmployeePaymentsPage() {
             <select id="payment-month" value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
               <option value="2026-05">2026-05</option>
               <option value="2026-04">2026-04</option>
+              <option value="2026-03">2026-03</option>
             </select>
           </label>
           <label htmlFor="payment-amount">
@@ -169,12 +173,17 @@ export default function EmployeePaymentsPage() {
             <p className="kpi-value">{selectedCustomerPreviousBalance.toFixed(2)} LBP</p>
           </div>
           <div>
-            <p className="muted">Ongoing balance for selected month</p>
+            <p className="muted">This month ({monthKey})</p>
+            <p className="kpi-value">{selectedCustomerThisMonthBalance.toFixed(2)} LBP</p>
+          </div>
+          <div>
+            <p className="muted">Total due (through {monthKey})</p>
             <p className="kpi-value">{selectedCustomerBalance.toFixed(2)} LBP</p>
           </div>
         </div>
         <p className="muted" style={{ marginTop: 8, marginBottom: 8 }}>
-          Partial payment is allowed. Any unpaid remainder stays in ongoing balance.
+          Total due includes unpaid bills from earlier months until they are paid. Partial payment is
+          allowed; any unpaid remainder stays on the bill.
         </p>
         <label htmlFor="payment-receipt">
           Receipt image
@@ -222,11 +231,12 @@ export default function EmployeePaymentsPage() {
             <select
               id="payments-month-filter"
               value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value as "all" | "2026-05" | "2026-04")}
+              onChange={(e) => setMonthFilter(e.target.value as "all" | "2026-05" | "2026-04" | "2026-03")}
             >
               <option value="all">All</option>
               <option value="2026-05">2026-05</option>
               <option value="2026-04">2026-04</option>
+              <option value="2026-03">2026-03</option>
             </select>
           </label>
         </div>

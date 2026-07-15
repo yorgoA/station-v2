@@ -3,6 +3,15 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type BillingEntryRow } from "../../../lib/types/billing";
+import {
+  applyDraftImagesToRows,
+  clearBillingDraft,
+  readBillingDraftImages,
+  pruneOversizedBillingDrafts,
+  readBillingDraftRows,
+  writeBillingDraftImages,
+  writeBillingDraftRows,
+} from "../../../lib/billing/draft-storage";
 import { formatEntryUnlockDate, isEntryWindowOpen } from "../../../lib/billing/entry-window";
 import { AppShell } from "../../_components/app-shell";
 
@@ -138,6 +147,7 @@ function BillingEntryContent() {
     if (qRegion === "mrah" || qRegion === "printania" || qRegion === "all") {
       setRegionFilter(qRegion);
     }
+    pruneOversizedBillingDrafts();
     setIsHydrated(true);
   }, [searchParams]);
 
@@ -247,21 +257,7 @@ function BillingEntryContent() {
       return;
     }
 
-    const draftKey = `billing_draft:${monthKey}|${regionFilter}`;
-    let parsedDraftRows: BillingEntryRow[] = [];
-    const savedDraft = window.localStorage.getItem(draftKey);
-    if (savedDraft) {
-      try {
-        const parsed = JSON.parse(savedDraft) as BillingEntryRow[];
-        if (Array.isArray(parsed)) {
-          parsedDraftRows = parsed;
-        } else {
-          window.localStorage.removeItem(draftKey);
-        }
-      } catch {
-        window.localStorage.removeItem(draftKey);
-      }
-    }
+    const parsedDraftRows = readBillingDraftRows(monthKey, regionFilter) ?? [];
 
     Promise.all([
       fetch(`/api/billing/entry-rows?month=${monthKey}&region=${regionFilter}`),
@@ -343,9 +339,11 @@ function BillingEntryContent() {
             };
           }
         }
+        const draftImages = await readBillingDraftImages(monthKey, regionFilter);
+        const mappedWithDraftImages = applyDraftImagesToRows(mapped, draftImages);
         skipNextSaveRef.current = true;
-        setRows(mapped);
-        setCounterImageDataByRowId({});
+        setRows(mappedWithDraftImages);
+        setCounterImageDataByRowId(draftImages);
         setSubmittedBaselineByRowId(nextBaselineByRowId);
         setValidatedFixRows({});
         setSubmitAttempted(false);
@@ -377,9 +375,14 @@ function BillingEntryContent() {
       skipNextSaveRef.current = false;
       return;
     }
-    const draftKey = `billing_draft:${monthKey}|${regionFilter}`;
-    window.localStorage.setItem(draftKey, JSON.stringify(rows));
-  }, [isHydrated, monthKey, regionFilter, rows]);
+    const saved = writeBillingDraftRows(monthKey, regionFilter, rows);
+    if (!saved) {
+      setBanner(
+        "Could not save draft counters locally (browser storage full). Submit when ready or clear old drafts."
+      );
+    }
+    void writeBillingDraftImages(monthKey, regionFilter, counterImageDataByRowId);
+  }, [isHydrated, monthKey, regionFilter, rows, counterImageDataByRowId]);
 
   function updateRow(id: string, patch: Partial<BillingEntryRow>) {
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
@@ -471,7 +474,7 @@ function BillingEntryContent() {
       }
 
       setServerCurrentStatus("pending_review");
-      window.localStorage.removeItem(`billing_draft:${monthKey}|${regionFilter}`);
+      await clearBillingDraft(monthKey, regionFilter);
       setBanner("Submitted to server. Opening preview...");
       router.push(`/employee/billing/preview?month=${monthKey}&region=${regionFilter}`);
     } catch (error) {

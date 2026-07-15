@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
+import { requireRole } from "../../../../lib/auth/require-role";
 
 type SubmissionRowInput = {
   customerNumber: string;
@@ -20,40 +21,18 @@ type SubmissionBody = {
   rows: SubmissionRowInput[];
 };
 
-async function getOrCreateSystemUserId() {
-  const supabase = createSupabaseAdminClient();
-  const { data: existing, error: existingError } = await supabase
-    .from("app_users")
-    .select("id")
-    .eq("email", "system.manager@station-v2.local")
-    .maybeSingle();
-
-  if (existingError) throw new Error(existingError.message);
-  if (existing?.id) return existing.id as string;
-
-  const { data: created, error: createError } = await supabase
-    .from("app_users")
-    .insert({
-      role: "manager",
-      display_name: "System Manager",
-      email: "system.manager@station-v2.local",
-      is_active: true,
-    })
-    .select("id")
-    .single();
-  if (createError) throw new Error(createError.message);
-  return created.id as string;
-}
-
 export async function POST(request: Request) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const body = (await request.json()) as SubmissionBody;
     if (!body.monthKey || !body.regionCode || !Array.isArray(body.rows) || body.rows.length === 0) {
       return NextResponse.json({ error: "Invalid submission payload." }, { status: 400 });
     }
 
     const supabase = createSupabaseAdminClient();
-    const actorUserId = await getOrCreateSystemUserId();
+    const actorUserId = auth.actor.appUserId;
 
     const { data: region, error: regionError } = await supabase
       .from("regions")
@@ -202,6 +181,9 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const monthKey = searchParams.get("month");
     const regionCode = searchParams.get("region");

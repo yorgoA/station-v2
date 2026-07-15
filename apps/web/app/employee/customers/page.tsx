@@ -124,7 +124,7 @@ export default function EmployeeCustomersPage() {
     if (visibleColumns.building) headers.push("Building");
     if (visibleColumns.status) headers.push("Status");
     if (visibleColumns.paidThisMonth) headers.push(`Paid This Month (${monthKey})`);
-    if (visibleColumns.ongoingBalance) headers.push(`Ongoing Balance (${monthKey})`);
+    if (visibleColumns.ongoingBalance) headers.push(`Total Due (through ${monthKey})`);
 
     const csvRows = rows.map((c) => {
       const values = [`${c.fullName} (${c.customerNumber})`, c.region];
@@ -346,7 +346,7 @@ export default function EmployeeCustomersPage() {
               {visibleColumns.building && <th>Building</th>}
               {visibleColumns.status && <th>Status</th>}
               {visibleColumns.paidThisMonth && <th>Paid This Month ({monthKey})</th>}
-              {visibleColumns.ongoingBalance && <th>Ongoing Balance ({monthKey})</th>}
+              {visibleColumns.ongoingBalance && <th>Total Due (through {monthKey})</th>}
             </tr>
           </thead>
           <tbody>

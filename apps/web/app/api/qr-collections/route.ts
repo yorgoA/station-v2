@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../lib/supabase/server-admin";
+import { requireRole } from "../../../lib/auth/require-role";
 
 type CreateQrCollectionBody = {
   customerId: string;
@@ -15,6 +16,9 @@ type CreateQrCollectionBody = {
 
 export async function GET(request: Request) {
   try {
+    const auth = await requireRole(["manager", "employee", "collector"]);
+    if ("response" in auth) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const region = searchParams.get("region");
@@ -63,6 +67,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireRole(["collector"]);
+    if ("response" in auth) return auth.response;
+
     const body = (await request.json()) as CreateQrCollectionBody;
     if (!body.customerId || !body.customerNumber || !body.regionCode || !body.monthKey || !body.collectedAmount) {
       return NextResponse.json({ error: "Invalid QR collection payload." }, { status: 400 });

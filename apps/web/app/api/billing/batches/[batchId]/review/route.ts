@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../../../lib/supabase/server-admin";
+import { requireRole } from "../../../../../../lib/auth/require-role";
 
 type ReviewDecision = {
   rowId: string;
@@ -15,33 +16,11 @@ type Context = {
   params: { batchId: string };
 };
 
-async function getOrCreateSystemUserId() {
-  const supabase = createSupabaseAdminClient();
-  const { data: existing, error: existingError } = await supabase
-    .from("app_users")
-    .select("id")
-    .eq("email", "system.manager@station-v2.local")
-    .maybeSingle();
-
-  if (existingError) throw new Error(existingError.message);
-  if (existing?.id) return existing.id as string;
-
-  const { data: created, error: createError } = await supabase
-    .from("app_users")
-    .insert({
-      role: "manager",
-      display_name: "System Manager",
-      email: "system.manager@station-v2.local",
-      is_active: true,
-    })
-    .select("id")
-    .single();
-  if (createError) throw new Error(createError.message);
-  return created.id as string;
-}
-
 export async function POST(request: Request, context: Context) {
   try {
+    const auth = await requireRole(["manager"]);
+    if ("response" in auth) return auth.response;
+
     const batchId = context.params.batchId;
     const body = (await request.json()) as ReviewBody;
     if (!Array.isArray(body.decisions) || body.decisions.length === 0) {
@@ -49,7 +28,7 @@ export async function POST(request: Request, context: Context) {
     }
 
     const supabase = createSupabaseAdminClient();
-    const actorUserId = await getOrCreateSystemUserId();
+    const actorUserId = auth.actor.appUserId;
     const { data: existingBatch, error: existingBatchError } = await supabase
       .from("billing_batches")
       .select("id, status")

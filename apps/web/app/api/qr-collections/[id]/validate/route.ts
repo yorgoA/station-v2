@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../../lib/supabase/server-admin";
+import { requireRole } from "../../../../../lib/auth/require-role";
 
 type ValidateBody = {
   customerNumber?: string;
@@ -13,6 +14,9 @@ type Context = { params: { id: string } };
 
 export async function POST(request: Request, context: Context) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const logId = context.params.id;
     const body = (await request.json()) as ValidateBody;
     const supabase = createSupabaseAdminClient();

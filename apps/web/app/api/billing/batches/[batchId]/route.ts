@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../../lib/supabase/server-admin";
+import { requireRole } from "../../../../../lib/auth/require-role";
 
 type Context = {
   params: { batchId: string };
@@ -7,6 +8,9 @@ type Context = {
 
 export async function GET(_request: Request, context: Context) {
   try {
+    const auth = await requireRole(["manager", "employee"]);
+    if ("response" in auth) return auth.response;
+
     const { searchParams } = new URL(_request.url);
     const includeImages = searchParams.get("includeImages") !== "0";
     const batchId = context.params.batchId;
