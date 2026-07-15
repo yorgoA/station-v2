@@ -9,7 +9,7 @@ type CreatePaymentBody = {
   regionCode: "mrah" | "printania";
   monthKey: string;
   amount: number;
-  receiptFileName?: string;
+  receiptImageUrl?: string;
 };
 
 export async function GET(request: Request) {
@@ -82,18 +82,24 @@ export async function POST(request: Request) {
     if (!Number.isFinite(body.amount) || body.amount <= 0) {
       return NextResponse.json({ error: "Payment amount must be greater than 0." }, { status: 400 });
     }
+    if (!body.receiptImageUrl) {
+      return NextResponse.json({ error: "A receipt image is required." }, { status: 400 });
+    }
 
     const supabase = createSupabaseAdminClient();
-    const paymentDate = `${body.monthKey}-07`;
-    const { error } = await supabase.from("payments").insert({
-      customer_id: body.customerId,
-      amount: body.amount,
-      payment_date: paymentDate,
-      method: "employee_manual",
-      receipt_image_url: body.receiptFileName ?? null,
-      notes: `Manual employee payment for ${body.customerNumber}`,
+    // record_payment() applies the amount to the bill for (customer, month) and
+    // rejects atomically if it exceeds that bill's remaining balance — see
+    // db/schema.sql / db/migrations/004_record_payment.sql.
+    const { error } = await supabase.rpc("record_payment", {
+      p_customer_id: body.customerId,
+      p_month_key: body.monthKey,
+      p_amount: body.amount,
+      p_method: "employee_manual",
+      p_receipt_image_url: body.receiptImageUrl,
+      p_notes: `Manual employee payment for ${body.customerNumber}`,
+      p_actor_user_id: auth.actor.appUserId
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -9,7 +9,8 @@ export default function EmployeePaymentsPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [monthKey, setMonthKey] = useState("2026-05");
   const [amount, setAmount] = useState("");
-  const [receiptFile, setReceiptFile] = useState("");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [payments, setPayments] = useState<EmployeePayment[]>([]);
   const [customers, setCustomers] = useState<
     Array<{
@@ -91,7 +92,17 @@ export default function EmployeePaymentsPage() {
       setMessage("Please upload a receipt image.");
       return;
     }
+    setIsUploading(true);
     try {
+      const uploadForm = new FormData();
+      uploadForm.append("file", receiptFile);
+      const uploadResponse = await fetch("/api/receipt/upload", { method: "POST", body: uploadForm });
+      const uploadPayload = (await uploadResponse.json()) as { url?: string; error?: string };
+      if (!uploadResponse.ok || !uploadPayload.url) {
+        setMessage(uploadPayload.error ?? "Failed to upload receipt image.");
+        return;
+      }
+
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,7 +113,7 @@ export default function EmployeePaymentsPage() {
           regionCode: selectedCustomer.region,
           monthKey,
           amount: parsedAmount,
-          receiptFileName: receiptFile,
+          receiptImageUrl: uploadPayload.url,
         }),
       });
       const payload = (await response.json()) as { error?: string };
@@ -114,10 +125,12 @@ export default function EmployeePaymentsPage() {
       const refreshPayload = (await refresh.json()) as { payments: EmployeePayment[] };
       setPayments(refreshPayload.payments ?? []);
       setAmount("");
-      setReceiptFile("");
+      setReceiptFile(null);
       setMessage("Payment recorded successfully.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unknown payment error.");
+    } finally {
+      setIsUploading(false);
     }
   }
 
@@ -191,13 +204,13 @@ export default function EmployeePaymentsPage() {
             id="payment-receipt"
             type="file"
             accept="image/*"
-            onChange={(e) => setReceiptFile(e.target.files?.[0]?.name ?? "")}
+            onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
           />
         </label>
-        {receiptFile ? <p>Selected: {receiptFile}</p> : null}
+        {receiptFile ? <p>Selected: {receiptFile.name}</p> : null}
         <div className="card-actions-right">
-          <button type="button" onClick={handleRecordPayment}>
-            Record Payment
+          <button type="button" onClick={handleRecordPayment} disabled={isUploading}>
+            {isUploading ? "Uploading..." : "Record Payment"}
           </button>
         </div>
         {message ? <p className="muted">{message}</p> : null}
