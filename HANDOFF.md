@@ -75,22 +75,28 @@ untouched, just not offered as a choice. Committed as `af7374c`.
      actual manager UI, confirmed both `billing_type_id` and `subscribed_ampere` persisted
      correctly in Postgres.
 
+## Also shipped this session (committed as `e66ac9a`)
+
+6. **Fixed customer-list billing-type mislabeling**
+   - `GET /api/customers` (behind `/manager/customers` and `/employee/customers`) compared
+     `billing_types.key` (real values: `metered`/`amp-only`/`both`/`fixed-monthly`, lowercase-
+     hyphenated) against `"FIXED_MONTHLY"`/`"FREE"` literals that never matched anything real —
+     every non-free customer silently fell through to "metered" regardless of actual type.
+   - **Verified live**: this wasn't just theoretical — pre-existing test customers (`Karim Test`,
+     `Nadim Test`) had real `amp-only`/`fixed-monthly` types in the DB all along, both showing as
+     "metered" in the list before the fix, correctly as `amp-only`/`fixed-monthly` after.
+   - Also widened the billing-type filter dropdown (both list pages) to offer all 4 real types
+     plus `free` (previously only Metered/Fixed-monthly, so you couldn't even filter to see your
+     `both` customers — 98% of the book). Verified filtering to "Both" correctly narrows to
+     exactly the real `both` customers.
+
 ## Known gaps / next steps (not started)
 - No way to add a missed reading to an already-`approved_posted` batch (accepted gap, not built)
 - Receipt/photo upload isn't wired to real storage (no `@vercel/blob`/`sharp` yet)
 - Settings → Accounts page is still local-state mock data, not real
 - No RLS policies on Supabase tables — everything currently relies on the app-layer `requireRole`
   guard + the service-role key; `SECURITY_CHECKLIST.md` still has this open
-- **`GET /api/customers` (the list endpoint behind `/manager/customers` and `/employee/customers`)
-  mislabels every customer's billing type as either `free` or `metered`** — it has its own
-  primitive mapping (`isFree ? "free" : key === "FIXED_MONTHLY" ? "fixed-monthly" : "metered"`)
-  that doesn't know about `both`/`amp-only` at all. Confirmed live: `C-0001`/`C-0002` (real `both`/
-  `amp-only` customers) show as "metered" in the customer list table, even though the detail page
-  (`GET /api/customers/[customerId]`, already fixed) shows the correct type. Same file's filter
-  dropdown also only offers Metered/Fixed-monthly as filter options. Not fixed yet — same root
-  cause as the gap we just closed, different endpoint.
 
 ## Where to pick up next session
-Just say "check HANDOFF.md and keep going" — natural next step is either the customers-list
-mislabeling bug above (quick, same shape as what we just fixed), the payments flow / receipt
-upload, or one of the other gaps.
+Just say "check HANDOFF.md and keep going" — natural next step is the payments flow / receipt
+upload, RLS policies, or the missed-reading-after-approval gap.
