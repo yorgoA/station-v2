@@ -15,7 +15,9 @@ type CustomerDetails = {
   boxNumber: string;
   building: string;
   region: "mrah" | "printania";
-  billingType: "metered" | "fixed-monthly" | "free";
+  billingType: "metered" | "amp-only" | "both" | "fixed-monthly" | "free";
+  subscribedAmpere: number | null;
+  fixedMonthlyAmount: number;
   status: string;
 };
 type BillRow = {
@@ -60,6 +62,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
   const [buildingMode, setBuildingMode] = useState<"existing" | "new">("existing");
   const [status, setStatus] = useState("active");
   const [billingPlan, setBillingPlan] = useState<CustomerDetails["billingType"]>("metered");
+  const [subscribedAmpere, setSubscribedAmpere] = useState("");
+  const [fixedMonthlyAmount, setFixedMonthlyAmount] = useState("");
 
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [billDraft, setBillDraft] = useState<BillRow | null>(null);
@@ -101,6 +105,12 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
           setBuilding(payload.customer.building ?? "");
           setStatus(payload.customer.status ?? "active");
           setBillingPlan(payload.customer.billingType ?? "metered");
+          setSubscribedAmpere(
+            payload.customer.subscribedAmpere != null ? String(payload.customer.subscribedAmpere) : ""
+          );
+          setFixedMonthlyAmount(
+            payload.customer.fixedMonthlyAmount ? String(payload.customer.fixedMonthlyAmount) : ""
+          );
         }
       })
       .catch(() => {
@@ -158,6 +168,14 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
 
   async function saveCustomerInfo() {
     if (!customer) return;
+    if ((billingPlan === "amp-only" || billingPlan === "both") && !(Number(subscribedAmpere) > 0)) {
+      setMessage("Subscribed ampere must be a positive number for amp-only/both billing.");
+      return;
+    }
+    if (billingPlan === "fixed-monthly" && !(Number(fixedMonthlyAmount) > 0)) {
+      setMessage("Fixed monthly amount must be a positive number for fixed-monthly billing.");
+      return;
+    }
     const before = customer;
     const changes: AuditChange[] = [];
     if (fullName !== before.fullName) changes.push({ field: "fullName", before: before.fullName, after: fullName });
@@ -168,6 +186,12 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
     if (status !== before.status) changes.push({ field: "status", before: before.status, after: status });
     if (billingPlan !== before.billingType) {
       changes.push({ field: "billingType", before: before.billingType, after: billingPlan });
+    }
+    if (subscribedAmpere !== String(before.subscribedAmpere ?? "")) {
+      changes.push({ field: "subscribedAmpere", before: String(before.subscribedAmpere ?? ""), after: subscribedAmpere });
+    }
+    if (fixedMonthlyAmount !== String(before.fixedMonthlyAmount || "")) {
+      changes.push({ field: "fixedMonthlyAmount", before: String(before.fixedMonthlyAmount || ""), after: fixedMonthlyAmount });
     }
 
     const response = await fetch(`/api/customers/${params.customerId}`, {
@@ -182,6 +206,9 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         building,
         status,
         billingPlan,
+        subscribedAmpere:
+          billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
+        fixedMonthlyAmount: billingPlan === "fixed-monthly" ? Number(fixedMonthlyAmount) : 0,
       }),
     });
     const payload = (await response.json()) as { error?: string };
@@ -191,7 +218,18 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
     }
     setCustomer((prev) =>
       prev
-        ? { ...prev, fullName, customerNumber, phone, boxNumber, building, status, billingType: billingPlan }
+        ? {
+            ...prev,
+            fullName,
+            customerNumber,
+            phone,
+            boxNumber,
+            building,
+            status,
+            billingType: billingPlan,
+            subscribedAmpere: billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
+            fixedMonthlyAmount: billingPlan === "fixed-monthly" ? Number(fixedMonthlyAmount) : 0,
+          }
         : prev
     );
     addAudit("customer_info", undefined, changes);
@@ -356,11 +394,35 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 value={billingPlan}
                 onChange={(e) => setBillingPlan(e.target.value as CustomerDetails["billingType"])}
               >
-                <option value="metered">metered</option>
+                <option value="both">both</option>
                 <option value="fixed-monthly">fixed-monthly</option>
                 <option value="free">free customer</option>
+                {billingPlan === "metered" ? <option value="metered">metered (legacy)</option> : null}
+                {billingPlan === "amp-only" ? <option value="amp-only">amp-only (legacy)</option> : null}
               </select>
             </label>
+            {billingPlan === "amp-only" || billingPlan === "both" ? (
+              <label>
+                Subscribed Ampere (A)
+                <input
+                  type="number"
+                  value={subscribedAmpere}
+                  onChange={(e) => setSubscribedAmpere(e.target.value)}
+                  placeholder="e.g. 10"
+                />
+              </label>
+            ) : null}
+            {billingPlan === "fixed-monthly" ? (
+              <label>
+                Fixed Monthly Amount (LBP)
+                <input
+                  type="number"
+                  value={fixedMonthlyAmount}
+                  onChange={(e) => setFixedMonthlyAmount(e.target.value)}
+                  placeholder="e.g. 500000"
+                />
+              </label>
+            ) : null}
           </div>
         ) : (
           <div className="info-grid">
@@ -371,6 +433,12 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
             <div><p className="muted">Box</p><p>{customer.boxNumber || "-"}</p></div>
             <div><p className="muted">Building</p><p>{customer.building || "-"}</p></div>
             <div><p className="muted">Billing Type</p><p>{customer.billingType}</p></div>
+            {customer.billingType === "amp-only" || customer.billingType === "both" ? (
+              <div><p className="muted">Subscribed Ampere</p><p>{customer.subscribedAmpere ?? "not set"}</p></div>
+            ) : null}
+            {customer.billingType === "fixed-monthly" ? (
+              <div><p className="muted">Fixed Monthly Amount</p><p>{customer.fixedMonthlyAmount.toLocaleString()} LBP</p></div>
+            ) : null}
             <div><p className="muted">Status</p><p>{customer.status}</p></div>
           </div>
         )}
@@ -383,6 +451,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 className="danger-btn"
                 onClick={() => {
                   setBillingPlan(customer.billingType);
+                  setSubscribedAmpere(customer.subscribedAmpere != null ? String(customer.subscribedAmpere) : "");
+                  setFixedMonthlyAmount(customer.fixedMonthlyAmount ? String(customer.fixedMonthlyAmount) : "");
                   setIsEditingInfo(false);
                 }}
               >
@@ -395,6 +465,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               type="button"
               onClick={() => {
                 setBillingPlan(customer.billingType);
+                setSubscribedAmpere(customer.subscribedAmpere != null ? String(customer.subscribedAmpere) : "");
+                setFixedMonthlyAmount(customer.fixedMonthlyAmount ? String(customer.fixedMonthlyAmount) : "");
                 setIsEditingInfo(true);
               }}
             >

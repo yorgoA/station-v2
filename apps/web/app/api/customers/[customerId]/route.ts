@@ -15,7 +15,9 @@ type PatchBody =
       status?: string;
       linkedCustomerId?: string;
       /** Metering plan + free flag; only managers should send this from UI. */
-      billingPlan?: "free" | "metered" | "fixed-monthly";
+      billingPlan?: "free" | "metered" | "amp-only" | "both" | "fixed-monthly";
+      subscribedAmpere?: number;
+      fixedMonthlyAmount?: number;
     }
   | {
       section: "bill";
@@ -49,7 +51,7 @@ export async function GET(
       supabase
         .from("customers")
         .select(
-          "id, customer_number, full_name, phone, box_number, building, status, is_free_customer, monitor_id, regions!inner(code), billing_types(key)"
+          "id, customer_number, full_name, phone, box_number, building, status, is_free_customer, monitor_id, subscribed_ampere, fixed_monthly_amount, regions!inner(code), billing_types(key)"
         )
         .eq("id", customerId)
         .single(),
@@ -116,6 +118,8 @@ export async function GET(
         status: String(c.status ?? "active"),
         region: regionCode || "mrah",
         billingType: Boolean(c.is_free_customer) ? "free" : btKey || "metered",
+        subscribedAmpere: c.subscribed_ampere != null ? Number(c.subscribed_ampere) : null,
+        fixedMonthlyAmount: c.fixed_monthly_amount != null ? Number(c.fixed_monthly_amount) : 0,
         isMonitor,
         linkedCustomerId,
         linkedCustomerName,
@@ -189,11 +193,25 @@ export async function PATCH(
       if (body.building !== undefined) payload.building = body.building;
       if (body.status !== undefined) payload.status = body.status;
       if (body.billingPlan !== undefined) {
+        if ((body.billingPlan === "amp-only" || body.billingPlan === "both") && !(Number(body.subscribedAmpere) > 0)) {
+          return NextResponse.json(
+            { error: "subscribedAmpere is required (and must be > 0) for amp-only/both billing." },
+            { status: 400 }
+          );
+        }
+        if (body.billingPlan === "fixed-monthly" && !(Number(body.fixedMonthlyAmount) > 0)) {
+          return NextResponse.json(
+            { error: "fixedMonthlyAmount is required (and must be > 0) for fixed-monthly billing." },
+            { status: 400 }
+          );
+        }
         if (body.billingPlan === "free") {
           payload.is_free_customer = true;
         } else {
           payload.is_free_customer = false;
-          const billingKey = body.billingPlan === "fixed-monthly" ? "fixed-monthly" : "metered";
+          // 'free' has no billing_types row of its own (orthogonal is_free_customer flag);
+          // every other option now maps directly to its own real billing_types row.
+          const billingKey = body.billingPlan;
           const { data: billingTypeRow, error: billingTypeLookupError } = await supabase
             .from("billing_types")
             .select("id")
@@ -205,6 +223,8 @@ export async function PATCH(
           if (billingTypeRow?.id) payload.billing_type_id = billingTypeRow.id as string;
         }
       }
+      if (body.subscribedAmpere !== undefined) payload.subscribed_ampere = body.subscribedAmpere;
+      if (body.fixedMonthlyAmount !== undefined) payload.fixed_monthly_amount = body.fixedMonthlyAmount;
       if (body.linkedCustomerId !== undefined) {
         const linkedId = body.linkedCustomerId.trim();
         if (!linkedId) {
