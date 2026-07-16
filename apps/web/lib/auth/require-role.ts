@@ -39,7 +39,7 @@ export async function requireRole(allowedRoles: SessionRole[]): Promise<RequireR
   const supabase = createSupabaseAdminClient();
   const { data: appUser, error } = await supabase
     .from("app_users")
-    .select("id")
+    .select("id, is_active")
     .eq("email", sessionUser.email)
     .maybeSingle();
   if (error) {
@@ -51,6 +51,14 @@ export async function requireRole(allowedRoles: SessionRole[]): Promise<RequireR
         {
           error: `No app_users record found for ${sessionUser.email}. Ask a manager to add your account in Settings -> Accounts.`
         },
+        { status: 403 }
+      )
+    };
+  }
+  if (!appUser.is_active) {
+    return {
+      response: NextResponse.json(
+        { error: "This account has been disabled. Contact a manager." },
         { status: 403 }
       )
     };

@@ -1,97 +1,145 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 
 type AccountRow = {
   id: string;
-  name: string;
   email: string;
+  displayName: string;
   role: "manager" | "employee" | "collector";
-  status: "active" | "invited" | "disabled";
-  password: string;
+  isActive: boolean;
+  createdAt: string;
 };
 
-const initialAccounts: AccountRow[] = [
-  {
-    id: "u-1",
-    name: "Yorgo Aoun",
-    email: "yorgo@stationaoun.com",
-    role: "manager",
-    status: "active",
-    password: "Manager@123",
-  },
-  {
-    id: "u-2",
-    name: "Nour Team",
-    email: "nour@stationaoun.com",
-    role: "employee",
-    status: "active",
-    password: "Employee@123",
-  },
-  {
-    id: "u-3",
-    name: "Yamen",
-    email: "yamen@stationaoun.com",
-    role: "collector",
-    status: "active",
-    password: "Christian@1999",
-  },
-];
-
 export default function ManagerAccountsSettingsPage() {
-  const [accounts, setAccounts] = useState(initialAccounts);
+  const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"manager" | "employee" | "collector">("employee");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const passwordsMatch = password !== "" && password === confirmPassword;
+
+  const [selectedAccount, setSelectedAccount] = useState<AccountRow | null>(null);
+  const [manageName, setManageName] = useState("");
   const [manageRole, setManageRole] = useState<"manager" | "employee" | "collector">("employee");
-  const [manageStatus, setManageStatus] = useState<"active" | "invited" | "disabled">("active");
-  const [showPassword, setShowPassword] = useState(false);
+  const [manageActive, setManageActive] = useState(true);
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const passwordsMatch = password !== "" && password === confirmPassword;
-  const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? null;
-  const newPasswordsMatch = newPassword !== "" && newPassword === confirmNewPassword;
+  const [saving, setSaving] = useState(false);
+  const newPasswordsMatch = newPassword === "" || newPassword === confirmNewPassword;
+
+  async function loadAccounts() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/settings/accounts");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Failed to load accounts.");
+      setAccounts(data.accounts ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load accounts.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadAccounts();
+  }, []);
 
   function openManageModal(account: AccountRow) {
-    setSelectedAccountId(account.id);
+    setSelectedAccount(account);
+    setManageName(account.displayName);
     setManageRole(account.role);
-    setManageStatus(account.status);
-    setShowPassword(false);
+    setManageActive(account.isActive);
     setNewPassword("");
     setConfirmNewPassword("");
+    setMessage("");
   }
 
   function closeManageModal() {
-    setSelectedAccountId(null);
+    setSelectedAccount(null);
   }
 
-  function saveManagedAccount() {
-    if (!selectedAccount) return;
-    setAccounts((prev) =>
-      prev.map((account) =>
-        account.id === selectedAccount.id
-          ? {
-              ...account,
-              role: manageRole,
-              status: manageStatus,
-              password: newPasswordsMatch ? newPassword : account.password,
-            }
-          : account
-      )
-    );
-    closeManageModal();
+  async function handleCreateAccount() {
+    setError("");
+    setMessage("");
+    if (!name.trim() || !email.trim() || password.length < 8 || !passwordsMatch) return;
+    setCreating(true);
+    try {
+      const response = await fetch("/api/settings/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName: name, email, role, password })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Failed to create account.");
+      setName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setRole("employee");
+      setMessage("Account created.");
+      await loadAccounts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create account.");
+    } finally {
+      setCreating(false);
+    }
   }
 
-  function deleteManagedAccount() {
+  async function saveManagedAccount() {
+    if (!selectedAccount || !newPasswordsMatch) return;
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/settings/accounts/${selectedAccount.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: manageName,
+          role: manageRole,
+          isActive: manageActive,
+          newPassword: newPassword || undefined
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Failed to save account.");
+      closeManageModal();
+      setMessage("Account updated.");
+      await loadAccounts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save account.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteManagedAccount() {
     if (!selectedAccount) return;
-    setAccounts((prev) => prev.filter((account) => account.id !== selectedAccount.id));
-    closeManageModal();
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/settings/accounts/${selectedAccount.id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Failed to delete account.");
+      closeManageModal();
+      setMessage("Account deleted.");
+      await loadAccounts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete account.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -103,6 +151,10 @@ export default function ManagerAccountsSettingsPage() {
       <Link href="/manager/settings" className="back-link">
         ← Back to Settings
       </Link>
+
+      {message ? <p className="muted" role="status">{message}</p> : null}
+      {error ? <p style={{ color: "var(--danger)" }} role="alert">{error}</p> : null}
+
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Create Account</h3>
         <div className="filters-grid filters-grid-pro">
@@ -156,50 +208,69 @@ export default function ManagerAccountsSettingsPage() {
           <button
             type="button"
             className="success-btn"
-            disabled={!name.trim() || !email.trim() || password.length < 8 || !passwordsMatch}
+            disabled={!name.trim() || !email.trim() || password.length < 8 || !passwordsMatch || creating}
+            onClick={handleCreateAccount}
           >
-            Create Account
+            {creating ? "Creating..." : "Create Account"}
           </button>
         </div>
       </div>
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Existing Accounts</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map((account) => (
-              <tr key={account.id}>
-                <td>{account.name}</td>
-                <td>{account.email}</td>
-                <td>{account.role}</td>
-                <td>{account.status}</td>
-                <td>
-                  <button type="button" onClick={() => openManageModal(account)}>
-                    Manage
-                  </button>
-                </td>
+        {loading ? (
+          <p className="muted">Loading accounts...</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {accounts.map((account) => (
+                <tr key={account.id}>
+                  <td>{account.displayName}</td>
+                  <td>{account.email}</td>
+                  <td>{account.role}</td>
+                  <td>{account.isActive ? "active" : "disabled"}</td>
+                  <td>
+                    <button type="button" onClick={() => openManageModal(account)}>
+                      Manage
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {accounts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="muted">
+                    No accounts yet.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        )}
       </div>
+
       {selectedAccount ? (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Manage account">
           <div className="modal-card">
             <h3 style={{ marginTop: 0 }}>Manage Account</h3>
-            <p className="muted">
-              {selectedAccount.name} ({selectedAccount.email})
-            </p>
+            <p className="muted">{selectedAccount.email}</p>
             <div className="filters-grid filters-grid-pro">
+              <label htmlFor="manage-account-name">
+                Full name
+                <input
+                  id="manage-account-name"
+                  value={manageName}
+                  onChange={(e) => setManageName(e.target.value)}
+                />
+              </label>
               <label htmlFor="manage-account-role">
                 Role
                 <select
@@ -216,27 +287,12 @@ export default function ManagerAccountsSettingsPage() {
                 Status
                 <select
                   id="manage-account-status"
-                  value={manageStatus}
-                  onChange={(e) => setManageStatus(e.target.value as typeof manageStatus)}
+                  value={manageActive ? "active" : "disabled"}
+                  onChange={(e) => setManageActive(e.target.value === "active")}
                 >
                   <option value="active">Active</option>
-                  <option value="invited">Invited</option>
                   <option value="disabled">Disabled</option>
                 </select>
-              </label>
-              <label htmlFor="manage-account-password">
-                Current password
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input
-                    id="manage-account-password"
-                    type={showPassword ? "text" : "password"}
-                    value={selectedAccount.password}
-                    readOnly
-                  />
-                  <button type="button" onClick={() => setShowPassword((v) => !v)}>
-                    {showPassword ? "Hide" : "Show"}
-                  </button>
-                </div>
               </label>
               <label htmlFor="manage-account-new-password">
                 New password
@@ -259,17 +315,14 @@ export default function ManagerAccountsSettingsPage() {
                 />
               </label>
             </div>
-            {confirmNewPassword.length > 0 && !newPasswordsMatch ? (
+            {newPassword.length > 0 && !newPasswordsMatch ? (
               <p style={{ color: "var(--danger)" }}>New passwords do not match.</p>
             ) : null}
             <div style={{ display: "flex", gap: 8, justifyContent: "space-between", marginTop: 12 }}>
-              <button type="button" className="warning-btn">
-                Send Password Reset
+              <button type="button" className="danger-btn" onClick={deleteManagedAccount} disabled={saving}>
+                Delete Account
               </button>
               <div style={{ display: "flex", gap: 8 }}>
-                <button type="button" className="danger-btn" onClick={deleteManagedAccount}>
-                  Delete Account
-                </button>
                 <button type="button" className="danger-btn" onClick={closeManageModal}>
                   Close
                 </button>
@@ -277,9 +330,9 @@ export default function ManagerAccountsSettingsPage() {
                   type="button"
                   className="success-btn"
                   onClick={saveManagedAccount}
-                  disabled={(newPassword.length > 0 || confirmNewPassword.length > 0) && !newPasswordsMatch}
+                  disabled={saving || (newPassword.length > 0 && !newPasswordsMatch)}
                 >
-                  Save Changes
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </div>
