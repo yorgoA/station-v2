@@ -153,12 +153,36 @@ untouched, just not offered as a choice. Committed as `af7374c`.
      boilerplate (several Application Authorization items were already true from earlier this
      session and are now checked off with evidence).
 
+## Also shipped this session (committed as `195ef44`)
+
+10. **Real account management, replacing the mock Accounts page**
+    - You confirmed this was worth building properly (not just cleaning up the mock), so:
+      `GET/POST /api/settings/accounts` and `PATCH/DELETE /api/settings/accounts/[userId]`,
+      backed by Supabase's Auth Admin API (`auth.admin.createUser/updateUserById/deleteUser/
+      listUsers`), kept in sync with `app_users` (role, display name, active status).
+    - Delete **deactivates** `app_users` (never hard-deletes it — it's referenced by FK from
+      `billing_batches`/`payments` as an audit trail of who approved/recorded what) while fully
+      removing the Supabase Auth login. Both delete and disable block a manager from doing it to
+      their own account.
+    - Real fix bundled in: `requireRole()` never actually checked `app_users.is_active` before —
+      "disable" was silently a no-op until now.
+    - Dropped the mock's fake "current password" display (real passwords are hashed and never
+      retrievable — showing one back was always fake) and the email-dependent "send reset" button,
+      since the direct set-new-password flow already in the UI covers that without needing
+      Supabase's transactional email configured.
+    - **Verified**: full production build passes; all 4 endpoints return 401 unauthenticated; the
+      new `is_active` check doesn't affect any of your 4 existing `app_users` rows (all active).
+    - **Not tested live by me**: actually creating an account, since that means setting a real
+      password for a new login-capable identity — creating accounts/entering passwords isn't
+      something I do myself even for testing. Worth trying yourself: create a throwaway test
+      account from Manager → Settings → Accounts, confirm it can log in, then delete it.
+
 ## Known gaps / next steps (not started)
 - No way to add a missed reading to an already-`approved_posted` batch (accepted gap, not built)
-- Settings → Accounts page is still local-state mock data, not real
 - No per-region/per-customer ownership scoping (any employee can act on any region's customers —
-  role-level checks are solid, there's just no finer-grained ownership boundary yet)
+  role-level checks are solid, there's just no finer-grained ownership boundary yet; you said this
+  is fine given your current team size)
 
 ## Where to pick up next session
 Just say "check HANDOFF.md and keep going" — natural next step is the missed-reading-after-approval
-gap or the real Accounts management page.
+gap, or test the new Accounts page yourself first.
