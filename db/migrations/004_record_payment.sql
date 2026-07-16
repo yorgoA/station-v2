@@ -52,8 +52,12 @@ begin
       status = v_new_status
   where id = v_bill.id;
 
+  -- payment_date is pinned to the bill's own month (matching the existing convention
+  -- elsewhere in the app, e.g. the old submissions flow's `${monthKey}-07`) rather than
+  -- today's real date, since every report/filter in the app treats payment_date as the
+  -- billing month, not the literal day cash changed hands.
   insert into payments (customer_id, bill_id, amount, payment_date, method, receipt_image_url, recorded_by_user_id, notes)
-  values (p_customer_id, v_bill.id, p_amount, current_date, p_method, p_receipt_image_url, p_actor_user_id, p_notes)
+  values (p_customer_id, v_bill.id, p_amount, (p_month_key || '-07')::date, p_method, p_receipt_image_url, p_actor_user_id, p_notes)
   returning id into v_payment_id;
 
   return v_payment_id;
