@@ -90,13 +90,47 @@ untouched, just not offered as a choice. Committed as `af7374c`.
      `both` customers — 98% of the book). Verified filtering to "Both" correctly narrows to
      exactly the real `both` customers.
 
+## Also shipped this session (committed as `92c2ec2`, `d4bbd99`)
+
+7. **Real payment application + receipt upload**
+   - New `record_payment()` Postgres function: applies a payment to exactly the bill for
+     (customer, month), atomically updating `paid_amount`/`remaining_amount`/`status`, rejecting
+     if the amount exceeds that bill's remaining balance. Previously, recording a payment did
+     **nothing** to what a customer owed — this was a real, silent gap.
+   - Ported V1's `receipt-image.ts` (sharp resize/reencode) and `receipt-upload.ts` (Vercel Blob)
+     into `apps/web/lib/receipts/`; added `@vercel/blob` + `sharp` as dependencies. New guarded
+     `POST /api/receipt/upload` route. Employee payments page now actually uploads the selected
+     file before recording the payment.
+   - Along the way, fixed **two pre-existing type errors** that had been quietly tolerated by
+     `next dev`/`tsc --noEmit` all session but turned out to hard-block Vercel's production build
+     (`api/billing/batches/[batchId]/route.ts` non-literal Supabase `.select()`, and a missing
+     `?.` in `employee/customers/[customerId]/page.tsx`). Verified with a full local
+     `npm run build`, not just `tsc --noEmit` — worth remembering for future sessions, since dev
+     mode is more lenient than the real production build.
+
+## 🚀 station-v2 is now deployed and live
+
+- **URL**: https://station-v2.vercel.app (Vercel project `yorgoas-projects/station-v2`, root
+  directory `apps/web`, auto-deploys on push to `main`)
+- All Supabase env vars + a dedicated **`station-v2-blob`** Vercel Blob store (kept separate from
+  V1's existing `station-counters-blob`, per your own "keep V2 isolated from V1" checklist item)
+  are configured on the project.
+- **Verified live** (unauthenticated): login page loads, and both `/api/customers` and
+  `/api/receipt/upload` correctly return 401 without a session — same auth behavior as local dev.
+- **Not yet verified live** (needs a real login, which I can't do myself): an actual payment
+  recording + receipt upload end-to-end on the production URL. Worth a quick manual pass when
+  you're logged in as employee.
+- Cost note (see chat): current setup is $0/month (Vercel Hobby + Supabase Free). The two real
+  reasons to eventually pay are Supabase Free's 7-day inactivity auto-pause and Vercel Hobby's
+  non-commercial terms — not data volume, which stays cheap for years even with photo uploads
+  (~$45/month total for Vercel Pro + Supabase Pro if/when you want that).
+
 ## Known gaps / next steps (not started)
 - No way to add a missed reading to an already-`approved_posted` batch (accepted gap, not built)
-- Receipt/photo upload isn't wired to real storage (no `@vercel/blob`/`sharp` yet)
 - Settings → Accounts page is still local-state mock data, not real
 - No RLS policies on Supabase tables — everything currently relies on the app-layer `requireRole`
   guard + the service-role key; `SECURITY_CHECKLIST.md` still has this open
 
 ## Where to pick up next session
-Just say "check HANDOFF.md and keep going" — natural next step is the payments flow / receipt
-upload, RLS policies, or the missed-reading-after-approval gap.
+Just say "check HANDOFF.md and keep going" — natural next step is a live login to spot-check
+payments/receipt upload on production, RLS policies, or the missed-reading-after-approval gap.
