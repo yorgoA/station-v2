@@ -19,6 +19,7 @@ type CustomerDetails = {
   subscribedAmpere: number | null;
   fixedMonthlyAmount: number;
   status: string;
+  isMonitor?: boolean;
 };
 type BillRow = {
   id: string;
@@ -321,8 +322,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
       subtitle={`Manager customer details • #${customer.customerNumber}`}
       navItems={managerNavItems}
     >
-      <Link href="/manager/customers" className="back-link">
-        ← Back to Customers
+      <Link href={customer.isMonitor ? "/manager/monitors" : "/manager/customers"} className="back-link">
+        ← Back to {customer.isMonitor ? "Monitors" : "Customers"}
       </Link>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Customer Information</h3>

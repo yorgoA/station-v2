@@ -173,8 +173,8 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
       subtitle={`${customer.isMonitor ? "Monitor" : "Customer"} #${customer.customerNumber}`}
       navItems={employeeNavItems}
     >
-      <Link href="/employee/customers" className="back-link">
-        ← Back to Customers
+      <Link href={customer.isMonitor ? "/employee/monitors" : "/employee/customers"} className="back-link">
+        ← Back to {customer.isMonitor ? "Monitors" : "Customers"}
       </Link>
       <div className="card">
         {isEditing ? (
@@ -357,20 +357,14 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
         )}
       </div>
       {(selectedBill || selectedPayment) && (
-        <div className="modal-backdrop" role="presentation" onClick={() => {
-          setSelectedBillId(null);
-          setSelectedPaymentId(null);
-        }}>
-          <div className="modal-content" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 style={{ margin: 0 }}>{selectedBill ? "Bill Details" : "Receipt / Payment Details"}</h3>
-              <button type="button" className="icon-btn" onClick={() => {
-                setSelectedBillId(null);
-                setSelectedPaymentId(null);
-              }}>
-                ✕
-              </button>
-            </div>
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={selectedBill ? "Bill details" : "Receipt / payment details"}
+        >
+          <div className="modal-card">
+            <h3 style={{ marginTop: 0 }}>{selectedBill ? "Bill Details" : "Receipt / Payment Details"}</h3>
             {selectedBill ? (
               <div className="info-grid">
                 <div><p className="muted">Month</p><p>{selectedBill.monthKey}</p></div>
@@ -390,6 +384,18 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                 <div><p className="muted">Payment ID</p><p>{selectedPayment.id}</p></div>
               </div>
             ) : null}
+            <div className="card-actions-right">
+              <button
+                type="button"
+                className="danger-btn"
+                onClick={() => {
+                  setSelectedBillId(null);
+                  setSelectedPaymentId(null);
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
