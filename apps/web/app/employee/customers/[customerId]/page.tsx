@@ -53,6 +53,7 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
   const [linkedCustomerId, setLinkedCustomerId] = useState("");
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/customers?region=all")
@@ -87,7 +88,8 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
           setLinkedCustomerId(p.customer.linkedCustomerId ?? "");
         }
       })
-      .catch(() => setPayload(null));
+      .catch(() => setPayload(null))
+      .finally(() => setLoading(false));
   }, [params.customerId]);
 
   const customer = useMemo(() => payload?.customer, [payload]);
@@ -113,6 +115,14 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
     () => allCustomers.filter((candidate) => !candidate.isMonitor && candidate.id !== customer?.id),
     [allCustomers, customer?.id]
   );
+
+  if (loading) {
+    return (
+      <AppShell title="Loading..." navItems={employeeNavItems}>
+        <p className="muted">Loading customer details...</p>
+      </AppShell>
+    );
+  }
 
   if (!customer) {
     return (

@@ -73,6 +73,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
 
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<AuditEntry | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const auditStorageKey = `station_v2_manager_customer_audit:${params.customerId}`;
 
@@ -118,7 +119,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         setCustomer(null);
         setBills([]);
         setPayments([]);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [params.customerId]);
   const boxOptions = useMemo(
     () => Array.from(new Set(allCustomers.map((c) => String(c.boxNumber ?? "").trim()).filter(Boolean))),
@@ -155,6 +157,14 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
       },
       ...prev,
     ]);
+  }
+
+  if (loading) {
+    return (
+      <AppShell title="Loading..." navItems={managerNavItems}>
+        <p className="muted">Loading customer details...</p>
+      </AppShell>
+    );
   }
 
   if (!customer) {
