@@ -695,3 +695,27 @@ drop trigger if exists trg_set_updated_at_qr_collection_logs on qr_collection_lo
 create trigger trg_set_updated_at_qr_collection_logs
 before update on qr_collection_logs
 for each row execute function set_updated_at();
+
+-- ==========
+-- Row Level Security: locks every table down for the anon/publishable key
+-- (public by design, embedded in every browser bundle). No policies are
+-- added because none are needed -- the app only ever uses that key for
+-- Supabase Auth, never direct table queries; all real data access goes
+-- through API routes using the service-role key, which bypasses RLS
+-- regardless of policies. See db/migrations/005_enable_rls.sql.
+-- ==========
+alter table regions enable row level security;
+alter table monitors enable row level security;
+alter table billing_types enable row level security;
+alter table app_users enable row level security;
+alter table ampere_price_tiers enable row level security;
+alter table monthly_kwh_tariffs enable row level security;
+alter table customers enable row level security;
+alter table billing_batches enable row level security;
+alter table billing_batch_items enable row level security;
+alter table billing_batch_item_reviews enable row level security;
+alter table billing_batch_events enable row level security;
+alter table bills enable row level security;
+alter table payments enable row level security;
+alter table qr_collection_logs enable row level security;
+alter table generator_monthly_readings enable row level security;

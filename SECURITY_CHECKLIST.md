@@ -16,16 +16,26 @@ Use this checklist before production cutover.
 
 ## Database access control
 - [ ] Remove temporary broad dev grants/policies.
-- [ ] Enable and verify RLS on all public-facing tables.
-- [ ] Create explicit policies per role/action (manager, employee).
-- [ ] Verify non-authorized role cannot read/write restricted rows.
-- [ ] Ensure immutable behavior for approved billing data is enforced.
+- [x] Enable and verify RLS on all public-facing tables (`db/migrations/005_enable_rls.sql`).
+- [ ] ~~Create explicit policies per role/action~~ — not needed: RLS is enabled with zero
+      policies (default-deny) for `anon`/`authenticated`. The app never queries tables with
+      the public key (verified: every `createSupabasePublicClient()` call site is Auth-only),
+      so per-role DB policies would be unused surface area, not missing coverage.
+- [x] Verify non-authorized role cannot read/write restricted rows (tested live: anon key
+      querying tables directly via the REST API is denied after RLS was enabled).
+- [x] Ensure immutable behavior for approved billing data is enforced (`block_approved_batch_mutation`,
+      `block_bill_pricing_mutation` triggers).
 
 ## Application authorization
-- [ ] Protect all mutation routes/actions with session + role checks.
-- [ ] Enforce manager-only actions (approvals, settings, correction paths).
-- [ ] Enforce employee edit limits (`phone`, `boxNumber`, `building`, `status` only).
-- [ ] Add server-side ownership/permission validation for every write.
+- [x] Protect all mutation routes/actions with session + role checks (`requireRole()` on all
+      API routes, verified live: unauthenticated requests return 401 across the board).
+- [x] Enforce manager-only actions (approvals, settings, batch review/approve are all
+      `requireRole(["manager"])`).
+- [x] Enforce employee edit limits (`phone`, `boxNumber`, `building`, `status` only — enforced
+      server-side in the customer PATCH handler, not just hidden in the UI).
+- [ ] Add server-side ownership/permission validation for every write (role-level checks are
+      done; there's no per-region/per-customer ownership scoping yet — e.g. any employee can
+      act on any region's customers).
 
 ## Data integrity and auditability
 - [ ] Ensure mandatory manager note on rejection is enforced.
