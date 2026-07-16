@@ -117,20 +117,48 @@ untouched, just not offered as a choice. Committed as `af7374c`.
   are configured on the project.
 - **Verified live** (unauthenticated): login page loads, and both `/api/customers` and
   `/api/receipt/upload` correctly return 401 without a session — same auth behavior as local dev.
-- **Not yet verified live** (needs a real login, which I can't do myself): an actual payment
-  recording + receipt upload end-to-end on the production URL. Worth a quick manual pass when
-  you're logged in as employee.
 - Cost note (see chat): current setup is $0/month (Vercel Hobby + Supabase Free). The two real
   reasons to eventually pay are Supabase Free's 7-day inactivity auto-pause and Vercel Hobby's
   non-commercial terms — not data volume, which stays cheap for years even with photo uploads
   (~$45/month total for Vercel Pro + Supabase Pro if/when you want that).
 
+## Also shipped this session (committed as `ba242ba`, `4c5a1fe`)
+
+8. **Live-verified payments/receipt upload on production, found + fixed a real bug**
+   - Logged in as employee on the real `station-v2.vercel.app`, created a real bill (2,315,050
+     LBP: 10A tier + 30kWh), and confirmed: overpayment is correctly rejected with an exact error
+     message; a valid partial payment (1,000,000 LBP) reduced the bill to exactly 1,315,050
+     remaining; the receipt photo was genuinely uploaded to Vercel Blob (real `sharp`-processed
+     PNG, not a placeholder).
+   - Found live: `record_payment()` used `current_date` for `payment_date` instead of the bill's
+     own month, which silently broke month-filtered payment views even though the payment itself
+     applied correctly. Fixed to pin `payment_date` to the bill's `month_key` (matching the
+     existing `${monthKey}-07` convention used elsewhere in the app).
+
+9. **RLS enabled on all 15 tables — closed a real public-key exposure**
+   - `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are sent to every browser
+     by design. Without RLS, that key could query Supabase's REST API directly and read/write any
+     table, completely bypassing the app and `requireRole()` — a real, live exposure once
+     deployed publicly (not just a checklist item anymore).
+   - Fix: RLS enabled with **zero policies** on every table (`db/migrations/005_enable_rls.sql`).
+     No policies needed — confirmed the app's client-side code only ever uses the public key for
+     Supabase Auth (sign in / get user / sign out), never a direct table query, so default-deny is
+     complete and correct. All real data access goes through API routes using the service-role
+     key, which bypasses RLS regardless.
+   - **Verified live**: `curl` with the real anon key against `/rest/v1/customers` now returns
+     `permission denied for table customers` (previously would've returned real data); a real
+     logged-in employee session on production still loads correct data
+     (`Test PayFlow` → $1,315,050 total due, matching the payment test above) — RLS broke nothing.
+   - Updated `SECURITY_CHECKLIST.md` to reflect verified reality instead of the original unchecked
+     boilerplate (several Application Authorization items were already true from earlier this
+     session and are now checked off with evidence).
+
 ## Known gaps / next steps (not started)
 - No way to add a missed reading to an already-`approved_posted` batch (accepted gap, not built)
 - Settings → Accounts page is still local-state mock data, not real
-- No RLS policies on Supabase tables — everything currently relies on the app-layer `requireRole`
-  guard + the service-role key; `SECURITY_CHECKLIST.md` still has this open
+- No per-region/per-customer ownership scoping (any employee can act on any region's customers —
+  role-level checks are solid, there's just no finer-grained ownership boundary yet)
 
 ## Where to pick up next session
-Just say "check HANDOFF.md and keep going" — natural next step is a live login to spot-check
-payments/receipt upload on production, RLS policies, or the missed-reading-after-approval gap.
+Just say "check HANDOFF.md and keep going" — natural next step is the missed-reading-after-approval
+gap or the real Accounts management page.
