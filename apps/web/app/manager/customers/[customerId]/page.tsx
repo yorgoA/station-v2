@@ -321,6 +321,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
       title={customer.fullName}
       subtitle={`Manager customer details • #${customer.customerNumber}`}
       navItems={managerNavItems}
+      activeHref={customer.isMonitor ? "/manager/monitors" : "/manager/customers"}
     >
       <Link href={customer.isMonitor ? "/manager/monitors" : "/manager/customers"} className="back-link">
         ← Back to {customer.isMonitor ? "Monitors" : "Customers"}

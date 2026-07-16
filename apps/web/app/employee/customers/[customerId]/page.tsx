@@ -172,6 +172,7 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
       title={customer.fullName}
       subtitle={`${customer.isMonitor ? "Monitor" : "Customer"} #${customer.customerNumber}`}
       navItems={employeeNavItems}
+      activeHref={customer.isMonitor ? "/employee/monitors" : "/employee/customers"}
     >
       <Link href={customer.isMonitor ? "/employee/monitors" : "/employee/customers"} className="back-link">
         ← Back to {customer.isMonitor ? "Monitors" : "Customers"}

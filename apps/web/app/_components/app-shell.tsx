@@ -30,6 +30,10 @@ type AppShellProps = {
   children: ReactNode;
   navItems?: NavItem[];
   appName?: string;
+  /** Force a specific nav item active, overriding the default pathname-prefix match.
+   *  Needed for shared detail routes (e.g. a monitor's detail page lives at the same
+   *  URL as a customer's) where the pathname alone can't tell which nav item should light up. */
+  activeHref?: string;
 };
 
 const defaultNavItems: NavItem[] = [
@@ -104,7 +108,8 @@ export function AppShell({
   subtitle,
   children,
   navItems,
-  appName
+  appName,
+  activeHref
 }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [accessChecked, setAccessChecked] = useState(false);
@@ -233,8 +238,9 @@ export function AppShell({
         <p className="muted">Mock UX prototype</p>
         <nav>
           {resolvedNavItems.map((item) => {
-            const isActive =
-              pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            const isActive = activeHref
+              ? item.href === activeHref
+              : pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
