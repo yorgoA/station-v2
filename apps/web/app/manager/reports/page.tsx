@@ -43,9 +43,14 @@ export default function ManagerReportsPage() {
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Actual vs Reported</h3>
           <p className="muted">Compare actual manual values vs reported app values for kWh and money loss.</p>
-          <Link href={`/manager/reports/loss_mrah?${defaultScope}`} className="action-link-btn">
-            Open Actual vs Reported
-          </Link>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link href={`/manager/reports/loss_mrah?${defaultScope}`} className="action-link-btn">
+              Open Mrah
+            </Link>
+            <Link href={`/manager/reports/loss_printania?${defaultScope}`} className="action-link-btn">
+              Open Printania
+            </Link>
+          </div>
         </div>
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Monitors Data</h3>

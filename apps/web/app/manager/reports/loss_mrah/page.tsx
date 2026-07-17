@@ -19,6 +19,7 @@ import {
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { ReportScopeFilters, ReportScopeLabel, useReportScope } from "../_components/report-scope-controls";
+import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../../lib/constants/months";
 
 type SavedLossInput = {
   generatedKwh: number;
@@ -27,13 +28,16 @@ type SavedLossInput = {
 };
 
 const STORAGE_KEY = "station_v2_loss_mrah_manual_inputs";
-const APP_KWH_BY_MONTH: Record<string, number> = {
-  "2026-02": 97_830,
-  "2026-03": 100_220,
-  "2026-04": 101_900,
-  "2026-05": 102_450,
-};
 const MONEY_RATE_PER_KWH = 400;
+// Last 6 real months up to the current one, oldest first -- no future months (no bills exist yet).
+const TREND_MONTHS = MONTH_OPTIONS.filter((m) => m <= CURRENT_MONTH_KEY).slice(0, 6).reverse();
+
+async function fetchAppCalculatedKwh(monthKey: string, region: "mrah" | "printania"): Promise<number> {
+  const response = await fetch(`/api/reports/manager?month=${monthKey}&region=${region}`);
+  if (!response.ok) return 0;
+  const payload = (await response.json()) as { kwhOverview?: { totalKwhProduced?: number } };
+  return Number(payload.kwhOverview?.totalKwhProduced ?? 0);
+}
 
 function parseStoredLossInputs(raw: string | null): Record<string, SavedLossInput> {
   if (!raw) return {};
@@ -51,8 +55,32 @@ function LossMrahReportContent() {
   const [generatedKwh, setGeneratedKwh] = useState("");
   const [validated, setValidated] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [appCalculatedKwh, setAppCalculatedKwh] = useState(0);
+  const [trendAppKwh, setTrendAppKwh] = useState<Record<string, number>>({});
   const storageEntryKey = `${monthKey}|${region}`;
-  const appCalculatedKwh = APP_KWH_BY_MONTH[monthKey] ?? 102_450;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAppCalculatedKwh(monthKey, region === "printania" ? "printania" : "mrah").then((value) => {
+      if (!cancelled) setAppCalculatedKwh(value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [monthKey, region]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      TREND_MONTHS.map(async (month) => [month, await fetchAppCalculatedKwh(month, region === "printania" ? "printania" : "mrah")] as const)
+    ).then((entries) => {
+      if (cancelled) return;
+      setTrendAppKwh(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [region]);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -100,16 +128,15 @@ function LossMrahReportContent() {
 
   const monthlyLossTrendData = useMemo(() => {
     const stored = isHydrated ? parseStoredLossInputs(localStorage.getItem(STORAGE_KEY)) : {};
-    const months = Object.keys(APP_KWH_BY_MONTH).sort();
-    return months.map((month) => {
+    return TREND_MONTHS.map((month) => {
       const entry = stored[`${month}|${region}`];
       const generated = entry?.generatedKwh ?? 0;
-      const appKwh = APP_KWH_BY_MONTH[month];
+      const appKwh = trendAppKwh[month] ?? 0;
       const monthDiff = generated - appKwh;
       const monthLossPercent = generated > 0 ? Number(((monthDiff / generated) * 100).toFixed(2)) : 0;
       return { month, generated, appKwh, diffKwh: monthDiff, lossPercent: monthLossPercent };
     });
-  }, [isHydrated, region]);
+  }, [isHydrated, region, trendAppKwh]);
 
   const hasInput = generatedKwh.trim() !== "";
   const reportedAmount = appCalculatedKwh * MONEY_RATE_PER_KWH;
