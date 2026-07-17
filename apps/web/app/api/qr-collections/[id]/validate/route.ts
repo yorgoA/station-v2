@@ -59,16 +59,20 @@ export async function POST(request: Request, context: Context) {
       .eq("id", logId);
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
-    const paymentDate = new Date().toISOString().slice(0, 10);
-    const { error: paymentError } = await supabase.from("payments").insert({
-      customer_id: log.customer_id,
-      amount: nextCollectedAmount,
-      payment_date: paymentDate,
-      method: "collector_qr",
-      receipt_image_url: log.employee_receipt_image_name ?? null,
-      notes: `Validated from qr_collection_logs:${log.id}`,
+    // record_payment() applies the amount to the bill for (customer, month) and rejects
+    // atomically if it exceeds that bill's remaining balance -- same RPC the manual
+    // employee payment flow uses (see POST /api/payments). A plain insert here would
+    // record money collected without ever reducing what the customer owes.
+    const { error: paymentError } = await supabase.rpc("record_payment", {
+      p_customer_id: log.customer_id,
+      p_month_key: body.monthKey ?? log.month_key,
+      p_amount: nextCollectedAmount,
+      p_method: "collector_qr",
+      p_receipt_image_url: log.employee_receipt_image_name ?? null,
+      p_notes: `Validated from qr_collection_logs:${log.id}`,
+      p_actor_user_id: auth.actor.appUserId
     });
-    if (paymentError) return NextResponse.json({ error: paymentError.message }, { status: 500 });
+    if (paymentError) return NextResponse.json({ error: paymentError.message }, { status: 400 });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
