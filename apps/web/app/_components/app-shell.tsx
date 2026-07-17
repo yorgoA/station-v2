@@ -235,7 +235,6 @@ export function AppShell({
           {sidebarOpen ? "✕" : "☰"}
         </button>
         <h2>{resolvedAppName}</h2>
-        <p className="muted">Mock UX prototype</p>
         <nav>
           {resolvedNavItems.map((item) => {
             const isActive = activeHref
