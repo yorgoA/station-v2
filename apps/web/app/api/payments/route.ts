@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from("payments")
-      .select("id, amount, payment_date, receipt_image_url, customers!inner(full_name, regions!inner(code))")
+      .select("id, amount, payment_date, receipt_image_url, customers!inner(id, full_name, regions!inner(code))")
       .order("payment_date", { ascending: false });
 
     if (month && month !== "all") query = query.gte("payment_date", `${month}-01`).lte("payment_date", `${month}-31`);
@@ -39,8 +39,8 @@ export async function GET(request: Request) {
     };
     const readCustomer = (
       value:
-        | { full_name: string; regions?: { code: string } | Array<{ code: string }> | null }
-        | Array<{ full_name: string; regions?: { code: string } | Array<{ code: string }> | null }>
+        | { id: string; full_name: string; regions?: { code: string } | Array<{ code: string }> | null }
+        | Array<{ id: string; full_name: string; regions?: { code: string } | Array<{ code: string }> | null }>
         | null
     ) => {
       if (Array.isArray(value)) return value[0] ?? null;
@@ -50,12 +50,13 @@ export async function GET(request: Request) {
     const payments = (data ?? []).map((row) => {
       const customer = readCustomer(
         row.customers as
-          | { full_name: string; regions?: { code: string } | Array<{ code: string }> | null }
-          | Array<{ full_name: string; regions?: { code: string } | Array<{ code: string }> | null }>
+          | { id: string; full_name: string; regions?: { code: string } | Array<{ code: string }> | null }
+          | Array<{ id: string; full_name: string; regions?: { code: string } | Array<{ code: string }> | null }>
           | null
       );
       return {
         id: row.id,
+        customerId: customer?.id ?? "",
         customerName: customer?.full_name ?? "-",
         region: (readRegion(customer?.regions)?.code as "mrah" | "printania" | undefined) ?? "mrah",
         amount: Number(row.amount),

@@ -13,6 +13,7 @@ import {
   writeBillingDraftRows,
 } from "../../../lib/billing/draft-storage";
 import { formatEntryUnlockDate, isEntryWindowOpen } from "../../../lib/billing/entry-window";
+import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
 import { AppShell } from "../../_components/app-shell";
 
 type RowErrors = {
@@ -44,7 +45,7 @@ type BatchReviewItem = {
 function BillingEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [monthKey, setMonthKey] = useState("2026-04");
+  const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
   const [rows, setRows] = useState<BillingEntryRow[]>([]);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -496,8 +497,11 @@ function BillingEntryContent() {
               value={monthKey}
               onChange={(e) => setMonthKey(e.target.value)}
             >
-              <option value="2026-05">2026-05</option>
-              <option value="2026-04">2026-04</option>
+              {MONTH_OPTIONS.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
             </select>
           </label>
           <label htmlFor="regionFilter">

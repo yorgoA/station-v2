@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
 import { type EmployeePayment, type EmployeeRegion } from "../../../lib/types/employee";
+import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
 
 export default function EmployeePaymentsPage() {
+  const router = useRouter();
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [monthKey, setMonthKey] = useState("2026-05");
+  const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
   const [amount, setAmount] = useState("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -25,7 +28,7 @@ export default function EmployeePaymentsPage() {
   >([]);
   const [search, setSearch] = useState("");
   const [regionFilter, setRegionFilter] = useState<"all" | EmployeeRegion>("all");
-  const [monthFilter, setMonthFilter] = useState<"all" | "2026-05" | "2026-04" | "2026-03">("all");
+  const [monthFilter, setMonthFilter] = useState<"all" | string>("all");
   const [message, setMessage] = useState("");
   useEffect(() => {
     fetch(`/api/customers?region=all&month=${encodeURIComponent(monthKey)}`)
@@ -138,8 +141,9 @@ export default function EmployeePaymentsPage() {
     setMessage(`Bill PDF generation is not wired yet for payment ${paymentId}.`);
   }
 
-  function openCustomerFromPayment(customerName: string) {
-    setMessage(`Open customer flow is not wired yet for ${customerName}.`);
+  function openCustomerFromPayment(customerId: string) {
+    if (!customerId) return;
+    router.push(`/employee/customers/${customerId}`);
   }
 
   return (
@@ -164,9 +168,11 @@ export default function EmployeePaymentsPage() {
           <label htmlFor="payment-month">
             Month
             <select id="payment-month" value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
-              <option value="2026-05">2026-05</option>
-              <option value="2026-04">2026-04</option>
-              <option value="2026-03">2026-03</option>
+              {MONTH_OPTIONS.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
             </select>
           </label>
           <label htmlFor="payment-amount">
@@ -244,12 +250,14 @@ export default function EmployeePaymentsPage() {
             <select
               id="payments-month-filter"
               value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value as "all" | "2026-05" | "2026-04" | "2026-03")}
+              onChange={(e) => setMonthFilter(e.target.value)}
             >
               <option value="all">All</option>
-              <option value="2026-05">2026-05</option>
-              <option value="2026-04">2026-04</option>
-              <option value="2026-03">2026-03</option>
+              {MONTH_OPTIONS.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -273,7 +281,7 @@ export default function EmployeePaymentsPage() {
               <tr
                 key={p.id}
                 className="clickable-row"
-                onClick={() => openCustomerFromPayment(p.customerName)}
+                onClick={() => openCustomerFromPayment(p.customerId)}
               >
                 <td>{p.date}</td>
                 <td>{p.customerName}</td>

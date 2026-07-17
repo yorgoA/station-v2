@@ -28,6 +28,7 @@ export type EmployeeCustomer = {
 
 export type EmployeePayment = {
   id: string;
+  customerId: string;
   customerName: string;
   region: EmployeeRegion;
   amount: number;

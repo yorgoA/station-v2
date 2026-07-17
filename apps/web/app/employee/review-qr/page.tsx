@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
+import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
 
 type QrCollectionLog = {
   id: string;
@@ -29,13 +30,13 @@ type QrCollectionLog = {
 export default function EmployeeReviewQrPage() {
   const [logs, setLogs] = useState<QrCollectionLog[]>([]);
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
-  const [monthFilter, setMonthFilter] = useState<"all" | "2026-05" | "2026-04">("all");
+  const [monthFilter, setMonthFilter] = useState<"all" | string>("all");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [selectedLog, setSelectedLog] = useState<QrCollectionLog | null>(null);
   const [modifyMode, setModifyMode] = useState(false);
   const [editCustomerNumber, setEditCustomerNumber] = useState("");
-  const [editMonthKey, setEditMonthKey] = useState("2026-05");
+  const [editMonthKey, setEditMonthKey] = useState(CURRENT_MONTH_KEY);
   const [editCollectedAmount, setEditCollectedAmount] = useState("");
   const [editCurrency, setEditCurrency] = useState<"LBP" | "USD">("LBP");
   const [modificationReason, setModificationReason] = useState("");
@@ -182,11 +183,14 @@ export default function EmployeeReviewQrPage() {
             <select
               id="review-qr-month"
               value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value as "all" | "2026-05" | "2026-04")}
+              onChange={(e) => setMonthFilter(e.target.value)}
             >
               <option value="all">All</option>
-              <option value="2026-05">2026-05</option>
-              <option value="2026-04">2026-04</option>
+              {MONTH_OPTIONS.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -303,8 +307,11 @@ export default function EmployeeReviewQrPage() {
                       <label>
                         Bill month
                         <select value={editMonthKey} onChange={(e) => setEditMonthKey(e.target.value)}>
-                          <option value="2026-05">2026-05</option>
-                          <option value="2026-04">2026-04</option>
+                          {MONTH_OPTIONS.map((month) => (
+                            <option key={month} value={month}>
+                              {month}
+                            </option>
+                          ))}
                         </select>
                       </label>
                       <label>

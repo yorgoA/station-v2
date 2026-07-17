@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../_components/app-shell";
 import { managerNavItems } from "../../_components/role-nav";
+import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
 
 export default function ManagerDashboardPage() {
   const [showPendingDetails, setShowPendingDetails] = useState(false);
@@ -18,7 +19,7 @@ export default function ManagerDashboardPage() {
       managerNote?: string;
     }>
   >([]);
-  const [monthKey, setMonthKey] = useState("2026-05");
+  const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
 
   useEffect(() => {
@@ -104,8 +105,11 @@ export default function ManagerDashboardPage() {
               value={monthKey}
               onChange={(e) => setMonthKey(e.target.value)}
             >
-              <option value="2026-05">2026-05</option>
-              <option value="2026-04">2026-04</option>
+              {MONTH_OPTIONS.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
             </select>
           </label>
           <label htmlFor="manager-dashboard-region">

@@ -5,11 +5,12 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { type BillingEntryRow } from "../../../lib/types/billing";
 import { formatEntryUnlockDate, isEntryWindowOpen } from "../../../lib/billing/entry-window";
+import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
 import { AppShell } from "../../_components/app-shell";
 
 function BillingPreviewContent() {
   const searchParams = useSearchParams();
-  const [monthKey, setMonthKey] = useState("2026-04");
+  const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
   const [filteredRows, setFilteredRows] = useState<BillingEntryRow[]>([]);
   const [workflowStatusByPeriod, setWorkflowStatusByPeriod] = useState<Map<string, string>>(
@@ -283,8 +284,11 @@ function BillingPreviewContent() {
             value={monthKey}
             onChange={(e) => setMonthKey(e.target.value)}
           >
-            <option value="2026-05">2026-05</option>
-            <option value="2026-04">2026-04</option>
+            {MONTH_OPTIONS.map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
           </select>
         </label>{" "}
         <label htmlFor="preview-region-filter">

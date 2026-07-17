@@ -1,3 +1,5 @@
-export const REPORT_MONTH_OPTIONS = ["2026-05", "2026-04", "2026-03", "2026-02"] as const;
-export const DEFAULT_REPORT_MONTH = REPORT_MONTH_OPTIONS[0];
+import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "./months";
+
+export const REPORT_MONTH_OPTIONS = MONTH_OPTIONS;
+export const DEFAULT_REPORT_MONTH = CURRENT_MONTH_KEY;
 export const DEFAULT_REPORT_REGION = "all" as const;

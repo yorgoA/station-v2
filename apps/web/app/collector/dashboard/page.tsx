@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { collectorNavItems } from "../../_components/role-nav";
 import { type EmployeeRegion } from "../../../lib/types/employee";
+import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
 
 export default function CollectorDashboardPage() {
   const router = useRouter();
   const [regionFilter, setRegionFilter] = useState<"all" | EmployeeRegion>("all");
-  const [monthKey, setMonthKey] = useState("2026-05");
+  const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
   const [filteredCustomers, setFilteredCustomers] = useState<Array<{
     id: string;
     name: string;
@@ -83,8 +84,11 @@ export default function CollectorDashboardPage() {
               value={monthKey}
               onChange={(e) => setMonthKey(e.target.value)}
             >
-              <option value="2026-05">2026-05</option>
-              <option value="2026-04">2026-04</option>
+              {MONTH_OPTIONS.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
             </select>
           </label>
         </div>
