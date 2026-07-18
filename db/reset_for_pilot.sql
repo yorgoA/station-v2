@@ -19,9 +19,9 @@ begin;
 
 -- Three separate immutability triggers protect approved/priced data and must
 -- all be disabled for this one operation, then re-enabled immediately after:
---   trg_block_bill_pricing_mutation    on bills              (blocks DELETE outright)
---   trg_block_approved_batch_updates   on billing_batches     (blocks UPDATE/DELETE once approved_posted)
---   trg_block_approved_item_updates    on billing_batch_items (blocks INSERT/UPDATE/DELETE once parent batch is approved_posted)
+--   trg_block_bill_pricing_mutation    on bills             (blocks DELETE outright)
+--   trg_block_approved_batch_updates   on billing_batches    (blocks UPDATE/DELETE once approved_posted)
+--   trg_block_approved_item_updates    on billing_batch_items(blocks INSERT/UPDATE/DELETE once parent batch is approved_posted)
 alter table bills disable trigger trg_block_bill_pricing_mutation;
 alter table billing_batches disable trigger trg_block_approved_batch_updates;
 alter table billing_batch_items disable trigger trg_block_approved_item_updates;
