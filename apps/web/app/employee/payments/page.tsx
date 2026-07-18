@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
 import { type EmployeePayment, type EmployeeRegion } from "../../../lib/types/employee";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 export default function EmployeePaymentsPage() {
   const router = useRouter();
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const months = useAvailableMonths();
   const [amount, setAmount] = useState("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -168,7 +170,7 @@ export default function EmployeePaymentsPage() {
           <label htmlFor="payment-month">
             Month
             <select id="payment-month" value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
-              {MONTH_OPTIONS.map((month) => (
+              {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>
@@ -253,7 +255,7 @@ export default function EmployeePaymentsPage() {
               onChange={(e) => setMonthFilter(e.target.value)}
             >
               <option value="all">All</option>
-              {MONTH_OPTIONS.map((month) => (
+              {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>

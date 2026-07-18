@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
 import { type EmployeeRegion } from "../../../lib/types/employee";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 export default function EmployeeDashboardPage() {
   const [notifications, setNotifications] = useState<
@@ -13,6 +14,7 @@ export default function EmployeeDashboardPage() {
   >([]);
   const [regionFilter, setRegionFilter] = useState<"all" | EmployeeRegion>("all");
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const months = useAvailableMonths();
   const [pendingQrValidations] = useState(0);
   const [changeRequestedCount, setChangeRequestedCount] = useState(0);
 
@@ -135,7 +137,7 @@ export default function EmployeeDashboardPage() {
               value={monthKey}
               onChange={(e) => setMonthKey(e.target.value)}
             >
-              {MONTH_OPTIONS.map((month) => (
+              {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>

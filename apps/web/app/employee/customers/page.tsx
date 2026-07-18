@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
 import { type EmployeeBillingType, type EmployeeRegion, type EmployeeStatus } from "../../../lib/types/employee";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type EmployeeCustomerRow = {
   id: string;
@@ -25,6 +26,7 @@ export default function EmployeeCustomersPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const months = useAvailableMonths();
   const [region, setRegion] = useState<"all" | EmployeeRegion>("all");
   const [status, setStatus] = useState<"all" | EmployeeStatus>("all");
   const [billingType, setBillingType] = useState<"all" | EmployeeBillingType | "free">("all");
@@ -197,7 +199,7 @@ export default function EmployeeCustomersPage() {
                 value={monthKey}
                 onChange={(e) => setMonthKey(e.target.value)}
               >
-                {MONTH_OPTIONS.map((month) => (
+                {months.map((month) => (
                   <option key={month} value={month}>
                     {month}
                   </option>

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../_components/app-shell";
 import { managerNavItems } from "../../_components/role-nav";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 export default function ManagerDashboardPage() {
   const [showPendingDetails, setShowPendingDetails] = useState(false);
@@ -20,6 +21,7 @@ export default function ManagerDashboardPage() {
     }>
   >([]);
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const months = useAvailableMonths();
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
 
   useEffect(() => {
@@ -105,7 +107,7 @@ export default function ManagerDashboardPage() {
               value={monthKey}
               onChange={(e) => setMonthKey(e.target.value)}
             >
-              {MONTH_OPTIONS.map((month) => (
+              {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>

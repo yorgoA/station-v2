@@ -36,6 +36,15 @@ export default function ManagerSettingsPage() {
             Open Accounts
           </Link>
         </div>
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Billing Calendar</h3>
+          <p className="muted">
+            Months normally open for entry on the 27th. Force a month open early or closed early here.
+          </p>
+          <Link href="/manager/settings/billing-calendar" className="action-link-btn">
+            Open Billing Calendar
+          </Link>
+        </div>
       </div>
     </AppShell>
   );

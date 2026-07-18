@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { collectorNavItems } from "../../_components/role-nav";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type QrCollectionLog = {
   id: string;
@@ -33,6 +34,7 @@ function CollectorScanContent() {
   const searchParams = useSearchParams();
   const [qrInput, setQrInput] = useState("");
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const months = useAvailableMonths();
   const [amount, setAmount] = useState("");
   const [amountCurrency, setAmountCurrency] = useState<"LBP" | "USD">("LBP");
   const [customers, setCustomers] = useState<ScanCustomer[]>([]);
@@ -160,7 +162,7 @@ function CollectorScanContent() {
           <label htmlFor="collector-month">
             Bill month
             <select id="collector-month" value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
-              {MONTH_OPTIONS.map((month) => (
+              {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>

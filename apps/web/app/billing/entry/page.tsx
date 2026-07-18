@@ -12,8 +12,8 @@ import {
   writeBillingDraftImages,
   writeBillingDraftRows,
 } from "../../../lib/billing/draft-storage";
-import { formatEntryUnlockDate, isEntryWindowOpen } from "../../../lib/billing/entry-window";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 import { AppShell } from "../../_components/app-shell";
 
 type RowErrors = {
@@ -46,6 +46,7 @@ function BillingEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const months = useAvailableMonths();
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
   const [rows, setRows] = useState<BillingEntryRow[]>([]);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -65,8 +66,29 @@ function BillingEntryContent() {
   const [validatedFixRows, setValidatedFixRows] = useState<Record<string, boolean>>({});
 
   const periodKey = `${monthKey}|${regionFilter}`;
-  const entryWindowOpen = isEntryWindowOpen(monthKey);
-  const unlockDateLabel = formatEntryUnlockDate(monthKey);
+  const [entryWindowOpen, setEntryWindowOpen] = useState(false);
+  const [unlockDateLabel, setUnlockDateLabel] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/settings/billing-lock?month=${encodeURIComponent(monthKey)}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to check entry lock.");
+        const payload = (await response.json()) as { isOpen?: boolean; unlockDateLabel?: string };
+        if (cancelled) return;
+        setEntryWindowOpen(Boolean(payload.isOpen));
+        setUnlockDateLabel(payload.unlockDateLabel ?? "");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setEntryWindowOpen(false);
+        setUnlockDateLabel("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [monthKey]);
+
   const isChangesRequested = serverCurrentStatus === "changes_requested";
   const derivedStatus = serverCurrentStatus;
   const isCurrentPeriodSubmitted =
@@ -497,7 +519,7 @@ function BillingEntryContent() {
               value={monthKey}
               onChange={(e) => setMonthKey(e.target.value)}
             >
-              {MONTH_OPTIONS.map((month) => (
+              {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>

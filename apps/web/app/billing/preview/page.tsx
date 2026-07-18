@@ -4,13 +4,14 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { type BillingEntryRow } from "../../../lib/types/billing";
-import { formatEntryUnlockDate, isEntryWindowOpen } from "../../../lib/billing/entry-window";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 import { AppShell } from "../../_components/app-shell";
 
 function BillingPreviewContent() {
   const searchParams = useSearchParams();
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const months = useAvailableMonths();
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
   const [filteredRows, setFilteredRows] = useState<BillingEntryRow[]>([]);
   const [workflowStatusByPeriod, setWorkflowStatusByPeriod] = useState<Map<string, string>>(
@@ -24,8 +25,29 @@ function BillingPreviewContent() {
   }>({ open: false, title: "", rows: [] });
   const regionOptions: Array<"mrah" | "printania"> = ["mrah", "printania"];
   const periodKey = `${monthKey}|${regionFilter}`;
-  const entryWindowOpen = isEntryWindowOpen(monthKey);
-  const unlockDateLabel = formatEntryUnlockDate(monthKey);
+  const [entryWindowOpen, setEntryWindowOpen] = useState(false);
+  const [unlockDateLabel, setUnlockDateLabel] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/settings/billing-lock?month=${encodeURIComponent(monthKey)}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to check entry lock.");
+        const payload = (await response.json()) as { isOpen?: boolean; unlockDateLabel?: string };
+        if (cancelled) return;
+        setEntryWindowOpen(Boolean(payload.isOpen));
+        setUnlockDateLabel(payload.unlockDateLabel ?? "");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setEntryWindowOpen(false);
+        setUnlockDateLabel("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [monthKey]);
+
   const isCurrentPeriodSubmitted =
     regionFilter !== "all" &&
     ["pending_review", "approved_posted"].includes(workflowStatusByPeriod.get(periodKey) ?? "");
@@ -191,8 +213,7 @@ function BillingPreviewContent() {
             ? "in_progress"
             : "ready_to_submit";
     const regionWorkflowStatus = workflowStatusByPeriod.get(regionPeriodKey);
-    const regionEntryWindowOpen = isEntryWindowOpen(monthKey);
-    const regionIsCalendarLocked = !regionEntryWindowOpen && !regionWorkflowStatus;
+    const regionIsCalendarLocked = !entryWindowOpen && !regionWorkflowStatus;
     const regionTone =
       regionWorkflowStatus === "approved_posted"
         ? "success"
@@ -284,7 +305,7 @@ function BillingPreviewContent() {
             value={monthKey}
             onChange={(e) => setMonthKey(e.target.value)}
           >
-            {MONTH_OPTIONS.map((month) => (
+            {months.map((month) => (
               <option key={month} value={month}>
                 {month}
               </option>

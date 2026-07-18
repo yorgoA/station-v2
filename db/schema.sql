@@ -283,6 +283,20 @@ create index if not exists idx_generator_readings_month_region
   on generator_monthly_readings(month_key, region_id);
 
 -- ==========
+-- Billing-entry month lock override
+-- ==========
+-- Default rule (apps/web/lib/billing/entry-window.ts) opens a month for entry
+-- starting on the 27th of that same month. This table lets a manager force a
+-- month open early (e.g. a pilot/test run before the 27th) or force it closed
+-- even after the 27th. No row for a month = fall back to the calendar rule.
+create table if not exists billing_month_locks (
+  month_key text primary key check (month_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
+  override text not null check (override in ('unlocked', 'locked')),
+  updated_by_user_id uuid references app_users(id),
+  updated_at timestamptz not null default now()
+);
+
+-- ==========
 -- Transition + immutability safety
 -- ==========
 create or replace function validate_billing_batch_transition()
@@ -696,6 +710,11 @@ create trigger trg_set_updated_at_qr_collection_logs
 before update on qr_collection_logs
 for each row execute function set_updated_at();
 
+drop trigger if exists trg_set_updated_at_billing_month_locks on billing_month_locks;
+create trigger trg_set_updated_at_billing_month_locks
+before update on billing_month_locks
+for each row execute function set_updated_at();
+
 -- ==========
 -- Row Level Security: locks every table down for the anon/publishable key
 -- (public by design, embedded in every browser bundle). No policies are
@@ -719,3 +738,4 @@ alter table bills enable row level security;
 alter table payments enable row level security;
 alter table qr_collection_logs enable row level security;
 alter table generator_monthly_readings enable row level security;
+alter table billing_month_locks enable row level security;

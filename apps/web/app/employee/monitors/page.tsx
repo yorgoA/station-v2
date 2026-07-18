@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type MonitorRow = {
   id: string;
@@ -22,6 +23,7 @@ type MonitorRow = {
 export default function EmployeeMonitorsPage() {
   const router = useRouter();
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const months = useAvailableMonths();
   const [region, setRegion] = useState<"all" | "mrah" | "printania">("all");
   const [rows, setRows] = useState<MonitorRow[]>([]);
 
@@ -47,7 +49,7 @@ export default function EmployeeMonitorsPage() {
           <label>
             Month
             <select value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
-              {MONTH_OPTIONS.map((month) => (
+              {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>

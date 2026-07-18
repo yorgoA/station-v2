@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
-import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../lib/constants/months";
+import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type QrCollectionLog = {
   id: string;
@@ -31,6 +32,7 @@ export default function EmployeeReviewQrPage() {
   const [logs, setLogs] = useState<QrCollectionLog[]>([]);
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
   const [monthFilter, setMonthFilter] = useState<"all" | string>("all");
+  const months = useAvailableMonths();
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [selectedLog, setSelectedLog] = useState<QrCollectionLog | null>(null);
@@ -186,7 +188,7 @@ export default function EmployeeReviewQrPage() {
               onChange={(e) => setMonthFilter(e.target.value)}
             >
               <option value="all">All</option>
-              {MONTH_OPTIONS.map((month) => (
+              {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>
@@ -307,7 +309,7 @@ export default function EmployeeReviewQrPage() {
                       <label>
                         Bill month
                         <select value={editMonthKey} onChange={(e) => setEditMonthKey(e.target.value)}>
-                          {MONTH_OPTIONS.map((month) => (
+                          {months.map((month) => (
                             <option key={month} value={month}>
                               {month}
                             </option>

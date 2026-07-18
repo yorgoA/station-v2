@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../lib/auth/require-role";
+import { getEntryLockState } from "../../../../lib/billing/entry-window";
 
 type SubmissionRowInput = {
   customerNumber: string;
@@ -33,6 +34,19 @@ export async function POST(request: Request) {
 
     const supabase = createSupabaseAdminClient();
     const actorUserId = auth.actor.appUserId;
+
+    // Managers can always submit/correct; employees are gated by the entry-window lock
+    // (only enforced client-side before this -- an employee could otherwise bypass the
+    // UI's lock banner with a raw API call).
+    if (auth.actor.role === "employee") {
+      const lockState = await getEntryLockState(supabase, body.monthKey);
+      if (!lockState.isOpen) {
+        return NextResponse.json(
+          { error: `${body.monthKey} is locked for entry until ${lockState.unlockDateLabel}.` },
+          { status: 403 }
+        );
+      }
+    }
 
     const { data: region, error: regionError } = await supabase
       .from("regions")

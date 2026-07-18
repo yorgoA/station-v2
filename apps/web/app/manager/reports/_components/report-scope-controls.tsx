@@ -3,11 +3,8 @@
 import { type ReadonlyURLSearchParams, usePathname, useRouter } from "next/navigation";
 import { type ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import {
-  DEFAULT_REPORT_MONTH,
-  DEFAULT_REPORT_REGION,
-  REPORT_MONTH_OPTIONS,
-} from "../../../../lib/constants/reports";
+import { DEFAULT_REPORT_MONTH, DEFAULT_REPORT_REGION } from "../../../../lib/constants/reports";
+import { useAvailableMonths } from "../../../../lib/hooks/use-available-months";
 import { type ReportMonthKey, type ReportRegionFilter } from "../../../../lib/types/reports";
 
 type UseReportScopeArgs = {
@@ -61,6 +58,7 @@ export function ReportScopeFilters({
   allRegionsLabel = "All regions",
   children,
 }: ReportScopeFiltersProps) {
+  const months = useAvailableMonths();
   return (
     <div className="filters-grid filters-grid-pro">
       <label htmlFor={`${idPrefix}-month`}>
@@ -70,7 +68,7 @@ export function ReportScopeFilters({
           value={monthKey}
           onChange={(e) => onMonthChange(e.target.value)}
         >
-          {REPORT_MONTH_OPTIONS.map((month) => (
+          {months.map((month) => (
             <option key={month} value={month}>
               {month}
             </option>
