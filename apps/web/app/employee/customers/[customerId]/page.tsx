@@ -51,7 +51,6 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
   const [buildingMode, setBuildingMode] = useState<"existing" | "new">("existing");
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
-  const [linkedCustomerId, setLinkedCustomerId] = useState("");
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,7 +87,6 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
           setCustomerNumber(p.customer.customerNumber ?? "");
           setBoxNumber(p.customer.boxNumber ?? "");
           setBuilding(p.customer.building ?? "");
-          setLinkedCustomerId(p.customer.linkedCustomerId ?? "");
         }
       })
       .catch(() => setPayload(null))
@@ -114,11 +112,6 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
     () => Array.from(new Set(allCustomers.map((c) => String(c.building ?? "").trim()).filter(Boolean))),
     [allCustomers]
   );
-  const linkableCustomerOptions = useMemo(
-    () => allCustomers.filter((candidate) => !candidate.isMonitor && candidate.id !== customer?.id),
-    [allCustomers, customer?.id]
-  );
-
   if (loading) {
     return (
       <AppShell title="Loading..." navItems={employeeNavItems}>
@@ -143,16 +136,16 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
       setMessage("Confirm the new box/building name above before saving.");
       return;
     }
+    // Employees can only edit phone/boxNumber/building/status (enforced server-side too) --
+    // name, customer number, and monitor linkage are manager-only, so those are never sent
+    // here even though earlier code used to include them unconditionally and get rejected.
     const response = await fetch(`/api/customers/${params.customerId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         section: "customer",
-        fullName,
-        customerNumber,
         boxNumber,
         building,
-        linkedCustomerId: customer?.isMonitor ? linkedCustomerId : undefined,
       }),
     });
     const res = (await response.json()) as { error?: string };
@@ -166,16 +159,8 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
             ...prev,
             customer: {
               ...prev.customer,
-              fullName,
-              customerNumber,
               boxNumber,
               building,
-              linkedCustomerId: customer?.isMonitor ? linkedCustomerId : prev.customer.linkedCustomerId,
-              linkedCustomerName: customer?.isMonitor
-                ? (linkableCustomerOptions.find((opt) => opt.id === linkedCustomerId)
-                    ? `${linkableCustomerOptions.find((opt) => opt.id === linkedCustomerId)?.fullName ?? ""} (${linkableCustomerOptions.find((opt) => opt.id === linkedCustomerId)?.customerNumber ?? ""})`
-                    : "Missing link")
-                : prev.customer.linkedCustomerName,
             },
           }
         : prev
@@ -199,7 +184,10 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
           <div className="filters-grid filters-grid-pro">
             <label>
               Name
-              <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              <input value={fullName} readOnly disabled />
+              <p className="muted" style={{ margin: "4px 0 0" }}>
+                Name is manager-only — edit under Manager → Customers.
+              </p>
             </label>
             <label>
               Number
@@ -208,14 +196,10 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
             {customer.isMonitor ? (
               <label>
                 Linked To
-                <select value={linkedCustomerId} onChange={(e) => setLinkedCustomerId(e.target.value)}>
-                  <option value="">No linked customer</option>
-                  {linkableCustomerOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.fullName} ({opt.customerNumber})
-                    </option>
-                  ))}
-                </select>
+                <input value={customer.linkedCustomerName || "Missing link"} readOnly disabled />
+                <p className="muted" style={{ margin: "4px 0 0" }}>
+                  Monitor linkage is manager-only — edit under Manager → Customers.
+                </p>
               </label>
             ) : null}
             <label>
