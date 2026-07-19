@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../../_components/app-shell";
 import { employeeNavItems } from "../../../_components/role-nav";
+import { SimilarValueGuard } from "../../../_components/similar-value-guard";
 type Props = { params: { customerId: string } };
 
 export default function EmployeeCustomerDetailsPage({ params }: Props) {
@@ -54,6 +55,8 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [boxNameBlocking, setBoxNameBlocking] = useState(false);
+  const [buildingNameBlocking, setBuildingNameBlocking] = useState(false);
 
   useEffect(() => {
     fetch("/api/customers?region=all")
@@ -136,6 +139,10 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
 
   async function saveBasicInfo() {
     setMessage("");
+    if (boxNameBlocking || buildingNameBlocking) {
+      setMessage("Confirm the new box/building name above before saving.");
+      return;
+    }
     const response = await fetch(`/api/customers/${params.customerId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -231,10 +238,24 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                 onClick={() => {
                   setBoxMode((m) => (m === "existing" ? "new" : "existing"));
                   setBoxNumber("");
+                  setBoxNameBlocking(false);
                 }}
               >
                 {boxMode === "existing" ? "Add New Box" : "Use Existing Box"}
               </button>
+              {boxMode === "new" ? (
+                <SimilarValueGuard
+                  label="box"
+                  value={boxNumber}
+                  candidates={boxOptions}
+                  onUseExisting={(existing) => {
+                    setBoxNumber(existing);
+                    setBoxMode("existing");
+                    setBoxNameBlocking(false);
+                  }}
+                  onBlockingChange={setBoxNameBlocking}
+                />
+              ) : null}
             </label>
             <label>
               Building
@@ -256,10 +277,24 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                 onClick={() => {
                   setBuildingMode((m) => (m === "existing" ? "new" : "existing"));
                   setBuilding("");
+                  setBuildingNameBlocking(false);
                 }}
               >
                 {buildingMode === "existing" ? "Add New Building" : "Use Existing Building"}
               </button>
+              {buildingMode === "new" ? (
+                <SimilarValueGuard
+                  label="building"
+                  value={building}
+                  candidates={buildingOptions}
+                  onUseExisting={(existing) => {
+                    setBuilding(existing);
+                    setBuildingMode("existing");
+                    setBuildingNameBlocking(false);
+                  }}
+                  onBlockingChange={setBuildingNameBlocking}
+                />
+              ) : null}
             </label>
           </div>
         ) : (
@@ -284,7 +319,13 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
               <button type="button" className="danger-btn" onClick={() => setIsEditing(false)}>
                 Cancel
               </button>{" "}
-              <button type="button" className="success-btn" onClick={saveBasicInfo}>
+              <button
+                type="button"
+                className="success-btn"
+                onClick={saveBasicInfo}
+                disabled={boxNameBlocking || buildingNameBlocking}
+                title={boxNameBlocking || buildingNameBlocking ? "Confirm the new box/building name above first" : undefined}
+              >
                 Save
               </button>
             </>

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../../../_components/app-shell";
 import { employeeNavItems } from "../../../_components/role-nav";
+import { SimilarValueGuard } from "../../../_components/similar-value-guard";
 
 export default function EmployeeAddCustomerPage() {
   const router = useRouter();
@@ -23,6 +24,8 @@ export default function EmployeeAddCustomerPage() {
   const [buildingMode, setBuildingMode] = useState<"existing" | "new">("existing");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [boxNameBlocking, setBoxNameBlocking] = useState(false);
+  const [buildingNameBlocking, setBuildingNameBlocking] = useState(false);
 
   useEffect(() => {
     fetch("/api/customers?region=all")
@@ -56,6 +59,10 @@ export default function EmployeeAddCustomerPage() {
     }
     if (billingType === "fixed-monthly" && !(Number(fixedMonthlyAmount) > 0)) {
       setMessage("Fixed monthly amount must be a positive number for fixed-monthly billing.");
+      return;
+    }
+    if (boxNameBlocking || buildingNameBlocking) {
+      setMessage("Confirm the new box/building name above before creating this customer.");
       return;
     }
     setIsSubmitting(true);
@@ -168,10 +175,24 @@ export default function EmployeeAddCustomerPage() {
               onClick={() => {
                 setBoxMode((m) => (m === "existing" ? "new" : "existing"));
                 setBoxNumber("");
+                setBoxNameBlocking(false);
               }}
             >
               {boxMode === "existing" ? "Add New Box" : "Use Existing Box"}
             </button>
+            {boxMode === "new" ? (
+              <SimilarValueGuard
+                label="box"
+                value={boxNumber}
+                candidates={boxOptions}
+                onUseExisting={(existing) => {
+                  setBoxNumber(existing);
+                  setBoxMode("existing");
+                  setBoxNameBlocking(false);
+                }}
+                onBlockingChange={setBoxNameBlocking}
+              />
+            ) : null}
           </label>
           <label>
             Building
@@ -193,10 +214,24 @@ export default function EmployeeAddCustomerPage() {
               onClick={() => {
                 setBuildingMode((m) => (m === "existing" ? "new" : "existing"));
                 setBuilding("");
+                setBuildingNameBlocking(false);
               }}
             >
               {buildingMode === "existing" ? "Add New Building" : "Use Existing Building"}
             </button>
+            {buildingMode === "new" ? (
+              <SimilarValueGuard
+                label="building"
+                value={building}
+                candidates={buildingOptions}
+                onUseExisting={(existing) => {
+                  setBuilding(existing);
+                  setBuildingMode("existing");
+                  setBuildingNameBlocking(false);
+                }}
+                onBlockingChange={setBuildingNameBlocking}
+              />
+            ) : null}
           </label>
         </div>
         <p className="muted" style={{ marginTop: 8 }}>
@@ -204,7 +239,12 @@ export default function EmployeeAddCustomerPage() {
         </p>
         {message ? <p className="muted">{message}</p> : null}
         <div className="card-actions-right">
-          <button type="button" onClick={onSubmit} disabled={isSubmitting}>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={isSubmitting || boxNameBlocking || buildingNameBlocking}
+            title={boxNameBlocking || buildingNameBlocking ? "Confirm the new box/building name above first" : undefined}
+          >
             {isSubmitting ? "Creating..." : "Create Customer"}
           </button>
         </div>

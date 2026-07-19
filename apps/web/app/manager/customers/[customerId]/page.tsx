@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
+import { SimilarValueGuard } from "../../../_components/similar-value-guard";
 
 type Props = { params: { customerId: string } };
 
@@ -61,6 +62,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
   const [allCustomers, setAllCustomers] = useState<Array<{ boxNumber?: string; building?: string }>>([]);
   const [boxMode, setBoxMode] = useState<"existing" | "new">("existing");
   const [buildingMode, setBuildingMode] = useState<"existing" | "new">("existing");
+  const [boxNameBlocking, setBoxNameBlocking] = useState(false);
+  const [buildingNameBlocking, setBuildingNameBlocking] = useState(false);
   const [status, setStatus] = useState("active");
   const [billingPlan, setBillingPlan] = useState<CustomerDetails["billingType"]>("metered");
   const [subscribedAmpere, setSubscribedAmpere] = useState("");
@@ -185,6 +188,10 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
     }
     if (billingPlan === "fixed-monthly" && !(Number(fixedMonthlyAmount) > 0)) {
       setMessage("Fixed monthly amount must be a positive number for fixed-monthly billing.");
+      return;
+    }
+    if (boxNameBlocking || buildingNameBlocking) {
+      setMessage("Confirm the new box/building name above before saving.");
       return;
     }
     const before = customer;
@@ -363,10 +370,24 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 onClick={() => {
                   setBoxMode((m) => (m === "existing" ? "new" : "existing"));
                   setBoxNumber("");
+                  setBoxNameBlocking(false);
                 }}
               >
                 {boxMode === "existing" ? "Add New Box" : "Use Existing Box"}
               </button>
+              {boxMode === "new" ? (
+                <SimilarValueGuard
+                  label="box"
+                  value={boxNumber}
+                  candidates={boxOptions}
+                  onUseExisting={(existing) => {
+                    setBoxNumber(existing);
+                    setBoxMode("existing");
+                    setBoxNameBlocking(false);
+                  }}
+                  onBlockingChange={setBoxNameBlocking}
+                />
+              ) : null}
             </label>
             <label>
               Building
@@ -388,10 +409,24 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 onClick={() => {
                   setBuildingMode((m) => (m === "existing" ? "new" : "existing"));
                   setBuilding("");
+                  setBuildingNameBlocking(false);
                 }}
               >
                 {buildingMode === "existing" ? "Add New Building" : "Use Existing Building"}
               </button>
+              {buildingMode === "new" ? (
+                <SimilarValueGuard
+                  label="building"
+                  value={building}
+                  candidates={buildingOptions}
+                  onUseExisting={(existing) => {
+                    setBuilding(existing);
+                    setBuildingMode("existing");
+                    setBuildingNameBlocking(false);
+                  }}
+                  onBlockingChange={setBuildingNameBlocking}
+                />
+              ) : null}
             </label>
             <label>
               Status
@@ -470,7 +505,15 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               >
                 Cancel
               </button>{" "}
-              <button type="button" className="success-btn" onClick={saveCustomerInfo}>Save Info</button>
+              <button
+                type="button"
+                className="success-btn"
+                onClick={saveCustomerInfo}
+                disabled={boxNameBlocking || buildingNameBlocking}
+                title={boxNameBlocking || buildingNameBlocking ? "Confirm the new box/building name above first" : undefined}
+              >
+                Save Info
+              </button>
             </>
           ) : (
             <button
