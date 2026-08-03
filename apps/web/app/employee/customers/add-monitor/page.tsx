@@ -12,6 +12,7 @@ export default function EmployeeAddMonitorPage() {
   const [monitorName, setMonitorName] = useState("");
   const [nameBlocking, setNameBlocking] = useState(false);
   const [monitorCategory, setMonitorCategory] = useState<"theft-controller" | "elevator">("elevator");
+  const [startingCounter, setStartingCounter] = useState("0");
   const [linkedCustomerId, setLinkedCustomerId] = useState("");
   const [customerOptions, setCustomerOptions] = useState<
     Array<{ id: string; fullName: string; customerNumber: string; region: string; boxNumber: string }>
@@ -56,6 +57,10 @@ export default function EmployeeAddMonitorPage() {
       setMessage("Confirm the monitor name above before creating.");
       return;
     }
+    if (startingCounter.trim() !== "" && Number(startingCounter) < 0) {
+      setMessage("Starting counter can't be negative.");
+      return;
+    }
     setIsSubmitting(true);
     setMessage("");
     try {
@@ -71,6 +76,7 @@ export default function EmployeeAddMonitorPage() {
           monitorName,
           monitorCategory,
           linkedCustomerId,
+          startingCounter: Number(startingCounter || "0"),
         }),
       });
       const payload = (await response.json()) as { error?: string };
@@ -125,6 +131,18 @@ export default function EmployeeAddMonitorPage() {
           <label>
             Box
             <input value={linkedCustomer?.boxNumber ?? "-"} readOnly disabled />
+          </label>
+          <label>
+            Starting Counter (kWh)
+            <input
+              type="number"
+              value={startingCounter}
+              onChange={(e) => setStartingCounter(e.target.value)}
+              placeholder="0"
+            />
+            <p className="muted" style={{ margin: "4px 0 0" }}>
+              Leave at 0 for a brand-new monitor. Set to its real current meter reading if it&apos;s already running.
+            </p>
           </label>
         </div>
         <SimilarValueGuard
