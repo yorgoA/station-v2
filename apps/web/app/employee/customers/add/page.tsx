@@ -17,6 +17,7 @@ export default function EmployeeAddCustomerPage() {
   const [subscribedAmpere, setSubscribedAmpere] = useState("");
   const [fixedMonthlyAmount, setFixedMonthlyAmount] = useState("");
   const [phone, setPhone] = useState("");
+  const [startingCounter, setStartingCounter] = useState("0");
   const [boxNumber, setBoxNumber] = useState("");
   const [building, setBuilding] = useState("");
   const [allCustomers, setAllCustomers] = useState<Array<{ fullName?: string; boxNumber?: string; building?: string }>>([]);
@@ -66,6 +67,10 @@ export default function EmployeeAddCustomerPage() {
       setMessage("Fixed monthly amount must be a positive number for fixed-monthly billing.");
       return;
     }
+    if (billingType === "both" && startingCounter.trim() !== "" && Number(startingCounter) < 0) {
+      setMessage("Starting counter can't be negative.");
+      return;
+    }
     if (boxNameBlocking || buildingNameBlocking || nameBlocking) {
       setMessage("Confirm the highlighted name(s) above before creating this customer.");
       return;
@@ -88,6 +93,7 @@ export default function EmployeeAddCustomerPage() {
           subscribedAmpere:
             billingType === "amp-only" || billingType === "both" ? Number(subscribedAmpere) : undefined,
           fixedMonthlyAmount: billingType === "fixed-monthly" ? Number(fixedMonthlyAmount) : undefined,
+          startingCounter: billingType === "both" ? Number(startingCounter || "0") : undefined,
         }),
       });
       const payload = (await response.json()) as { error?: string };
@@ -143,6 +149,21 @@ export default function EmployeeAddCustomerPage() {
                 onChange={(e) => setSubscribedAmpere(e.target.value)}
                 placeholder="e.g. 10"
               />
+            </label>
+          ) : null}
+          {billingType === "both" ? (
+            <label>
+              Starting Counter (kWh)
+              <input
+                type="number"
+                value={startingCounter}
+                onChange={(e) => setStartingCounter(e.target.value)}
+                placeholder="0"
+              />
+              <p className="muted" style={{ margin: "4px 0 0" }}>
+                Leave at 0 for a brand-new customer. Set to their real current meter reading if they already
+                have a running meter -- their first bill will only charge consumption from this point forward.
+              </p>
             </label>
           ) : null}
           {billingType === "fixed-monthly" ? (

@@ -100,6 +100,11 @@ create table if not exists customers (
   is_free_customer boolean not null default false,
   status text not null default 'active',
   old_total_amount numeric(14,2) not null default 0,
+  -- Baseline meter reading for this customer's first bill (previous_counter
+  -- for their first month). Defaults to 0 for a genuinely new subscriber;
+  -- set explicitly when onboarding an existing customer with a real running
+  -- meter, so their first bill only charges consumption going forward.
+  starting_counter numeric(14,3) not null default 0,
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

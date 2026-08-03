@@ -17,6 +17,7 @@ type CreateCustomerBody = {
   monitorCategory?: "theft-controller" | "elevator";
   subscribedAmpere?: number;
   fixedMonthlyAmount?: number;
+  startingCounter?: number;
 };
 
 async function generateCustomerNumber(
@@ -263,6 +264,12 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    if (body.startingCounter !== undefined && (!Number.isFinite(body.startingCounter) || body.startingCounter < 0)) {
+      return NextResponse.json(
+        { error: "startingCounter must be a number >= 0." },
+        { status: 400 }
+      );
+    }
 
     const supabase = createSupabaseAdminClient();
     const prefix: "C" | "M" = body.mode === "monitor" ? "M" : "C";
@@ -350,6 +357,7 @@ export async function POST(request: Request) {
         subscribed_ampere:
           body.billingType === "amp-only" || body.billingType === "both" ? body.subscribedAmpere : null,
         fixed_monthly_amount: body.billingType === "fixed-monthly" ? body.fixedMonthlyAmount : 0,
+        starting_counter: body.startingCounter ?? 0,
         is_free_customer: body.billingType === "free",
         status: body.status?.toLowerCase() === "paused" ? "paused" : "active",
         notes:
