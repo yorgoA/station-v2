@@ -13,7 +13,7 @@ type CreateCustomerBody = {
   status?: "active" | "paused";
   mode?: "customer" | "monitor";
   monitorName?: string;
-  linkedCustomerId?: string;
+  linkedCustomerIds?: string[];
   monitorCategory?: "theft-controller" | "elevator";
   subscribedAmpere?: number;
   fixedMonthlyAmount?: number;
@@ -151,19 +151,19 @@ export async function GET(request: Request) {
       return raw === null || raw === undefined ? "" : String(raw);
     };
 
-    const linkedByMonitorId = new Map<string, { id: string; fullName: string; customerNumber: string }>();
+    const linkedByMonitorId = new Map<string, Array<{ id: string; fullName: string; customerNumber: string }>>();
     for (const row of customers ?? []) {
       const data = row as Record<string, unknown>;
       const monitorId = readMonitorId(data);
       const customerNumber = String(data.customer_number ?? "");
       if (!monitorId || customerNumber.startsWith("M-")) continue;
-      if (!linkedByMonitorId.has(monitorId)) {
-        linkedByMonitorId.set(monitorId, {
-          id: String(data.id ?? ""),
-          fullName: String(data.full_name ?? ""),
-          customerNumber,
-        });
-      }
+      const list = linkedByMonitorId.get(monitorId) ?? [];
+      list.push({
+        id: String(data.id ?? ""),
+        fullName: String(data.full_name ?? ""),
+        customerNumber,
+      });
+      linkedByMonitorId.set(monitorId, list);
     }
 
     const readMonitorCategory = (notesValue: unknown): "theft-controller" | "elevator" | "-" => {
@@ -182,7 +182,7 @@ export async function GET(request: Request) {
         const monitorId = readMonitorId(data);
         const customerNumber = String(data.customer_number ?? "");
         const isMonitor = customerNumber.startsWith("M-");
-        const linked = monitorId ? linkedByMonitorId.get(monitorId) : undefined;
+        const linkedList = monitorId ? linkedByMonitorId.get(monitorId) ?? [] : [];
         const monitorCategory = isMonitor ? readMonitorCategory(data.notes) : "-";
         const billInfo = billByCustomerId.get(id);
         const hasBillThisMonth = Boolean(billInfo);
@@ -190,10 +190,13 @@ export async function GET(request: Request) {
         const ongoingBalanceCarryOver = sumUnpaidRemaining(unpaidBills, id, monthKey, true);
         const ongoingBalance = sumUnpaidRemaining(unpaidBills, id, monthKey, false);
         const monitorKwh = monthConsumptionByCustomerId.get(id) ?? billInfo?.consumptionKwh ?? 0;
-        const linkedIncludedKwh = linked
-          ? (monthConsumptionByCustomerId.get(linked.id) ?? billByCustomerId.get(linked.id)?.consumptionKwh ?? 0)
-          : 0;
-        const monitorMatchKwh = monitorKwh - linkedIncludedKwh;
+        const linkedIncludedKwh = linkedList.reduce(
+          (sum, linked) =>
+            sum + (monthConsumptionByCustomerId.get(linked.id) ?? billByCustomerId.get(linked.id)?.consumptionKwh ?? 0),
+          0
+        );
+        // Loss/discrepancy = sum(linked customers' kWh) - monitor's own kWh.
+        const monitorMatchKwh = linkedIncludedKwh - monitorKwh;
         return {
           id,
           customerNumber,
@@ -204,9 +207,15 @@ export async function GET(request: Request) {
           status: String(data.status ?? "active").toLowerCase(),
           region: regionCode,
           isMonitor,
-          linkedTo: linked ? `${linked.fullName} (${linked.customerNumber})` : "Missing link",
-          linkedCustomerId: linked?.id ?? "",
-          linkedCustomerName: linked?.fullName ?? "Missing link",
+          linkedTo:
+            linkedList.length > 0
+              ? linkedList.map((c) => `${c.fullName} (${c.customerNumber})`).join(", ")
+              : "Missing link",
+          linkedCustomers: linkedList,
+          // Back-compat single-value fields (first linked customer, if any) -- some
+          // older UI still reads these; linkedCustomers is the source of truth.
+          linkedCustomerId: linkedList[0]?.id ?? "",
+          linkedCustomerName: linkedList[0]?.fullName ?? "Missing link",
           monitorCategory,
           monitorKwh,
           linkedIncludedKwh,
@@ -297,19 +306,20 @@ export async function POST(request: Request) {
     let regionId = region.id as string;
     let monitorId: string | null = null;
     if (body.mode === "monitor") {
-      if (!body.linkedCustomerId?.trim()) {
-        return NextResponse.json({ error: "linkedCustomerId is required for monitor mode." }, { status: 400 });
+      const linkedIds = Array.from(new Set((body.linkedCustomerIds ?? []).map((v) => v.trim()).filter(Boolean)));
+      if (linkedIds.length === 0) {
+        return NextResponse.json({ error: "At least one linked customer is required for monitor mode." }, { status: 400 });
       }
-      const { data: linkedCustomer, error: linkedCustomerError } = await supabase
+      const { data: linkedCustomers, error: linkedCustomerError } = await supabase
         .from("customers")
         .select("id, region_id, monitor_id")
-        .eq("id", body.linkedCustomerId.trim())
-        .single();
-      if (linkedCustomerError || !linkedCustomer) {
-        return NextResponse.json({ error: "Linked customer not found." }, { status: 400 });
+        .in("id", linkedIds);
+      if (linkedCustomerError || !linkedCustomers || linkedCustomers.length !== linkedIds.length) {
+        return NextResponse.json({ error: "One or more linked customers not found." }, { status: 400 });
       }
-      regionId = String(linkedCustomer.region_id ?? region.id);
-      monitorId = linkedCustomer.monitor_id ? String(linkedCustomer.monitor_id) : null;
+      regionId = String(linkedCustomers[0].region_id ?? region.id);
+      const existingOther = linkedCustomers.find((c) => c.monitor_id);
+      monitorId = existingOther ? String(existingOther.monitor_id) : null;
 
       const monitorName = body.monitorName?.trim() || `${fullName} Monitor`;
       if (!monitorId) {
@@ -329,17 +339,17 @@ export async function POST(request: Request) {
           );
         }
         monitorId = String(monitor.id);
+      }
 
-        const { error: updateLinkedError } = await supabase
-          .from("customers")
-          .update({ monitor_id: monitorId })
-          .eq("id", body.linkedCustomerId.trim());
-        if (updateLinkedError) {
-          return NextResponse.json(
-            { error: updateLinkedError.message ?? "Failed to link monitor to customer." },
-            { status: 500 }
-          );
-        }
+      const { error: updateLinkedError } = await supabase
+        .from("customers")
+        .update({ monitor_id: monitorId })
+        .in("id", linkedIds);
+      if (updateLinkedError) {
+        return NextResponse.json(
+          { error: updateLinkedError.message ?? "Failed to link monitor to customer(s)." },
+          { status: 500 }
+        );
       }
     }
 

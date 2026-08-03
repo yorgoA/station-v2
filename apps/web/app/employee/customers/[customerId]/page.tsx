@@ -20,8 +20,7 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
       billingType: "metered" | "fixed-monthly" | "free";
       status: string;
       isMonitor?: boolean;
-      linkedCustomerId?: string;
-      linkedCustomerName?: string;
+      linkedCustomers?: Array<{ id: string; fullName: string; customerNumber: string }>;
     };
     bills: Array<{
       id: string;
@@ -196,7 +195,15 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
             {customer.isMonitor ? (
               <label>
                 Linked To
-                <input value={customer.linkedCustomerName || "Missing link"} readOnly disabled />
+                <input
+                  value={
+                    customer.linkedCustomers?.length
+                      ? customer.linkedCustomers.map((c) => `${c.fullName} (${c.customerNumber})`).join(", ")
+                      : "Missing link"
+                  }
+                  readOnly
+                  disabled
+                />
                 <p className="muted" style={{ margin: "4px 0 0" }}>
                   Monitor linkage is manager-only — edit under Manager → Customers.
                 </p>
@@ -286,7 +293,14 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
             <div><p className="muted">Name</p><p>{customer.fullName}</p></div>
             <div><p className="muted">Number</p><p>{customer.customerNumber}</p></div>
             {customer.isMonitor ? (
-              <div><p className="muted">Linked To</p><p>{customer.linkedCustomerName || "Missing link"}</p></div>
+              <div>
+                <p className="muted">Linked To</p>
+                <p>
+                  {customer.linkedCustomers?.length
+                    ? customer.linkedCustomers.map((c) => `${c.fullName} (${c.customerNumber})`).join(", ")
+                    : "Missing link"}
+                </p>
+              </div>
             ) : null}
             <div><p className="muted">Phone</p><p>{customer.phone || "-"}</p></div>
             <div><p className="muted">Region</p><p>{customer.region}</p></div>

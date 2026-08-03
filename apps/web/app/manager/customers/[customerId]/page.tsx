@@ -21,6 +21,7 @@ type CustomerDetails = {
   fixedMonthlyAmount: number;
   status: string;
   isMonitor?: boolean;
+  linkedCustomers?: Array<{ id: string; fullName: string; customerNumber: string }>;
 };
 type BillRow = {
   id: string;
@@ -59,7 +60,10 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
   const [phone, setPhone] = useState("");
   const [boxNumber, setBoxNumber] = useState("");
   const [building, setBuilding] = useState("");
-  const [allCustomers, setAllCustomers] = useState<Array<{ boxNumber?: string; building?: string }>>([]);
+  const [allCustomers, setAllCustomers] = useState<
+    Array<{ id: string; fullName: string; customerNumber: string; boxNumber?: string; building?: string; isMonitor?: boolean }>
+  >([]);
+  const [selectedLinkedIds, setSelectedLinkedIds] = useState<string[]>([]);
   const [boxMode, setBoxMode] = useState<"existing" | "new">("existing");
   const [buildingMode, setBuildingMode] = useState<"existing" | "new">("existing");
   const [boxNameBlocking, setBoxNameBlocking] = useState(false);
@@ -84,7 +88,16 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
     fetch("/api/customers?region=all")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed to load box/building options.");
-        const payload = (await response.json()) as { customers: Array<{ boxNumber?: string; building?: string }> };
+        const payload = (await response.json()) as {
+          customers: Array<{
+            id: string;
+            fullName: string;
+            customerNumber: string;
+            boxNumber?: string;
+            building?: string;
+            isMonitor?: boolean;
+          }>;
+        };
         setAllCustomers(payload.customers ?? []);
       })
       .catch(() => setAllCustomers([]));
@@ -116,6 +129,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
           setFixedMonthlyAmount(
             payload.customer.fixedMonthlyAmount ? String(payload.customer.fixedMonthlyAmount) : ""
           );
+          setSelectedLinkedIds((payload.customer.linkedCustomers ?? []).map((c) => c.id));
         }
       })
       .catch(() => {
@@ -132,6 +146,10 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
   const buildingOptions = useMemo(
     () => Array.from(new Set(allCustomers.map((c) => String(c.building ?? "").trim()).filter(Boolean))),
     [allCustomers]
+  );
+  const linkableCustomerOptions = useMemo(
+    () => allCustomers.filter((c) => !c.isMonitor && c.id !== customer?.id),
+    [allCustomers, customer?.id]
   );
 
   useEffect(() => {
@@ -227,6 +245,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         subscribedAmpere:
           billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
         fixedMonthlyAmount: billingPlan === "fixed-monthly" ? Number(fixedMonthlyAmount) : 0,
+        linkedCustomerIds: customer.isMonitor ? selectedLinkedIds : undefined,
       }),
     });
     const payload = (await response.json()) as { error?: string };
@@ -247,6 +266,9 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
             billingType: billingPlan,
             subscribedAmpere: billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
             fixedMonthlyAmount: billingPlan === "fixed-monthly" ? Number(fixedMonthlyAmount) : 0,
+            linkedCustomers: customer.isMonitor
+              ? linkableCustomerOptions.filter((c) => selectedLinkedIds.includes(c.id))
+              : prev.linkedCustomers,
           }
         : prev
     );
@@ -428,6 +450,46 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 />
               ) : null}
             </label>
+            {customer.isMonitor ? (
+              <label>
+                Linked Customers
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    maxHeight: 180,
+                    overflowY: "auto",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    padding: 8,
+                  }}
+                >
+                  {linkableCustomerOptions.length === 0 ? (
+                    <span className="muted">No other customers available to link.</span>
+                  ) : (
+                    linkableCustomerOptions.map((option) => (
+                      <label key={option.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedLinkedIds.includes(option.id)}
+                          onChange={(e) =>
+                            setSelectedLinkedIds((prev) =>
+                              e.target.checked ? [...prev, option.id] : prev.filter((id) => id !== option.id)
+                            )
+                          }
+                        />
+                        {option.fullName} ({option.customerNumber})
+                      </label>
+                    ))
+                  )}
+                </div>
+                <p className="muted" style={{ margin: "4px 0 0" }}>
+                  Loss = sum(linked customers&apos; kWh) − this monitor&apos;s kWh. Check every customer this
+                  monitor covers (e.g. all apartments on a shared elevator meter).
+                </p>
+              </label>
+            ) : null}
             <label>
               Status
               <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -480,6 +542,16 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
             <div><p className="muted">Box</p><p>{customer.boxNumber || "-"}</p></div>
             <div><p className="muted">Building</p><p>{customer.building || "-"}</p></div>
             <div><p className="muted">Billing Type</p><p>{customer.billingType}</p></div>
+            {customer.isMonitor ? (
+              <div>
+                <p className="muted">Linked To</p>
+                <p>
+                  {customer.linkedCustomers?.length
+                    ? customer.linkedCustomers.map((c) => `${c.fullName} (${c.customerNumber})`).join(", ")
+                    : "Missing link"}
+                </p>
+              </div>
+            ) : null}
             {customer.billingType === "amp-only" || customer.billingType === "both" ? (
               <div><p className="muted">Subscribed Ampere</p><p>{customer.subscribedAmpere ?? "not set"}</p></div>
             ) : null}

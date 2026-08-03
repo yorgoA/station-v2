@@ -13,7 +13,8 @@ type PatchBody =
       boxNumber?: string;
       building?: string;
       status?: string;
-      linkedCustomerId?: string;
+      /** Full desired list of linked customers for a monitor row -- server reconciles adds/removes. */
+      linkedCustomerIds?: string[];
       /** Metering plan + free flag; only managers should send this from UI. */
       billingPlan?: "free" | "metered" | "amp-only" | "both" | "fixed-monthly";
       subscribedAmpere?: number;
@@ -90,21 +91,19 @@ export async function GET(
     const monitorId = String(c.monitor_id ?? "");
     const isMonitor = String(c.customer_number ?? "").startsWith("M-");
 
-    let linkedCustomerId = "";
-    let linkedCustomerName = "";
+    let linkedCustomers: Array<{ id: string; fullName: string; customerNumber: string }> = [];
     if (isMonitor && monitorId) {
-      const { data: linkedRow } = await supabase
+      const { data: linkedRows } = await supabase
         .from("customers")
         .select("id, full_name, customer_number")
         .eq("monitor_id", monitorId)
         .neq("id", customerId)
-        .not("customer_number", "like", "M-%")
-        .limit(1)
-        .maybeSingle();
-      if (linkedRow) {
-        linkedCustomerId = String(linkedRow.id ?? "");
-        linkedCustomerName = `${String(linkedRow.full_name ?? "")} (${String(linkedRow.customer_number ?? "")})`;
-      }
+        .not("customer_number", "like", "M-%");
+      linkedCustomers = (linkedRows ?? []).map((row) => ({
+        id: String(row.id ?? ""),
+        fullName: String(row.full_name ?? ""),
+        customerNumber: String(row.customer_number ?? ""),
+      }));
     }
 
     return NextResponse.json({
@@ -121,8 +120,7 @@ export async function GET(
         subscribedAmpere: c.subscribed_ampere != null ? Number(c.subscribed_ampere) : null,
         fixedMonthlyAmount: c.fixed_monthly_amount != null ? Number(c.fixed_monthly_amount) : 0,
         isMonitor,
-        linkedCustomerId,
-        linkedCustomerName,
+        linkedCustomers,
       },
       bills:
         (billsRes.data ?? []).map((b) => ({
@@ -225,47 +223,86 @@ export async function PATCH(
       }
       if (body.subscribedAmpere !== undefined) payload.subscribed_ampere = body.subscribedAmpere;
       if (body.fixedMonthlyAmount !== undefined) payload.fixed_monthly_amount = body.fixedMonthlyAmount;
-      if (body.linkedCustomerId !== undefined) {
-        const linkedId = body.linkedCustomerId.trim();
-        if (!linkedId) {
-          payload.monitor_id = null;
-        } else {
-          const { data: linkedCustomer, error: linkedError } = await supabase
+      if (body.linkedCustomerIds !== undefined) {
+        // Full desired list of linked customers for this monitor -- reconcile against
+        // whoever is currently linked (add newly-selected, unlink deselected) rather than
+        // the old one-in-one-out repoint, since a monitor can track several customers
+        // (e.g. an elevator meter covering multiple apartments): loss = sum(linked) - monitor.
+        const desiredIds = Array.from(new Set(body.linkedCustomerIds.map((v) => v.trim()).filter(Boolean)));
+
+        const { data: selfRow, error: selfError } = await supabase
+          .from("customers")
+          .select("monitor_id, region_id")
+          .eq("id", customerId)
+          .single();
+        if (selfError || !selfRow) {
+          return NextResponse.json({ error: "Customer not found." }, { status: 404 });
+        }
+        let targetMonitorId = selfRow.monitor_id ? String(selfRow.monitor_id) : null;
+
+        if (desiredIds.length > 0) {
+          const { data: desiredCustomers, error: desiredError } = await supabase
             .from("customers")
-            .select("id, full_name, region_id, monitor_id")
-            .eq("id", linkedId)
-            .single();
-          if (linkedError || !linkedCustomer) {
-            return NextResponse.json({ error: "Linked customer not found." }, { status: 400 });
+            .select("id, region_id, monitor_id")
+            .in("id", desiredIds);
+          if (desiredError) return NextResponse.json({ error: desiredError.message }, { status: 500 });
+          if (!desiredCustomers || desiredCustomers.length !== desiredIds.length) {
+            return NextResponse.json({ error: "One or more linked customers not found." }, { status: 400 });
           }
-          let nextMonitorId = linkedCustomer.monitor_id ? String(linkedCustomer.monitor_id) : "";
-          if (!nextMonitorId) {
+          if (!targetMonitorId) {
+            const existingOther = desiredCustomers.find((c) => c.monitor_id);
+            targetMonitorId = existingOther ? String(existingOther.monitor_id) : null;
+          }
+          if (!targetMonitorId) {
             const { data: createdMonitor, error: createMonitorError } = await supabase
               .from("monitors")
               .insert({
-                region_id: linkedCustomer.region_id,
-                name: `${String(linkedCustomer.full_name ?? "Linked Customer")} Monitor`,
+                region_id: selfRow.region_id ?? desiredCustomers[0]?.region_id,
+                name: "Monitor",
                 is_active: true,
               })
               .select("id")
               .single();
             if (createMonitorError || !createdMonitor) {
               return NextResponse.json(
-                { error: createMonitorError?.message ?? "Failed to create monitor for linked customer." },
+                { error: createMonitorError?.message ?? "Failed to create monitor." },
                 { status: 500 }
               );
             }
-            nextMonitorId = String(createdMonitor.id);
-            const { error: updateLinkedError } = await supabase
-              .from("customers")
-              .update({ monitor_id: nextMonitorId })
-              .eq("id", linkedId);
-            if (updateLinkedError) {
-              return NextResponse.json({ error: updateLinkedError.message }, { status: 500 });
-            }
+            targetMonitorId = String(createdMonitor.id);
           }
-          payload.monitor_id = nextMonitorId;
         }
+
+        if (targetMonitorId) {
+          const { data: currentlyLinked, error: currentlyLinkedError } = await supabase
+            .from("customers")
+            .select("id")
+            .eq("monitor_id", targetMonitorId)
+            .neq("id", customerId);
+          if (currentlyLinkedError) {
+            return NextResponse.json({ error: currentlyLinkedError.message }, { status: 500 });
+          }
+          const currentIds = (currentlyLinked ?? []).map((row) => String(row.id));
+          const toUnlink = currentIds.filter((id) => !desiredIds.includes(id));
+          const toLink = desiredIds.filter((id) => !currentIds.includes(id));
+
+          if (toUnlink.length > 0) {
+            const { error: unlinkError } = await supabase
+              .from("customers")
+              .update({ monitor_id: null })
+              .in("id", toUnlink);
+            if (unlinkError) return NextResponse.json({ error: unlinkError.message }, { status: 500 });
+          }
+          if (toLink.length > 0) {
+            const { error: linkError } = await supabase
+              .from("customers")
+              .update({ monitor_id: targetMonitorId })
+              .in("id", toLink);
+            if (linkError) return NextResponse.json({ error: linkError.message }, { status: 500 });
+          }
+        }
+
+        payload.monitor_id = desiredIds.length > 0 ? targetMonitorId : null;
       }
       const { error } = await supabase.from("customers").update(payload).eq("id", customerId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -13,7 +13,7 @@ export default function EmployeeAddMonitorPage() {
   const [nameBlocking, setNameBlocking] = useState(false);
   const [monitorCategory, setMonitorCategory] = useState<"theft-controller" | "elevator">("elevator");
   const [startingCounter, setStartingCounter] = useState("0");
-  const [linkedCustomerId, setLinkedCustomerId] = useState("");
+  const [linkedCustomerIds, setLinkedCustomerIds] = useState<string[]>([]);
   const [customerOptions, setCustomerOptions] = useState<
     Array<{ id: string; fullName: string; customerNumber: string; region: string; boxNumber: string }>
   >([]);
@@ -46,11 +46,11 @@ export default function EmployeeAddMonitorPage() {
       .catch(() => setCustomerOptions([]));
   }, []);
 
-  const linkedCustomer = customerOptions.find((customer) => customer.id === linkedCustomerId) ?? null;
+  const linkedCustomers = customerOptions.filter((customer) => linkedCustomerIds.includes(customer.id));
 
   async function onSubmit() {
-    if (!monitorName.trim() || !linkedCustomerId) {
-      setMessage("Monitor name and linked customer are required.");
+    if (!monitorName.trim() || linkedCustomerIds.length === 0) {
+      setMessage("Monitor name and at least one linked customer are required.");
       return;
     }
     if (nameBlocking) {
@@ -75,7 +75,7 @@ export default function EmployeeAddMonitorPage() {
           mode: "monitor",
           monitorName,
           monitorCategory,
-          linkedCustomerId,
+          linkedCustomerIds,
           startingCounter: Number(startingCounter || "0"),
         }),
       });
@@ -104,15 +104,41 @@ export default function EmployeeAddMonitorPage() {
             <input value={monitorName} onChange={(e) => setMonitorName(e.target.value)} placeholder="Building Elevator Monitor" />
           </label>
           <label>
-            Linked Customer
-            <select value={linkedCustomerId} onChange={(e) => setLinkedCustomerId(e.target.value)}>
-              <option value="">Select customer</option>
-              {customerOptions.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.fullName} ({customer.customerNumber})
-                </option>
-              ))}
-            </select>
+            Linked Customers
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                maxHeight: 180,
+                overflowY: "auto",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 8,
+              }}
+            >
+              {customerOptions.length === 0 ? (
+                <span className="muted">No customers available to link.</span>
+              ) : (
+                customerOptions.map((customer) => (
+                  <label key={customer.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={linkedCustomerIds.includes(customer.id)}
+                      onChange={(e) =>
+                        setLinkedCustomerIds((prev) =>
+                          e.target.checked ? [...prev, customer.id] : prev.filter((id) => id !== customer.id)
+                        )
+                      }
+                    />
+                    {customer.fullName} ({customer.customerNumber})
+                  </label>
+                ))
+              )}
+            </div>
+            <p className="muted" style={{ margin: "4px 0 0" }}>
+              Check every customer this monitor covers (e.g. all apartments sharing an elevator meter).
+            </p>
           </label>
           <label>
             Category
@@ -126,11 +152,15 @@ export default function EmployeeAddMonitorPage() {
           </label>
           <label>
             Region
-            <input value={linkedCustomer?.region ?? "-"} readOnly disabled />
+            <input value={linkedCustomers[0]?.region ?? "-"} readOnly disabled />
           </label>
           <label>
             Box
-            <input value={linkedCustomer?.boxNumber ?? "-"} readOnly disabled />
+            <input
+              value={linkedCustomers.length ? linkedCustomers.map((c) => c.boxNumber).join(", ") : "-"}
+              readOnly
+              disabled
+            />
           </label>
           <label>
             Starting Counter (kWh)

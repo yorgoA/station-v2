@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       );
     const customersQuery = supabase
       .from("customers")
-      .select("id, is_free_customer, monitor_id, regions!inner(code)");
+      .select("id, customer_number, full_name, is_free_customer, monitor_id, fixed_monthly_amount, regions!inner(code)");
 
     const [{ data: bills, error: billsError }, { data: payments, error: paymentsError }, { data: customers, error: customersError }] =
       await Promise.all([billsQuery, paymentsQuery, customersQuery]);
@@ -113,6 +113,44 @@ export async function GET(request: Request) {
     const monitorCustomers = filteredCustomers.filter((row) =>
       Boolean((row as Record<string, unknown>).monitor_id)
     ).length;
+
+    const monthKwhByCustomerId = new Map<string, number>();
+    for (const row of monthBills) {
+      monthKwhByCustomerId.set(
+        String((row as Record<string, unknown>).customer_id ?? ""),
+        Number((row as Record<string, unknown>).consumption_kwh ?? 0)
+      );
+    }
+    const linkedByMonitorId = new Map<
+      string,
+      Array<{ fullName: string; fixedMonthlyAmount: number }>
+    >();
+    for (const row of filteredCustomers) {
+      const data = row as Record<string, unknown>;
+      const monitorId = data.monitor_id ? String(data.monitor_id) : "";
+      const customerNumber = String(data.customer_number ?? "");
+      if (!monitorId || customerNumber.startsWith("M-")) continue;
+      const list = linkedByMonitorId.get(monitorId) ?? [];
+      list.push({
+        fullName: String(data.full_name ?? ""),
+        fixedMonthlyAmount: Number(data.fixed_monthly_amount ?? 0),
+      });
+      linkedByMonitorId.set(monitorId, list);
+    }
+    const monitorRows = filteredCustomers
+      .filter((row) => String((row as Record<string, unknown>).customer_number ?? "").startsWith("M-"))
+      .map((row) => {
+        const data = row as Record<string, unknown>;
+        const monitorId = data.monitor_id ? String(data.monitor_id) : "";
+        const linked = monitorId ? linkedByMonitorId.get(monitorId) ?? [] : [];
+        return {
+          customer: String(data.full_name ?? "-"),
+          region: (readRegionCode(data.regions) || "mrah") as RegionCode,
+          monitorUsageKwh: monthKwhByCustomerId.get(String(data.id ?? "")) ?? 0,
+          linkedFixedMonthlyTotal: linked.reduce((sum, c) => sum + c.fixedMonthlyAmount, 0),
+          linkedObligatoryCustomer: linked.length > 0 ? linked.map((c) => c.fullName).join(", ") : "Missing link",
+        };
+      });
     const freeCustomers = filteredCustomers.filter((row) =>
       Boolean((row as Record<string, unknown>).is_free_customer)
     ).length;
@@ -188,7 +226,7 @@ export async function GET(request: Request) {
       bills: billRows,
       payments: paymentRows,
       freeCustomers: freeCustomerRows,
-      monitors: [],
+      monitors: monitorRows,
     });
   } catch (error) {
     return NextResponse.json(
