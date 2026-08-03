@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { SimilarValueGuard } from "../../../_components/similar-value-guard";
+import { MultiSelect } from "../../../_components/multi-select";
 
 type Props = { params: { customerId: string } };
 
@@ -451,39 +452,19 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               ) : null}
             </label>
             {customer.isMonitor ? (
-              <label>
+              <label style={{ gridColumn: "1 / -1" }}>
                 Linked Customers
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 4,
-                    maxHeight: 180,
-                    overflowY: "auto",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    padding: 8,
-                  }}
-                >
-                  {linkableCustomerOptions.length === 0 ? (
-                    <span className="muted">No other customers available to link.</span>
-                  ) : (
-                    linkableCustomerOptions.map((option) => (
-                      <label key={option.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedLinkedIds.includes(option.id)}
-                          onChange={(e) =>
-                            setSelectedLinkedIds((prev) =>
-                              e.target.checked ? [...prev, option.id] : prev.filter((id) => id !== option.id)
-                            )
-                          }
-                        />
-                        {option.fullName} ({option.customerNumber})
-                      </label>
-                    ))
-                  )}
-                </div>
+                <MultiSelect
+                  options={linkableCustomerOptions.map((option) => ({
+                    id: option.id,
+                    label: option.fullName,
+                    sublabel: option.customerNumber,
+                  }))}
+                  selectedIds={selectedLinkedIds}
+                  onChange={setSelectedLinkedIds}
+                  searchPlaceholder="Search by name or customer number..."
+                  emptyMessage="No other customers available to link."
+                />
                 <p className="muted" style={{ margin: "4px 0 0" }}>
                   Loss = sum(linked customers&apos; kWh) − this monitor&apos;s kWh. Check every customer this
                   monitor covers (e.g. all apartments on a shared elevator meter).

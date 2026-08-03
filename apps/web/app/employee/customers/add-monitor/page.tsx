@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../../../_components/app-shell";
 import { employeeNavItems } from "../../../_components/role-nav";
 import { SimilarValueGuard } from "../../../_components/similar-value-guard";
+import { MultiSelect } from "../../../_components/multi-select";
 
 export default function EmployeeAddMonitorPage() {
   const router = useRouter();
@@ -103,39 +104,19 @@ export default function EmployeeAddMonitorPage() {
             Monitor Name
             <input value={monitorName} onChange={(e) => setMonitorName(e.target.value)} placeholder="Building Elevator Monitor" />
           </label>
-          <label>
+          <label style={{ gridColumn: "1 / -1" }}>
             Linked Customers
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 4,
-                maxHeight: 180,
-                overflowY: "auto",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: 8,
-              }}
-            >
-              {customerOptions.length === 0 ? (
-                <span className="muted">No customers available to link.</span>
-              ) : (
-                customerOptions.map((customer) => (
-                  <label key={customer.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <input
-                      type="checkbox"
-                      checked={linkedCustomerIds.includes(customer.id)}
-                      onChange={(e) =>
-                        setLinkedCustomerIds((prev) =>
-                          e.target.checked ? [...prev, customer.id] : prev.filter((id) => id !== customer.id)
-                        )
-                      }
-                    />
-                    {customer.fullName} ({customer.customerNumber})
-                  </label>
-                ))
-              )}
-            </div>
+            <MultiSelect
+              options={customerOptions.map((customer) => ({
+                id: customer.id,
+                label: customer.fullName,
+                sublabel: customer.customerNumber,
+              }))}
+              selectedIds={linkedCustomerIds}
+              onChange={setLinkedCustomerIds}
+              searchPlaceholder="Search by name or customer number..."
+              emptyMessage="No customers available to link."
+            />
             <p className="muted" style={{ margin: "4px 0 0" }}>
               Check every customer this monitor covers (e.g. all apartments sharing an elevator meter).
             </p>
