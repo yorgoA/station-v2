@@ -79,7 +79,7 @@ export async function GET(request: Request) {
     const { data: customers, error: customersError } = await supabase
       .from("customers")
       .select(
-        "id, customer_number, full_name, phone, box_number, building, status, is_free_customer, monitor_id, notes, regions!inner(code), billing_types(key)"
+        "id, customer_number, full_name, phone, box_number, building, status, is_free_customer, monitor_id, notes, starting_counter, regions!inner(code), billing_types(key)"
       )
       .order("full_name", { ascending: true });
     if (customersError) return NextResponse.json({ error: customersError.message }, { status: 500 });
@@ -220,6 +220,7 @@ export async function GET(request: Request) {
           monitorKwh,
           linkedIncludedKwh,
           monitorMatchKwh,
+          startingCounter: Number(data.starting_counter ?? 0),
           // billing_types.key is already the real lowercase-hyphenated key
           // (metered/amp-only/both/fixed-monthly) — no remapping needed here.
           billingType: isFree ? "free" : billingTypeKey || "metered",

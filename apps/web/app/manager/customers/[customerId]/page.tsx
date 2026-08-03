@@ -20,6 +20,7 @@ type CustomerDetails = {
   billingType: "metered" | "amp-only" | "both" | "fixed-monthly" | "free";
   subscribedAmpere: number | null;
   fixedMonthlyAmount: number;
+  startingCounter: number;
   status: string;
   isMonitor?: boolean;
   linkedCustomers?: Array<{ id: string; fullName: string; customerNumber: string }>;
@@ -73,6 +74,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
   const [billingPlan, setBillingPlan] = useState<CustomerDetails["billingType"]>("metered");
   const [subscribedAmpere, setSubscribedAmpere] = useState("");
   const [fixedMonthlyAmount, setFixedMonthlyAmount] = useState("");
+  const [startingCounter, setStartingCounter] = useState("0");
 
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [billDraft, setBillDraft] = useState<BillRow | null>(null);
@@ -130,6 +132,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
           setFixedMonthlyAmount(
             payload.customer.fixedMonthlyAmount ? String(payload.customer.fixedMonthlyAmount) : ""
           );
+          setStartingCounter(String(payload.customer.startingCounter ?? 0));
           setSelectedLinkedIds((payload.customer.linkedCustomers ?? []).map((c) => c.id));
         }
       })
@@ -230,6 +233,9 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
     if (fixedMonthlyAmount !== String(before.fixedMonthlyAmount || "")) {
       changes.push({ field: "fixedMonthlyAmount", before: String(before.fixedMonthlyAmount || ""), after: fixedMonthlyAmount });
     }
+    if (startingCounter !== String(before.startingCounter ?? 0)) {
+      changes.push({ field: "startingCounter", before: String(before.startingCounter ?? 0), after: startingCounter });
+    }
 
     const response = await fetch(`/api/customers/${params.customerId}`, {
       method: "PATCH",
@@ -246,6 +252,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         subscribedAmpere:
           billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
         fixedMonthlyAmount: billingPlan === "fixed-monthly" ? Number(fixedMonthlyAmount) : 0,
+        startingCounter: customer.isMonitor || billingPlan === "both" ? Number(startingCounter || "0") : undefined,
         linkedCustomerIds: customer.isMonitor ? selectedLinkedIds : undefined,
       }),
     });
@@ -267,6 +274,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
             billingType: billingPlan,
             subscribedAmpere: billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
             fixedMonthlyAmount: billingPlan === "fixed-monthly" ? Number(fixedMonthlyAmount) : 0,
+            startingCounter:
+              customer.isMonitor || billingPlan === "both" ? Number(startingCounter || "0") : prev.startingCounter,
             linkedCustomers: customer.isMonitor
               ? linkableCustomerOptions.filter((c) => selectedLinkedIds.includes(c.id))
               : prev.linkedCustomers,
@@ -513,6 +522,20 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 />
               </label>
             ) : null}
+            {customer.isMonitor || billingPlan === "both" ? (
+              <label>
+                Starting Counter (kWh)
+                <input
+                  type="number"
+                  value={startingCounter}
+                  onChange={(e) => setStartingCounter(e.target.value)}
+                  placeholder="0"
+                />
+                <p className="muted" style={{ margin: "4px 0 0" }}>
+                  Only affects the first bill -- ignored once a bill has been posted for this customer.
+                </p>
+              </label>
+            ) : null}
           </div>
         ) : (
           <div className="info-grid">
@@ -538,6 +561,9 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
             ) : null}
             {customer.billingType === "fixed-monthly" ? (
               <div><p className="muted">Fixed Monthly Amount</p><p>{customer.fixedMonthlyAmount.toLocaleString()} LBP</p></div>
+            ) : null}
+            {customer.isMonitor || customer.billingType === "both" ? (
+              <div><p className="muted">Starting Counter</p><p>{(customer.startingCounter ?? 0).toLocaleString()} kWh</p></div>
             ) : null}
             <div><p className="muted">Status</p><p>{customer.status}</p></div>
           </div>

@@ -18,6 +18,7 @@ type MonitorRow = {
   monitorKwh: number;
   linkedIncludedKwh: number;
   monitorMatchKwh: number;
+  startingCounter: number;
 };
 
 export default function ManagerMonitorsPage() {
@@ -76,6 +77,7 @@ export default function ManagerMonitorsPage() {
               <th>Monitor</th>
               <th>Category</th>
               <th>Linked to</th>
+              <th>Starting Counter</th>
               <th>Monitor kWh</th>
               <th>Linked kWh (included)</th>
               <th>Match</th>
@@ -125,6 +127,7 @@ export default function ManagerMonitorsPage() {
                     "Missing link"
                   )}
                 </td>
+                <td>{(row.startingCounter ?? 0).toLocaleString()}</td>
                 <td>{(row.monitorKwh ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
                 <td>{(row.linkedIncludedKwh ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
                 <td>{(row.monitorMatchKwh ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>

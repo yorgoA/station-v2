@@ -19,6 +19,7 @@ type PatchBody =
       billingPlan?: "free" | "metered" | "amp-only" | "both" | "fixed-monthly";
       subscribedAmpere?: number;
       fixedMonthlyAmount?: number;
+      startingCounter?: number;
     }
   | {
       section: "bill";
@@ -52,7 +53,7 @@ export async function GET(
       supabase
         .from("customers")
         .select(
-          "id, customer_number, full_name, phone, box_number, building, status, is_free_customer, monitor_id, subscribed_ampere, fixed_monthly_amount, regions!inner(code), billing_types(key)"
+          "id, customer_number, full_name, phone, box_number, building, status, is_free_customer, monitor_id, subscribed_ampere, fixed_monthly_amount, starting_counter, regions!inner(code), billing_types(key)"
         )
         .eq("id", customerId)
         .single(),
@@ -119,6 +120,7 @@ export async function GET(
         billingType: Boolean(c.is_free_customer) ? "free" : btKey || "metered",
         subscribedAmpere: c.subscribed_ampere != null ? Number(c.subscribed_ampere) : null,
         fixedMonthlyAmount: c.fixed_monthly_amount != null ? Number(c.fixed_monthly_amount) : 0,
+        startingCounter: c.starting_counter != null ? Number(c.starting_counter) : 0,
         isMonitor,
         linkedCustomers,
       },
@@ -223,6 +225,12 @@ export async function PATCH(
       }
       if (body.subscribedAmpere !== undefined) payload.subscribed_ampere = body.subscribedAmpere;
       if (body.fixedMonthlyAmount !== undefined) payload.fixed_monthly_amount = body.fixedMonthlyAmount;
+      if (body.startingCounter !== undefined) {
+        if (!Number.isFinite(body.startingCounter) || body.startingCounter < 0) {
+          return NextResponse.json({ error: "startingCounter must be a number >= 0." }, { status: 400 });
+        }
+        payload.starting_counter = body.startingCounter;
+      }
       if (body.linkedCustomerIds !== undefined) {
         // Full desired list of linked customers for this monitor -- reconcile against
         // whoever is currently linked (add newly-selected, unlink deselected) rather than
