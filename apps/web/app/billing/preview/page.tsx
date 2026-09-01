@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { type BillingEntryRow } from "../../../lib/types/billing";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { billingTypeNeedsMeterReading } from "../../../lib/billing/billing-types";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 import { AppShell } from "../../_components/app-shell";
 
@@ -133,9 +134,10 @@ function BillingPreviewContent() {
   );
   const readyRows = filteredRows.filter(
     (row) =>
-      row.newCounter !== undefined &&
-      row.newCounter >= row.previousCounter &&
-      Boolean(row.counterImageName)
+      !billingTypeNeedsMeterReading(row.billingType) ||
+      (row.newCounter !== undefined &&
+        row.newCounter >= row.previousCounter &&
+        Boolean(row.counterImageName))
   ).length;
   const previewStatus =
     completedRows === 0
@@ -206,9 +208,10 @@ function BillingPreviewContent() {
     const regionCompletedRows = regionRows.length;
     const regionReadyRows = regionRows.filter(
       (row) =>
-        row.newCounter !== undefined &&
-        row.newCounter >= row.previousCounter &&
-        Boolean(row.counterImageName)
+        !billingTypeNeedsMeterReading(row.billingType) ||
+        (row.newCounter !== undefined &&
+          row.newCounter >= row.previousCounter &&
+          Boolean(row.counterImageName))
     ).length;
     const regionEstimatedConsumption = regionRows.reduce(
       (acc, row) => acc + (row.previousCounter + 120 - row.previousCounter),

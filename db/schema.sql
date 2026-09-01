@@ -151,12 +151,25 @@ create table if not exists billing_batch_items (
   is_free_customer_snapshot boolean not null default false,
   ampere_price_snapshot numeric(14,2),
   kwh_price_snapshot numeric(14,2),
-  counter_image_url text not null, -- exactly 1 required image per item
+  -- Exactly 1 image per metered/both item (enforced in the entry UI + the
+  -- submissions API). NULL for flat-charge items (fixed-monthly / amp-only),
+  -- which carry no meter reading -- see migration 008.
+  counter_image_url text,
   counter_image_uploaded_at timestamptz not null default now(),
+  -- Employee-proposed correction to a fixed-monthly customer's amount, decided
+  -- by the manager during review (see migration 009). NULL amount = no proposal;
+  -- NULL decision = manager hasn't decided yet. Approving updates
+  -- customers.fixed_monthly_amount going forward, never past bills.
+  proposed_fixed_monthly_amount numeric(14,2),
+  proposed_fixed_monthly_note text,
+  proposed_fixed_monthly_decision text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (new_counter >= previous_counter),
   check (consumption_kwh >= 0),
+  check (proposed_fixed_monthly_amount is null or proposed_fixed_monthly_amount > 0),
+  check (proposed_fixed_monthly_decision is null
+    or proposed_fixed_monthly_decision in ('approved', 'rejected')),
   unique (batch_id, customer_id)
 );
 

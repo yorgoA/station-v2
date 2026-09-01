@@ -45,11 +45,15 @@ select b.id, b.customer_id, b.month_key, b.previous_counter, b.new_counter
 from bills b
 where b.new_counter < b.previous_counter;
 
--- 3c) Approved batch items missing required image evidence
+-- 3c) Approved batch items missing required image evidence.
+-- Only metered/both items carry a meter reading + photo; flat-charge items
+-- (fixed-monthly / amp-only) legitimately have counter_image_url = NULL.
 select bi.id, bi.batch_id, bi.customer_id
 from billing_batch_items bi
 join billing_batches bb on bb.id = bi.batch_id
+left join billing_types bt on bt.id = bi.billing_type_id_snapshot
 where bb.status = 'approved_posted'
+  and coalesce(bt.key, 'metered') in ('metered', 'both')
   and (bi.counter_image_url is null or btrim(bi.counter_image_url) = '');
 
 -- 4) Loss-analysis rollup (if generator inputs exist)

@@ -30,9 +30,17 @@ export async function GET(_request: Request, context: Context) {
     // types accurate; a non-literal select falls back to an untyped parser error.
     const { data: items, error: itemsError } = await supabase
       .from("billing_batch_items")
-      .select("id, previous_counter, new_counter, counter_image_url, customers!inner(customer_number, full_name)")
+      .select(
+        "id, previous_counter, new_counter, counter_image_url, billing_type_id_snapshot, is_free_customer_snapshot, proposed_fixed_monthly_amount, proposed_fixed_monthly_note, proposed_fixed_monthly_decision, customers!inner(customer_number, full_name, fixed_monthly_amount)"
+      )
       .eq("batch_id", batchId);
     if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
+
+    const { data: billingTypes, error: billingTypesError } = await supabase
+      .from("billing_types")
+      .select("id, key");
+    if (billingTypesError) return NextResponse.json({ error: billingTypesError.message }, { status: 500 });
+    const billingTypeKeyById = new Map((billingTypes ?? []).map((row) => [row.id as string, row.key as string]));
 
     const { data: reviews, error: reviewsError } = await supabase
       .from("billing_batch_item_reviews")
@@ -46,9 +54,8 @@ export async function GET(_request: Request, context: Context) {
       ])
     );
 
-    const readCustomer = (
-      value: { customer_number: string; full_name: string } | Array<{ customer_number: string; full_name: string }> | null
-    ) => {
+    type ItemCustomer = { customer_number: string; full_name: string; fixed_monthly_amount: number | null };
+    const readCustomer = (value: ItemCustomer | ItemCustomer[] | null) => {
       if (Array.isArray(value)) return value[0] ?? null;
       return value;
     };
@@ -86,19 +93,23 @@ export async function GET(_request: Request, context: Context) {
     }
 
     const mappedItems = (items ?? []).map((row) => {
-      const customer = readCustomer(
-        row.customers as
-          | { customer_number: string; full_name: string }
-          | Array<{ customer_number: string; full_name: string }>
-          | null
-      );
+      const customer = readCustomer(row.customers as ItemCustomer | ItemCustomer[] | null);
       return {
         id: row.id,
         customerNumber: customer?.customer_number ?? "",
         customerName: customer?.full_name ?? "",
+        billingType: billingTypeKeyById.get(row.billing_type_id_snapshot as string) ?? "metered",
+        isFreeCustomer: Boolean(row.is_free_customer_snapshot),
         previousCounter: row.previous_counter,
         newCounter: row.new_counter,
         counterImageName: includeImages ? row.counter_image_url : undefined,
+        currentFixedMonthlyAmount:
+          customer?.fixed_monthly_amount != null ? Number(customer.fixed_monthly_amount) : 0,
+        proposedFixedMonthlyAmount:
+          row.proposed_fixed_monthly_amount != null ? Number(row.proposed_fixed_monthly_amount) : undefined,
+        proposedFixedMonthlyNote: row.proposed_fixed_monthly_note ?? undefined,
+        proposedFixedMonthlyDecision:
+          (row.proposed_fixed_monthly_decision as "approved" | "rejected" | null) ?? undefined,
         reviewState: reviewByItemId.get(row.id)?.decision,
         reviewNote: reviewByItemId.get(row.id)?.note ?? undefined,
         employeeChangeSummary: employeeChangeByCustomerNumber.get(

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const { data: customers, error: customersError } = await supabase
       .from("customers")
       .select(
-        "id, customer_number, full_name, billing_type_id, is_free_customer, monitor_id, subscribed_ampere, starting_counter"
+        "id, customer_number, full_name, billing_type_id, is_free_customer, monitor_id, subscribed_ampere, fixed_monthly_amount, starting_counter"
       )
       .eq("region_id", region.id)
       .order("customer_number", { ascending: true });
@@ -89,6 +89,7 @@ export async function GET(request: Request) {
           | "both"
           | "fixed-monthly",
         subscribedAmpere: customer.subscribed_ampere != null ? Number(customer.subscribed_ampere) : null,
+        fixedMonthlyAmount: customer.fixed_monthly_amount != null ? Number(customer.fixed_monthly_amount) : 0,
         isFreeCustomer: Boolean(customer.is_free_customer),
         isMonitor,
         obligatoryLinkedToCustomerNumber,

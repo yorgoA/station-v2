@@ -13,6 +13,7 @@ import {
   writeBillingDraftRows,
 } from "../../../lib/billing/draft-storage";
 import { ACTIVE_ENTRY_MONTH_KEY } from "../../../lib/constants/months";
+import { billingTypeNeedsMeterReading } from "../../../lib/billing/billing-types";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 import { AppShell } from "../../_components/app-shell";
 
@@ -20,6 +21,7 @@ type RowErrors = {
   newCounter?: string;
   counterImageName?: string;
   obligatoryLinkedToCustomerNumber?: string;
+  proposedFixedMonthlyAmount?: string;
 };
 
 type ReviewRowFeedback = {
@@ -64,6 +66,7 @@ function BillingEntryContent() {
     Record<string, SubmittedRowBaseline>
   >({});
   const [validatedFixRows, setValidatedFixRows] = useState<Record<string, boolean>>({});
+  const [proposingFixRows, setProposingFixRows] = useState<Record<string, boolean>>({});
 
   const periodKey = `${monthKey}|${regionFilter}`;
   const [entryWindowOpen, setEntryWindowOpen] = useState(false);
@@ -122,19 +125,35 @@ function BillingEntryContent() {
         continue;
       }
       const errors: RowErrors = {};
-      if (row.newCounter === undefined || Number.isNaN(row.newCounter)) {
-        errors.newCounter = "New counter is required.";
-      } else if (row.newCounter < row.previousCounter) {
-        errors.newCounter = "New counter must be greater than or equal to previous counter.";
-      }
-      if (!row.counterImageName) {
-        errors.counterImageName = "Exactly one counter image is required.";
+      // Flat-charge customers (fixed-monthly / amp-only) bill the same amount
+      // every month, so entry collects no counter reading or photo for them.
+      if (billingTypeNeedsMeterReading(row.billingType)) {
+        if (row.newCounter === undefined || Number.isNaN(row.newCounter)) {
+          errors.newCounter = "New counter is required.";
+        } else if (row.newCounter < row.previousCounter) {
+          errors.newCounter = "New counter must be greater than or equal to previous counter.";
+        }
+        if (!row.counterImageName) {
+          errors.counterImageName = "Exactly one counter image is required.";
+        }
       }
       if (row.isMonitor && !row.obligatoryLinkedToCustomerNumber) {
         errors.obligatoryLinkedToCustomerNumber =
           "Monitor customers must be linked to one obligatory customer.";
       }
-      if (errors.newCounter || errors.counterImageName || errors.obligatoryLinkedToCustomerNumber) {
+      if (
+        row.billingType === "fixed-monthly" &&
+        row.proposedFixedMonthlyAmount !== undefined &&
+        !(Number.isFinite(row.proposedFixedMonthlyAmount) && row.proposedFixedMonthlyAmount > 0)
+      ) {
+        errors.proposedFixedMonthlyAmount = "Proposed amount must be a positive number.";
+      }
+      if (
+        errors.newCounter ||
+        errors.counterImageName ||
+        errors.obligatoryLinkedToCustomerNumber ||
+        errors.proposedFixedMonthlyAmount
+      ) {
         result[row.id] = errors;
       }
     }
@@ -144,11 +163,13 @@ function BillingEntryContent() {
   const hasErrors = Object.keys(rowErrors).length > 0;
   const completedRows = visibleRows.filter((row) => {
     if (row.isFreeCustomer) return true;
-    const countersOk =
-      row.newCounter !== undefined &&
-      row.newCounter >= row.previousCounter &&
-      Boolean(row.counterImageName);
-    if (!countersOk) return false;
+    if (billingTypeNeedsMeterReading(row.billingType)) {
+      const countersOk =
+        row.newCounter !== undefined &&
+        row.newCounter >= row.previousCounter &&
+        Boolean(row.counterImageName);
+      if (!countersOk) return false;
+    }
     if (row.isMonitor && !row.obligatoryLinkedToCustomerNumber) return false;
     return true;
   }).length;
@@ -312,7 +333,13 @@ function BillingEntryContent() {
         }));
         let submittedByCustomerNumber = new Map<
           string,
-          { previousCounter: number; newCounter: number; counterImageName?: string }
+          {
+            previousCounter: number;
+            newCounter: number;
+            counterImageName?: string;
+            proposedFixedMonthlyAmount?: number;
+            proposedFixedMonthlyNote?: string;
+          }
         >();
         if (submissionResponse && submissionResponse.ok) {
           const submittedPayload = (await submissionResponse.json()) as {
@@ -321,6 +348,8 @@ function BillingEntryContent() {
               previousCounter: number;
               newCounter: number;
               counterImageName?: string;
+              proposedFixedMonthlyAmount?: number;
+              proposedFixedMonthlyNote?: string;
             }>;
           };
           submittedByCustomerNumber = new Map(
@@ -330,6 +359,8 @@ function BillingEntryContent() {
                 previousCounter: Number(r.previousCounter),
                 newCounter: Number(r.newCounter),
                 counterImageName: r.counterImageName,
+                proposedFixedMonthlyAmount: r.proposedFixedMonthlyAmount,
+                proposedFixedMonthlyNote: r.proposedFixedMonthlyNote,
               },
             ])
           );
@@ -345,6 +376,8 @@ function BillingEntryContent() {
                   previousCounter: fromSubmitted.previousCounter,
                   newCounter: fromSubmitted.newCounter,
                   counterImageName: fromSubmitted.counterImageName,
+                  proposedFixedMonthlyAmount: fromSubmitted.proposedFixedMonthlyAmount,
+                  proposedFixedMonthlyNote: fromSubmitted.proposedFixedMonthlyNote,
                 }
               : starter;
           if (!draft) return base;
@@ -359,6 +392,8 @@ function BillingEntryContent() {
             obligatoryLinkedToCustomerNumber: draft.obligatoryLinkedToCustomerNumber,
             newCounter: draft.newCounter,
             counterImageName: draft.counterImageName,
+            proposedFixedMonthlyAmount: draft.proposedFixedMonthlyAmount ?? base.proposedFixedMonthlyAmount,
+            proposedFixedMonthlyNote: draft.proposedFixedMonthlyNote ?? base.proposedFixedMonthlyNote,
           };
         });
         const draftOnlyRows = parsedDraftRows.filter((draft) => !starterRows.some((s) => s.id === draft.id));
@@ -623,8 +658,21 @@ function BillingEntryContent() {
             const rowNeedsChange = rowWasChangesRequested && !rowIsApprovedByFix;
             const rowLocked = isChangesRequested && (rowFeedback?.state === "approved" || rowIsApprovedByFix);
             const rowReadOnly = rowLocked || row.isFreeCustomer || !entryUnlockedForEdit;
+            const needsMeterReading = billingTypeNeedsMeterReading(row.billingType);
+            const currentFixedAmount = row.fixedMonthlyAmount ?? 0;
+            const isProposingFix =
+              row.billingType === "fixed-monthly" &&
+              (proposingFixRows[row.id] === true || row.proposedFixedMonthlyAmount !== undefined);
+            const hasFixProposal =
+              row.billingType === "fixed-monthly" &&
+              row.proposedFixedMonthlyAmount !== undefined &&
+              Number.isFinite(row.proposedFixedMonthlyAmount) &&
+              (row.proposedFixedMonthlyAmount as number) > 0 &&
+              row.proposedFixedMonthlyAmount !== currentFixedAmount;
             const consumption =
-              row.newCounter !== undefined && row.newCounter >= row.previousCounter
+              needsMeterReading &&
+              row.newCounter !== undefined &&
+              row.newCounter >= row.previousCounter
                 ? row.newCounter - row.previousCounter
                 : undefined;
             return (
@@ -672,20 +720,24 @@ function BillingEntryContent() {
                   />
                 </label>
                 <br />
-                <label>
-                  Previous counter:{" "}
-                  <input
-                    type="number"
-                    value={row.previousCounter}
-                    disabled={rowReadOnly}
-                    onChange={(e) =>
-                      updateRow(row.id, {
-                        previousCounter: Number(e.target.value || "0")
-                      })
-                    }
-                  />
-                </label>
-                <br />
+                {needsMeterReading && (
+                  <>
+                    <label>
+                      Previous counter:{" "}
+                      <input
+                        type="number"
+                        value={row.previousCounter}
+                        disabled={rowReadOnly}
+                        onChange={(e) =>
+                          updateRow(row.id, {
+                            previousCounter: Number(e.target.value || "0")
+                          })
+                        }
+                      />
+                    </label>
+                    <br />
+                  </>
+                )}
                 <label>
                   Billing type:{" "}
                   <select
@@ -756,49 +808,150 @@ function BillingEntryContent() {
                   </>
                 )}
                 <br />
-                <label>
-                  New counter:{" "}
-                  <input
-                    type="number"
-                    value={row.newCounter ?? ""}
-                    disabled={rowReadOnly}
-                    onChange={(e) =>
-                      updateRow(row.id, {
-                        newCounter:
-                          e.target.value === "" ? undefined : Number(e.target.value)
-                      })
-                    }
-                  />
-                </label>
-                <br />
-                <label>
-                  {row.counterImageName
-                    ? "Counter image (click preview, choose file to replace): "
-                    : "Counter image (exactly 1): "}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={rowReadOnly}
-                    onChange={(e) => handleImageChange(row.id, e.target.files?.[0])}
-                  />
-                </label>
-                {getRowPreviewImage(row.id, row.counterImageName) ? (
-                  <div style={{ marginTop: 8 }}>
-                    <img
-                      src={getRowPreviewImage(row.id, row.counterImageName)}
-                      alt={`Counter ${row.customerNumber}`}
-                      title="Click to preview"
-                      onClick={() => setImageModalSrc(getRowPreviewImage(row.id, row.counterImageName))}
-                      style={{
-                        width: 140,
-                        height: "auto",
-                        borderRadius: 6,
-                        border: "1px solid #d1d5db",
-                        cursor: "pointer",
-                      }}
-                    />
+                {needsMeterReading ? (
+                  <>
+                    <label>
+                      New counter:{" "}
+                      <input
+                        type="number"
+                        value={row.newCounter ?? ""}
+                        disabled={rowReadOnly}
+                        onChange={(e) =>
+                          updateRow(row.id, {
+                            newCounter:
+                              e.target.value === "" ? undefined : Number(e.target.value)
+                          })
+                        }
+                      />
+                    </label>
+                    <br />
+                    <label>
+                      {row.counterImageName
+                        ? "Counter image (click preview, choose file to replace): "
+                        : "Counter image (exactly 1): "}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={rowReadOnly}
+                        onChange={(e) => handleImageChange(row.id, e.target.files?.[0])}
+                      />
+                    </label>
+                    {getRowPreviewImage(row.id, row.counterImageName) ? (
+                      <div style={{ marginTop: 8 }}>
+                        <img
+                          src={getRowPreviewImage(row.id, row.counterImageName)}
+                          alt={`Counter ${row.customerNumber}`}
+                          title="Click to preview"
+                          onClick={() => setImageModalSrc(getRowPreviewImage(row.id, row.counterImageName))}
+                          style={{
+                            width: 140,
+                            height: "auto",
+                            borderRadius: 6,
+                            border: "1px solid #d1d5db",
+                            cursor: "pointer",
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                ) : row.billingType === "fixed-monthly" ? (
+                  <div style={{ marginTop: 4 }}>
+                    <p className="muted" style={{ margin: 0 }}>
+                      Flat monthly charge — no counter reading or photo. The bill is the
+                      customer&apos;s set monthly amount, the same every month.
+                    </p>
+                    <p style={{ margin: "6px 0 0" }}>
+                      <strong>Fixed monthly amount:</strong>{" "}
+                      {currentFixedAmount > 0
+                        ? `${currentFixedAmount.toLocaleString()} LBP`
+                        : "not set — a manager must set it on the customer profile"}
+                    </p>
+                    {!isProposingFix ? (
+                      <button
+                        type="button"
+                        className="link-btn"
+                        disabled={rowReadOnly}
+                        onClick={() => {
+                          setProposingFixRows((prev) => ({ ...prev, [row.id]: true }));
+                          updateRow(row.id, {
+                            proposedFixedMonthlyAmount:
+                              row.proposedFixedMonthlyAmount ?? (currentFixedAmount || undefined),
+                          });
+                        }}
+                      >
+                        Propose a different amount
+                      </button>
+                    ) : (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: 10,
+                          borderRadius: 6,
+                          border: "1px solid #fdba74",
+                          background: "#fff7ed",
+                        }}
+                      >
+                        <p className="muted" style={{ margin: "0 0 6px" }}>
+                          Proposed correction — the manager approves or rejects this when validating the
+                          batch. Nothing changes until then.
+                        </p>
+                        <label>
+                          Proposed amount (LBP):{" "}
+                          <input
+                            type="number"
+                            value={row.proposedFixedMonthlyAmount ?? ""}
+                            disabled={rowReadOnly}
+                            onChange={(e) =>
+                              updateRow(row.id, {
+                                proposedFixedMonthlyAmount:
+                                  e.target.value === "" ? undefined : Number(e.target.value),
+                              })
+                            }
+                          />
+                        </label>
+                        <br />
+                        <label>
+                          Reason (optional):{" "}
+                          <input
+                            type="text"
+                            value={row.proposedFixedMonthlyNote ?? ""}
+                            disabled={rowReadOnly}
+                            onChange={(e) =>
+                              updateRow(row.id, {
+                                proposedFixedMonthlyNote: e.target.value || undefined,
+                              })
+                            }
+                          />
+                        </label>
+                        <br />
+                        <button
+                          type="button"
+                          className="link-btn"
+                          disabled={rowReadOnly}
+                          onClick={() => {
+                            setProposingFixRows((prev) => ({ ...prev, [row.id]: false }));
+                            updateRow(row.id, {
+                              proposedFixedMonthlyAmount: undefined,
+                              proposedFixedMonthlyNote: undefined,
+                            });
+                          }}
+                        >
+                          Remove proposal
+                        </button>
+                        {hasFixProposal && (
+                          <p style={{ margin: "6px 0 0", color: "var(--warning)" }}>
+                            Will send to manager: {currentFixedAmount.toLocaleString()} →{" "}
+                            {(row.proposedFixedMonthlyAmount as number).toLocaleString()} LBP
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ) : null}
+                ) : (
+                  <p className="muted" style={{ marginTop: 4 }}>
+                    Flat monthly charge ({row.billingType}) — no counter reading or photo needed.
+                  </p>
+                )}
                 {row.isFreeCustomer && (
                   <p className="muted">
                     Free customer — excluded from meter entry. Managers change free status on the customer
@@ -819,6 +972,9 @@ function BillingEntryContent() {
                 )}
                 {submitAttempted && errors?.obligatoryLinkedToCustomerNumber && (
                   <p style={{ color: "#b91c1c" }}>{errors.obligatoryLinkedToCustomerNumber}</p>
+                )}
+                {submitAttempted && errors?.proposedFixedMonthlyAmount && (
+                  <p style={{ color: "#b91c1c" }}>{errors.proposedFixedMonthlyAmount}</p>
                 )}
                 {rowNeedsChange && (
                   <div className="card-actions-right" style={{ marginTop: 10 }}>

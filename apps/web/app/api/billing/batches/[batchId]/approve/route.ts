@@ -14,6 +14,25 @@ export async function POST(_request: Request, context: Context) {
     const batchId = context.params.batchId;
     const supabase = createSupabaseAdminClient();
 
+    // An employee may have proposed a corrected fixed-monthly amount; the manager
+    // must approve or reject each one before the batch is priced, so a bill is
+    // never posted with an amount that's still under dispute.
+    const { data: undecided, error: undecidedError } = await supabase
+      .from("billing_batch_items")
+      .select("id")
+      .eq("batch_id", batchId)
+      .not("proposed_fixed_monthly_amount", "is", null)
+      .is("proposed_fixed_monthly_decision", null);
+    if (undecidedError) return NextResponse.json({ error: undecidedError.message }, { status: 500 });
+    if (undecided && undecided.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Decide the ${undecided.length} pending fixed-monthly change request(s) before approving this batch.`
+        },
+        { status: 400 }
+      );
+    }
+
     // approve_billing_batch() computes real priced bills, snapshots the prices used,
     // and transitions the batch to approved_posted, all in one Postgres transaction.
     // See db/schema.sql / db/migrations/002_billing_pricing.sql.

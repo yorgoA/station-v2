@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { type BillingEntryRow } from "../../../../lib/types/billing";
+import { billingTypeNeedsMeterReading } from "../../../../lib/billing/billing-types";
 
 export default function ManagerApprovalBatchPage() {
   const params = useParams<{ batchId: string }>();
@@ -22,6 +23,18 @@ export default function ManagerApprovalBatchPage() {
   const [rowStates, setRowStates] = useState<Record<string, "approved" | "changes_needed">>({});
   const [rowNotes, setRowNotes] = useState<Record<string, string>>({});
   const [employeeChangeSummaryByRowId, setEmployeeChangeSummaryByRowId] = useState<Record<string, string>>({});
+  const [fixProposalByRowId, setFixProposalByRowId] = useState<
+    Record<
+      string,
+      {
+        currentAmount: number;
+        proposedAmount: number;
+        note?: string;
+        decision?: "approved" | "rejected";
+      }
+    >
+  >({});
+  const [fixProposalBusyRowId, setFixProposalBusyRowId] = useState<string | null>(null);
   const [initialReviewStates, setInitialReviewStates] = useState<Record<string, "approved" | "changes_needed">>({});
   const [pendingModificationRows, setPendingModificationRows] = useState<Record<string, boolean>>({});
   const [modificationStartNotes, setModificationStartNotes] = useState<Record<string, string>>({});
@@ -57,10 +70,11 @@ export default function ManagerApprovalBatchPage() {
     return "";
   };
 
-  useEffect(() => {
-    if (!batchId) return;
-    fetch(`/api/billing/batches/${batchId}`)
-      .then(async (response) => {
+  const loadBatch = useCallback(
+    async (opts?: { preserveReviewState?: boolean }) => {
+      if (!batchId) return;
+      try {
+        const response = await fetch(`/api/billing/batches/${batchId}`);
         if (!response.ok) throw new Error("Failed to load batch from server.");
         const payload = (await response.json()) as {
           batch: {
@@ -75,9 +89,15 @@ export default function ManagerApprovalBatchPage() {
             id: string;
             customerNumber: string;
             customerName: string;
+            billingType?: string;
+            isFreeCustomer?: boolean;
             previousCounter: number;
             newCounter: number;
             counterImageName: string;
+            currentFixedMonthlyAmount?: number;
+            proposedFixedMonthlyAmount?: number;
+            proposedFixedMonthlyNote?: string;
+            proposedFixedMonthlyDecision?: "approved" | "rejected";
             reviewState?: "approved" | "changes_needed";
             reviewNote?: string;
             employeeChangeSummary?: string;
@@ -93,8 +113,9 @@ export default function ManagerApprovalBatchPage() {
             previousCounter: Number(item.previousCounter),
             newCounter: Number(item.newCounter),
             counterImageName: item.counterImageName,
-            billingType: "metered",
-            isFreeCustomer: false,
+            billingType: item.billingType ?? "metered",
+            isFreeCustomer: Boolean(item.isFreeCustomer),
+            fixedMonthlyAmount: Number(item.currentFixedMonthlyAmount ?? 0),
             isMonitor: false,
           }))
         );
@@ -105,31 +126,81 @@ export default function ManagerApprovalBatchPage() {
               .map((item) => [item.id, String(item.employeeChangeSummary)])
           )
         );
-        const nextStates: Record<string, "approved" | "changes_needed"> = {};
-        const nextNotes: Record<string, string> = {};
-        const nextInitialStates: Record<string, "approved" | "changes_needed"> = {};
-        for (const item of payload.items) {
-          if (item.reviewState) {
-            nextStates[item.id] = item.reviewState;
-            nextInitialStates[item.id] = item.reviewState;
-          } else if (payload.batch.status !== "pending_review") {
-            // Sent/posted batches are treated as finalized for display.
-            nextStates[item.id] = "approved";
+        setFixProposalByRowId(
+          Object.fromEntries(
+            payload.items
+              .filter((item) => item.proposedFixedMonthlyAmount != null)
+              .map((item) => [
+                item.id,
+                {
+                  currentAmount: Number(item.currentFixedMonthlyAmount ?? 0),
+                  proposedAmount: Number(item.proposedFixedMonthlyAmount),
+                  note: item.proposedFixedMonthlyNote,
+                  decision: item.proposedFixedMonthlyDecision,
+                },
+              ])
+          )
+        );
+        if (!opts?.preserveReviewState) {
+          const nextStates: Record<string, "approved" | "changes_needed"> = {};
+          const nextNotes: Record<string, string> = {};
+          const nextInitialStates: Record<string, "approved" | "changes_needed"> = {};
+          for (const item of payload.items) {
+            if (item.reviewState) {
+              nextStates[item.id] = item.reviewState;
+              nextInitialStates[item.id] = item.reviewState;
+            } else if (payload.batch.status !== "pending_review") {
+              // Sent/posted batches are treated as finalized for display.
+              nextStates[item.id] = "approved";
+            }
+            if (item.reviewNote) nextNotes[item.id] = item.reviewNote;
           }
-          if (item.reviewNote) nextNotes[item.id] = item.reviewNote;
+          setRowStates(nextStates);
+          setRowNotes(nextNotes);
+          setInitialReviewStates(nextInitialStates);
         }
-        setRowStates(nextStates);
-        setRowNotes(nextNotes);
-        setInitialReviewStates(nextInitialStates);
-      })
-      .catch(() => {
+      } catch {
         setServerBatch(null);
         setServerItems(null);
         setEmployeeChangeSummaryByRowId({});
+        setFixProposalByRowId({});
         setInitialReviewStates({});
         setBanner("Failed to load server batch details.");
+      }
+    },
+    [batchId]
+  );
+
+  useEffect(() => {
+    void loadBatch();
+  }, [loadBatch]);
+
+  async function decideFixProposal(rowId: string, decision: "approved" | "rejected") {
+    setFixProposalBusyRowId(rowId);
+    setBanner("");
+    try {
+      const response = await fetch(`/api/billing/batches/${batchId}/fixed-amount-proposal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: rowId, decision }),
       });
-  }, [batchId]);
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setBanner(data.error ?? "Failed to record decision on the proposed amount.");
+        return;
+      }
+      await loadBatch({ preserveReviewState: true });
+      setBanner(
+        decision === "approved"
+          ? "Proposed fixed-monthly amount approved and applied to the customer."
+          : "Proposed fixed-monthly amount rejected; the customer's amount is unchanged."
+      );
+    } catch (error) {
+      setBanner(error instanceof Error ? error.message : "Failed to record decision.");
+    } finally {
+      setFixProposalBusyRowId(null);
+    }
+  }
 
   function startModification(rowId: string) {
     setPendingModificationRows((prev) => ({ ...prev, [rowId]: true }));
@@ -272,8 +343,75 @@ export default function ManagerApprovalBatchPage() {
               {row.customerName} ({row.customerNumber})
             </strong>
           </p>
-          <p className="muted">Previous counter: {row.previousCounter}</p>
-          <p className="muted">Current counter: {row.newCounter ?? "-"}</p>
+          {billingTypeNeedsMeterReading(row.billingType) ? (
+            <>
+              <p className="muted">Previous counter: {row.previousCounter}</p>
+              <p className="muted">Current counter: {row.newCounter ?? "-"}</p>
+            </>
+          ) : row.billingType === "fixed-monthly" ? (
+            <p className="muted">
+              Flat monthly charge — billed the customer&apos;s set amount:{" "}
+              <strong>
+                {(fixProposalByRowId[row.id]?.currentAmount ?? row.fixedMonthlyAmount ?? 0).toLocaleString()} LBP
+              </strong>
+            </p>
+          ) : (
+            <p className="muted">
+              Flat monthly charge ({row.billingType}) — no meter reading; billed the customer&apos;s
+              set monthly amount.
+            </p>
+          )}
+          {fixProposalByRowId[row.id] ? (
+            <div
+              className="card"
+              style={{ marginTop: 6, marginBottom: 6, background: "#fff7ed", borderColor: "#fdba74" }}
+            >
+              <p style={{ marginTop: 0, marginBottom: 4 }}>
+                <strong>Employee proposes a fixed-monthly correction</strong>
+              </p>
+              <p className="muted" style={{ margin: "0 0 4px" }}>
+                {fixProposalByRowId[row.id].currentAmount.toLocaleString()} LBP →{" "}
+                {fixProposalByRowId[row.id].proposedAmount.toLocaleString()} LBP
+              </p>
+              {fixProposalByRowId[row.id].note ? (
+                <p className="muted" style={{ margin: "0 0 4px" }}>
+                  Reason: {fixProposalByRowId[row.id].note}
+                </p>
+              ) : null}
+              {fixProposalByRowId[row.id].decision === "approved" ? (
+                <p style={{ margin: 0, color: "var(--success)" }}>
+                  Approved — customer&apos;s amount updated to{" "}
+                  {fixProposalByRowId[row.id].proposedAmount.toLocaleString()} LBP. This bill will use it.
+                </p>
+              ) : fixProposalByRowId[row.id].decision === "rejected" ? (
+                <p style={{ margin: 0, color: "var(--danger)" }}>
+                  Rejected — customer&apos;s amount stays at{" "}
+                  {fixProposalByRowId[row.id].currentAmount.toLocaleString()} LBP.
+                </p>
+              ) : selectedBatch.status === "pending_review" || selectedBatch.status === "changes_requested" ? (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                  <button
+                    type="button"
+                    className="success-btn"
+                    disabled={fixProposalBusyRowId === row.id}
+                    onClick={() => decideFixProposal(row.id, "approved")}
+                  >
+                    Approve change
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-btn"
+                    disabled={fixProposalBusyRowId === row.id}
+                    onClick={() => decideFixProposal(row.id, "rejected")}
+                  >
+                    Reject change
+                  </button>
+                </div>
+              ) : (
+                <p className="muted" style={{ margin: 0 }}>Not decided.</p>
+              )}
+            </div>
+          ) : null}
           {employeeChangeSummaryByRowId[row.id] ? (
             <p className="muted" style={{ marginTop: 0, marginBottom: 6 }}>
               Employee modifications: {employeeChangeSummaryByRowId[row.id]}
@@ -283,10 +421,12 @@ export default function ManagerApprovalBatchPage() {
               Employee modifications: re-submitted after previous manager note (legacy details unavailable for this cycle).
             </p>
           ) : null}
+          {billingTypeNeedsMeterReading(row.billingType) && (
           <p className="muted" style={{ marginBottom: 6 }}>
             Counter image:
           </p>
-          {row.counterImageName ? (
+          )}
+          {billingTypeNeedsMeterReading(row.billingType) && row.counterImageName ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
               {toImageHref(row.counterImageName) ? (
                 <>

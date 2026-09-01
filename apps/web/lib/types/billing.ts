@@ -7,6 +7,11 @@ export type BillingEntryRow = {
   newCounter?: number;
   billingType: string;
   subscribedAmpere?: number | null;
+  /** Current standing amount for a fixed-monthly customer (LBP). */
+  fixedMonthlyAmount?: number;
+  /** Employee-proposed corrected amount for a fixed-monthly customer (LBP); undefined = no proposal. */
+  proposedFixedMonthlyAmount?: number;
+  proposedFixedMonthlyNote?: string;
   isFreeCustomer: boolean;
   isMonitor: boolean;
   obligatoryLinkedToCustomerNumber?: string;

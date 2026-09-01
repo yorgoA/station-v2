@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../lib/auth/require-role";
 import { getEntryLockState } from "../../../../lib/billing/entry-window";
+import { billingTypeNeedsMeterReading } from "../../../../lib/billing/billing-types";
 
 type SubmissionRowInput = {
   customerNumber: string;
@@ -14,6 +15,11 @@ type SubmissionRowInput = {
   counterImageDataUrl?: string;
   previousSubmittedNewCounter?: number;
   previousSubmittedCounterImageName?: string;
+  /** Current standing fixed-monthly amount as shown to the employee. */
+  fixedMonthlyAmount?: number;
+  /** Employee-proposed corrected fixed-monthly amount; omitted = no proposal. */
+  proposedFixedMonthlyAmount?: number;
+  proposedFixedMonthlyNote?: string;
 };
 
 type SubmissionBody = {
@@ -95,12 +101,52 @@ export async function POST(request: Request) {
 
     const employeeChangeSummaries: Array<{ customerNumber: string; summary: string }> = [];
     for (const row of body.rows) {
-      if (row.newCounter === undefined || row.newCounter < row.previousCounter || !row.counterImageName) {
+      // Flat-charge customers (fixed-monthly / amp-only) bill the same amount
+      // every month, so no counter reading or photo is entered for them. Only
+      // consumption-based rows (metered / both) carry a reading to validate.
+      const rowNeedsMeter = billingTypeNeedsMeterReading(row.billingType);
+      if (
+        rowNeedsMeter &&
+        (row.newCounter === undefined || row.newCounter < row.previousCounter || !row.counterImageName)
+      ) {
         return NextResponse.json(
           { error: `Row '${row.customerNumber || row.customerName}' has invalid counters/image.` },
           { status: 400 }
         );
       }
+
+      const previousCounterValue = Number.isFinite(row.previousCounter) ? row.previousCounter : 0;
+      // For a flat-charge row the meter doesn't move: store new = previous so the
+      // DB's `new_counter >= previous_counter` check holds and consumption is 0.
+      const newCounterValue = rowNeedsMeter ? (row.newCounter as number) : previousCounterValue;
+      const consumptionKwh = Math.max(newCounterValue - previousCounterValue, 0);
+
+      // Employee-proposed correction to a fixed-monthly customer's amount. Only
+      // meaningful for fixed-monthly; a value equal to the current amount is
+      // treated as "no proposal". Every (re)submit clears the manager decision.
+      const proposedRaw = Number(row.proposedFixedMonthlyAmount);
+      const currentFixedAmount = Number(row.fixedMonthlyAmount);
+      const hasProposal =
+        row.billingType === "fixed-monthly" &&
+        Number.isFinite(proposedRaw) &&
+        proposedRaw > 0 &&
+        !(Number.isFinite(currentFixedAmount) && proposedRaw === currentFixedAmount);
+      if (
+        row.billingType === "fixed-monthly" &&
+        row.proposedFixedMonthlyAmount !== undefined &&
+        row.proposedFixedMonthlyAmount !== null &&
+        (!Number.isFinite(proposedRaw) || proposedRaw <= 0)
+      ) {
+        return NextResponse.json(
+          { error: `Proposed fixed-monthly amount for '${row.customerNumber || row.customerName}' must be a positive number.` },
+          { status: 400 }
+        );
+      }
+      const proposedFixedMonthlyAmount = hasProposal ? proposedRaw : null;
+      const proposedFixedMonthlyNote =
+        hasProposal && typeof row.proposedFixedMonthlyNote === "string" && row.proposedFixedMonthlyNote.trim()
+          ? row.proposedFixedMonthlyNote.trim().slice(0, 500)
+          : null;
 
       const { data: existingCustomer, error: existingCustomerError } = await supabase
         .from("customers")
@@ -129,30 +175,39 @@ export async function POST(request: Request) {
         customerId = createdCustomer.id as string;
       }
 
-      const calculatedAmount = Math.max(row.newCounter - row.previousCounter, 0);
+      const calculatedAmount = consumptionKwh;
       const inlineImageFromName =
         typeof row.counterImageName === "string" && row.counterImageName.startsWith("data:image/")
           ? row.counterImageName
           : undefined;
-      const storedCounterImageUrl =
-        typeof row.counterImageDataUrl === "string" && row.counterImageDataUrl.startsWith("data:image/")
+      const storedCounterImageUrl = !rowNeedsMeter
+        ? null
+        : typeof row.counterImageDataUrl === "string" && row.counterImageDataUrl.startsWith("data:image/")
           ? row.counterImageDataUrl
           : inlineImageFromName
             ? inlineImageFromName
             : `uploads/${row.counterImageName}`;
       const counterChanged =
-        typeof row.previousSubmittedNewCounter === "number" && row.previousSubmittedNewCounter !== row.newCounter;
+        rowNeedsMeter &&
+        typeof row.previousSubmittedNewCounter === "number" &&
+        row.previousSubmittedNewCounter !== row.newCounter;
       const imageChanged =
+        rowNeedsMeter &&
         typeof row.previousSubmittedCounterImageName === "string" &&
         row.previousSubmittedCounterImageName.trim() !== "" &&
         row.previousSubmittedCounterImageName !== row.counterImageName;
-      if (counterChanged || imageChanged) {
+      if (counterChanged || imageChanged || proposedFixedMonthlyAmount !== null) {
         const parts: string[] = [];
         if (counterChanged) {
           parts.push(`counter ${row.previousSubmittedNewCounter} -> ${row.newCounter}`);
         }
         if (imageChanged) {
           parts.push("image replaced");
+        }
+        if (proposedFixedMonthlyAmount !== null) {
+          parts.push(
+            `proposed fixed monthly ${Number.isFinite(currentFixedAmount) ? currentFixedAmount.toLocaleString() : "?"} -> ${proposedFixedMonthlyAmount.toLocaleString()} LBP`
+          );
         }
         employeeChangeSummaries.push({
           customerNumber: row.customerNumber,
@@ -163,13 +218,18 @@ export async function POST(request: Request) {
         {
           batch_id: batch.id,
           customer_id: customerId,
-          previous_counter: row.previousCounter,
-          new_counter: row.newCounter,
-          consumption_kwh: Math.max(row.newCounter - row.previousCounter, 0),
+          previous_counter: previousCounterValue,
+          new_counter: newCounterValue,
+          consumption_kwh: consumptionKwh,
           calculated_amount: calculatedAmount,
           billing_type_id_snapshot: billingTypeByKey.get(row.billingType) ?? null,
           is_free_customer_snapshot: Boolean(row.isFreeCustomer),
           counter_image_url: storedCounterImageUrl,
+          proposed_fixed_monthly_amount: proposedFixedMonthlyAmount,
+          proposed_fixed_monthly_note: proposedFixedMonthlyNote,
+          // Every (re)submit resets the manager's decision -- they re-decide
+          // against whatever the customer's amount is at review time.
+          proposed_fixed_monthly_decision: null,
         },
         { onConflict: "batch_id,customer_id" }
       );
@@ -230,7 +290,9 @@ export async function GET(request: Request) {
 
     const { data: items, error: itemsError } = await supabase
       .from("billing_batch_items")
-      .select("id, previous_counter, new_counter, counter_image_url, customers!inner(customer_number, full_name)")
+      .select(
+        "id, previous_counter, new_counter, counter_image_url, proposed_fixed_monthly_amount, proposed_fixed_monthly_note, customers!inner(customer_number, full_name)"
+      )
       .eq("batch_id", batch.id);
     if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
 
@@ -255,6 +317,9 @@ export async function GET(request: Request) {
         previousCounter: row.previous_counter,
         newCounter: row.new_counter,
         counterImageName: row.counter_image_url,
+        proposedFixedMonthlyAmount:
+          row.proposed_fixed_monthly_amount != null ? Number(row.proposed_fixed_monthly_amount) : undefined,
+        proposedFixedMonthlyNote: row.proposed_fixed_monthly_note ?? undefined,
       };
     });
 

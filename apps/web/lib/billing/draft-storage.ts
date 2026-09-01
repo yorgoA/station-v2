@@ -90,6 +90,9 @@ export function writeBillingDraftRows(monthKey: string, region: string, rows: Bi
       isFreeCustomer: row.isFreeCustomer,
       isMonitor: row.isMonitor,
       obligatoryLinkedToCustomerNumber: row.obligatoryLinkedToCustomerNumber,
+      fixedMonthlyAmount: row.fixedMonthlyAmount,
+      proposedFixedMonthlyAmount: row.proposedFixedMonthlyAmount,
+      proposedFixedMonthlyNote: row.proposedFixedMonthlyNote,
     }));
     try {
       window.localStorage.setItem(key, JSON.stringify(minimal));
