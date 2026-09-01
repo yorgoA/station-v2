@@ -27,26 +27,36 @@ function BillingPreviewContent() {
   const periodKey = `${monthKey}|${regionFilter}`;
   const [entryWindowOpen, setEntryWindowOpen] = useState(false);
   const [unlockDateLabel, setUnlockDateLabel] = useState("");
+  const [lockDateLabel, setLockDateLabel] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/settings/billing-lock?month=${encodeURIComponent(monthKey)}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed to check entry lock.");
-        const payload = (await response.json()) as { isOpen?: boolean; unlockDateLabel?: string };
+        const payload = (await response.json()) as {
+          isOpen?: boolean;
+          unlockDateLabel?: string;
+          lockDateLabel?: string;
+        };
         if (cancelled) return;
         setEntryWindowOpen(Boolean(payload.isOpen));
         setUnlockDateLabel(payload.unlockDateLabel ?? "");
+        setLockDateLabel(payload.lockDateLabel ?? "");
       })
       .catch(() => {
         if (cancelled) return;
         setEntryWindowOpen(false);
         setUnlockDateLabel("");
+        setLockDateLabel("");
       });
     return () => {
       cancelled = true;
     };
   }, [monthKey]);
+
+  const entryWindowLabel =
+    unlockDateLabel && lockDateLabel ? `${unlockDateLabel} to ${lockDateLabel}` : "the scheduled window";
 
   const isCurrentPeriodSubmitted =
     regionFilter !== "all" &&
@@ -232,7 +242,7 @@ function BillingPreviewContent() {
           : regionWorkflowStatus === "changes_requested"
             ? "Changes requested"
             : regionIsCalendarLocked
-              ? "Locked by billing calendar until 27"
+              ? "Closed by billing calendar"
             : regionPreviewStatus === "ready_to_submit"
               ? "Ready to submit"
               : "Draft in progress";
@@ -389,7 +399,10 @@ function BillingPreviewContent() {
                   </button>
                 </div>
               )}
-              {(info.regionTone === "changes" || info.regionTone === "danger") && entryWindowOpen && (
+              {/* A manager send-back ("changes" tone) is always correctable, even
+                  after the calendar window closes; a plain draft ("danger") only
+                  while the window is open. */}
+              {(info.regionTone === "changes" || (info.regionTone === "danger" && entryWindowOpen)) && (
                 <div className="card-actions-right" style={{ marginTop: 14 }}>
                   <Link
                     href={`/employee/billing/entry?month=${monthKey}&region=${info.region}`}
@@ -412,7 +425,7 @@ function BillingPreviewContent() {
             <h3 style={{ margin: 0 }}>{statusTitle}</h3>
             <p style={{ marginTop: 8, marginBottom: 0 }}>
               {!entryWindowOpen && !persistedWorkflowStatus
-                ? `Locked by billing calendar until 27 (${unlockDateLabel}).`
+                ? `Closed by the billing calendar. Entry window: ${entryWindowLabel}.`
                 : statusDescription}
             </p>
           </div>
@@ -465,7 +478,7 @@ function BillingPreviewContent() {
             </button>
           </div>
         )}
-        {(statusTone === "changes" || statusTone === "danger") && entryWindowOpen && (
+        {(statusTone === "changes" || (statusTone === "danger" && entryWindowOpen)) && (
           <div className="card-actions-right">
             <Link
               href={`/employee/billing/entry?month=${monthKey}&region=${regionFilter}`}

@@ -290,10 +290,12 @@ create index if not exists idx_generator_readings_month_region
 -- ==========
 -- Billing-entry month lock override
 -- ==========
--- Default rule (apps/web/lib/billing/entry-window.ts) opens a month for entry
--- starting on the 27th of that same month. This table lets a manager force a
--- month open early (e.g. a pilot/test run before the 27th) or force it closed
--- even after the 27th. No row for a month = fall back to the calendar rule.
+-- Default rule (apps/web/lib/billing/entry-window.ts) keeps a month open for
+-- entry from the 27th of that month through the 26th of the next month (a
+-- rolling window, so a reading walk spanning month-end is never locked out).
+-- This table lets a manager force a month open early (e.g. a pilot/test run
+-- before the 27th) or force it closed. No row for a month = fall back to the
+-- calendar rule.
 create table if not exists billing_month_locks (
   month_key text primary key check (month_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
   override text not null check (override in ('unlocked', 'locked')),

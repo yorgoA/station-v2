@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../lib/auth/require-role";
-import { monthKeyFromDate } from "../../../../lib/constants/months";
+import { activeEntryMonthKey, monthKeyFromDate } from "../../../../lib/constants/months";
 
 /**
  * Months that should actually show up in month filters/pickers across the app:
  * the real current month (so entry/creation flows always have somewhere to
- * point), plus every month that has real billing_batches or bills data. No
- * arbitrary rolling window, and never future months beyond the current one --
- * a month only becomes selectable once there's a reason to select it.
+ * point), the month currently open for meter-reading entry (the previous
+ * calendar month during the first 26 days of a month -- it may have no data
+ * yet but the employee still needs to pick it), plus every month that has real
+ * billing_batches or bills data. No arbitrary rolling window, and never future
+ * months -- a month only becomes selectable once there's a reason to select it.
  */
 export async function GET() {
   try {
@@ -23,7 +25,7 @@ export async function GET() {
     if (batchesRes.error) return NextResponse.json({ error: batchesRes.error.message }, { status: 500 });
     if (billsRes.error) return NextResponse.json({ error: billsRes.error.message }, { status: 500 });
 
-    const months = new Set<string>([monthKeyFromDate(new Date())]);
+    const months = new Set<string>([monthKeyFromDate(new Date()), activeEntryMonthKey()]);
     for (const row of batchesRes.data ?? []) months.add(row.month_key as string);
     for (const row of billsRes.data ?? []) months.add(row.month_key as string);
 

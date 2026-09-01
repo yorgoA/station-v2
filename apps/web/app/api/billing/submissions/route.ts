@@ -35,19 +35,6 @@ export async function POST(request: Request) {
     const supabase = createSupabaseAdminClient();
     const actorUserId = auth.actor.appUserId;
 
-    // Managers can always submit/correct; employees are gated by the entry-window lock
-    // (only enforced client-side before this -- an employee could otherwise bypass the
-    // UI's lock banner with a raw API call).
-    if (auth.actor.role === "employee") {
-      const lockState = await getEntryLockState(supabase, body.monthKey);
-      if (!lockState.isOpen) {
-        return NextResponse.json(
-          { error: `${body.monthKey} is locked for entry until ${lockState.unlockDateLabel}.` },
-          { status: 403 }
-        );
-      }
-    }
-
     const { data: region, error: regionError } = await supabase
       .from("regions")
       .select("id, code")
@@ -65,6 +52,24 @@ export async function POST(request: Request) {
     if (existingBatchError) return NextResponse.json({ error: existingBatchError.message }, { status: 500 });
     if (existingBatch?.status === "approved_posted") {
       return NextResponse.json({ error: "This batch is already approved and immutable." }, { status: 409 });
+    }
+
+    // Managers can always submit/correct. Employees are gated by the entry-window
+    // lock (only enforced client-side before this -- an employee could otherwise
+    // bypass the UI's lock banner with a raw API call). The one carve-out: a
+    // batch the manager has sent back for changes is always re-submittable by
+    // the employee, even after its calendar window has closed -- otherwise a
+    // late "changes requested" would strand the batch with no way to fix it.
+    if (auth.actor.role === "employee" && existingBatch?.status !== "changes_requested") {
+      const lockState = await getEntryLockState(supabase, body.monthKey);
+      if (!lockState.isOpen) {
+        return NextResponse.json(
+          {
+            error: `${body.monthKey} is closed for entry (window ${lockState.unlockDateLabel} to ${lockState.lockDateLabel}).`
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const batchPayload = {

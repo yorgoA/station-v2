@@ -12,7 +12,7 @@ import {
   writeBillingDraftImages,
   writeBillingDraftRows,
 } from "../../../lib/billing/draft-storage";
-import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { ACTIVE_ENTRY_MONTH_KEY } from "../../../lib/constants/months";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 import { AppShell } from "../../_components/app-shell";
 
@@ -45,7 +45,7 @@ type BatchReviewItem = {
 function BillingEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  const [monthKey, setMonthKey] = useState(ACTIVE_ENTRY_MONTH_KEY);
   const months = useAvailableMonths();
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
   const [rows, setRows] = useState<BillingEntryRow[]>([]);
@@ -68,21 +68,28 @@ function BillingEntryContent() {
   const periodKey = `${monthKey}|${regionFilter}`;
   const [entryWindowOpen, setEntryWindowOpen] = useState(false);
   const [unlockDateLabel, setUnlockDateLabel] = useState("");
+  const [lockDateLabel, setLockDateLabel] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/settings/billing-lock?month=${encodeURIComponent(monthKey)}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed to check entry lock.");
-        const payload = (await response.json()) as { isOpen?: boolean; unlockDateLabel?: string };
+        const payload = (await response.json()) as {
+          isOpen?: boolean;
+          unlockDateLabel?: string;
+          lockDateLabel?: string;
+        };
         if (cancelled) return;
         setEntryWindowOpen(Boolean(payload.isOpen));
         setUnlockDateLabel(payload.unlockDateLabel ?? "");
+        setLockDateLabel(payload.lockDateLabel ?? "");
       })
       .catch(() => {
         if (cancelled) return;
         setEntryWindowOpen(false);
         setUnlockDateLabel("");
+        setLockDateLabel("");
       });
     return () => {
       cancelled = true;
@@ -91,6 +98,13 @@ function BillingEntryContent() {
 
   const isChangesRequested = serverCurrentStatus === "changes_requested";
   const derivedStatus = serverCurrentStatus;
+  // A month the manager has sent back for changes stays editable and
+  // re-submittable by the employee even after its calendar window has closed
+  // (the submissions API has the matching server-side carve-out). Every other
+  // month is governed purely by the rolling entry window.
+  const entryUnlockedForEdit = entryWindowOpen || isChangesRequested;
+  const windowLabel =
+    unlockDateLabel && lockDateLabel ? `${unlockDateLabel} to ${lockDateLabel}` : "the scheduled window";
   const isCurrentPeriodSubmitted =
     regionFilter !== "all" &&
     !isChangesRequested &&
@@ -269,14 +283,14 @@ function BillingEntryContent() {
       setValidatedFixRows({});
       return;
     }
-    if (!entryWindowOpen) {
+    if (!entryUnlockedForEdit) {
       skipNextSaveRef.current = true;
       setRows([]);
       setCounterImageDataByRowId({});
       setSubmittedBaselineByRowId({});
       setValidatedFixRows({});
       setSubmitAttempted(false);
-      setBanner(`Entry for ${monthKey} is locked by calendar. Opens on ${unlockDateLabel}.`);
+      setBanner(`Entry for ${monthKey} is closed by the billing calendar (window ${windowLabel}).`);
       return;
     }
 
@@ -390,7 +404,7 @@ function BillingEntryContent() {
         setValidatedFixRows({});
         setBanner(error instanceof Error ? error.message : "Failed to load starter rows.");
       });
-  }, [entryWindowOpen, isHydrated, monthKey, regionFilter, unlockDateLabel, serverCurrentStatus]);
+  }, [entryUnlockedForEdit, isHydrated, monthKey, regionFilter, windowLabel, serverCurrentStatus]);
 
   useEffect(() => {
     if (!isHydrated || regionFilter === "all") return;
@@ -440,8 +454,8 @@ function BillingEntryContent() {
       setBanner("This month/region is already submitted for review and is locked.");
       return;
     }
-    if (!entryWindowOpen) {
-      setBanner(`Entry for ${monthKey} is locked by calendar. Opens on ${unlockDateLabel}.`);
+    if (!entryUnlockedForEdit) {
+      setBanner(`Entry for ${monthKey} is closed by the billing calendar (window ${windowLabel}).`);
       return;
     }
     if (hasErrors) {
@@ -461,8 +475,8 @@ function BillingEntryContent() {
       setBanner("This month/region is already submitted for review.");
       return;
     }
-    if (!entryWindowOpen) {
-      setBanner(`Entry for ${monthKey} is locked by calendar. Opens on ${unlockDateLabel}.`);
+    if (!entryUnlockedForEdit) {
+      setBanner(`Entry for ${monthKey} is closed by the billing calendar (window ${windowLabel}).`);
       return;
     }
     if (hasErrors) {
@@ -551,10 +565,10 @@ function BillingEntryContent() {
 
       {!isCurrentPeriodSubmitted && (
         <>
-          {!entryWindowOpen && (
+          {!entryUnlockedForEdit && (
             <div className="card">
               <p style={{ color: "var(--warning)", margin: 0 }}>
-                Entry for {monthKey} is locked by calendar and opens on {unlockDateLabel}.
+                Entry for {monthKey} is closed by the billing calendar. Window: {windowLabel}.
               </p>
             </div>
           )}
@@ -571,7 +585,7 @@ function BillingEntryContent() {
               </div>
             </div>
           )}
-          {entryWindowOpen ? (
+          {entryUnlockedForEdit ? (
             <>
               <div className="card">
                 <div className="kpi-grid">
@@ -608,7 +622,7 @@ function BillingEntryContent() {
             const rowIsApproved = rowFeedback?.state === "approved" || rowIsApprovedByFix;
             const rowNeedsChange = rowWasChangesRequested && !rowIsApprovedByFix;
             const rowLocked = isChangesRequested && (rowFeedback?.state === "approved" || rowIsApprovedByFix);
-            const rowReadOnly = rowLocked || row.isFreeCustomer || !entryWindowOpen;
+            const rowReadOnly = rowLocked || row.isFreeCustomer || !entryUnlockedForEdit;
             const consumption =
               row.newCounter !== undefined && row.newCounter >= row.previousCounter
                 ? row.newCounter - row.previousCounter

@@ -10,6 +10,7 @@ type LockState = {
   isOpen: boolean;
   source: "manual_override" | "calendar_rule";
   unlockDateLabel: string;
+  lockDateLabel: string;
 };
 
 export default function ManagerBillingCalendarSettingsPage() {
@@ -59,7 +60,7 @@ export default function ManagerBillingCalendarSettingsPage() {
           ? `${monthKey} is now open for entry.`
           : action === "force_close"
             ? `${monthKey} is now locked for entry.`
-            : `${monthKey} override cleared -- back to the default 27th-of-month rule.`
+            : `${monthKey} override cleared -- back to the default rolling calendar rule.`
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update lock state.");
@@ -84,9 +85,10 @@ export default function ManagerBillingCalendarSettingsPage() {
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Entry Window</h3>
         <p className="muted">
-          By default a month opens for billing entry on its own 27th (e.g. July opens July 27th).
-          Use this to force a month open earlier -- for testing, or any other exception -- or force
-          it closed even after the 27th.
+          By default a month is open for billing entry from its own 27th through the 26th of the
+          next month (e.g. July: 27 Jul – 26 Aug), so a reading walk that runs into the first days
+          of the following month is never locked out. Use this to force a month open earlier -- for
+          testing, or any other exception -- or force it closed.
         </p>
         <div className="filters-grid filters-grid-pro">
           <label htmlFor="billing-calendar-month">
@@ -114,7 +116,7 @@ export default function ManagerBillingCalendarSettingsPage() {
             <p className="muted" style={{ marginBottom: 0 }}>
               {state.source === "manual_override"
                 ? "This is a manual override you set."
-                : `Following the default rule (opens ${state.unlockDateLabel}).`}
+                : `Following the default rolling rule (window ${state.unlockDateLabel} to ${state.lockDateLabel}).`}
             </p>
           </div>
         ) : null}
