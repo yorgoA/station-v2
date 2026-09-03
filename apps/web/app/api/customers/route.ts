@@ -66,7 +66,10 @@ function sumUnpaidRemaining(
 
 export async function GET(request: Request) {
   try {
-    const auth = await requireRole(["manager", "employee"]);
+    // Collectors read this for their dashboard and the scan screen (name, phone,
+    // address, bill amount, paid status). Creating customers (POST) stays
+    // manager/employee only.
+    const auth = await requireRole(["manager", "employee", "collector"]);
     if ("response" in auth) return auth.response;
 
     const { searchParams } = new URL(request.url);
