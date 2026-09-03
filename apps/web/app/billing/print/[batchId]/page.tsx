@@ -65,22 +65,42 @@ const PRINT_CSS = `
   }
 
   .bill {
-    direction: rtl; border: 1px solid #0f172a; border-radius: 3px; padding: 3mm 5mm;
-    font-size: 10.5px; line-height: 1.45; display: flex; flex-direction: column; gap: 1.6mm;
+    direction: rtl; border: 1px solid #0f172a; border-radius: 3px;
+    font-size: 10.5px; line-height: 1.45; display: flex; flex-direction: row;
   }
-  .bill .head { display: grid; grid-template-columns: 1.4fr 1fr 24mm; gap: 4mm; align-items: start; }
-  .bill .head .col { display: flex; flex-direction: column; gap: 0.6mm; }
-  .bill .head .name { font-size: 13px; font-weight: 800; }
-  .bill .head .subno { font-size: 12px; font-weight: 700; }
-  .bill .k { color: #475569; }
-  .bill .qr { width: 24mm; height: 24mm; }
+  .bill-main { flex: 1 1 auto; min-width: 0; padding: 3mm 4mm; display: flex; flex-direction: column; gap: 1.6mm; }
+  .bill-stub {
+    width: 44mm; flex: 0 0 44mm; padding: 3mm; display: flex; flex-direction: column;
+    gap: 1mm; align-items: center; text-align: center;
+  }
+  .bill-stub .qr { width: 30mm; height: 30mm; }
+  .bill-stub .r { width: 100%; }
+  .bill-stub .r .k { color: #475569; }
+  .bill-stub .due { font-weight: 800; font-size: 12px; border-top: 1px solid #cbd5e1; padding-top: 1mm; width: 100%; }
+
+  /* vertical tear line between the main bill and the detachable stub */
+  .cut-v {
+    width: 5mm; flex: 0 0 5mm; position: relative;
+    background-image: repeating-linear-gradient(to bottom, #94a3b8 0 6px, transparent 6px 12px);
+    background-position: center; background-size: 1px 100%; background-repeat: no-repeat;
+  }
+  .cut-v span {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(90deg);
+    background: #fff; padding: 2px 4px; color: #64748b; font-size: 8px; white-space: nowrap;
+  }
+
+  .bill-main .head { display: grid; grid-template-columns: 1.3fr 1fr; gap: 4mm; align-items: start; }
+  .bill-main .head .col { display: flex; flex-direction: column; gap: 0.6mm; }
+  .bill-main .head .name { font-size: 13px; font-weight: 800; }
+  .bill-main .head .subno { font-size: 12px; font-weight: 700; }
+  .bill-main .k { color: #475569; }
 
   table.reads { width: 100%; border-collapse: collapse; font-size: 10px; }
   table.reads th, table.reads td { border: 1px solid #94a3b8; padding: 1mm 1.5mm; text-align: center; }
   table.reads th { background: #f1f5f9; font-weight: 700; }
 
-  .bill .words { text-align: center; border-top: 1px solid #cbd5e1; padding-top: 1mm; font-size: 10px; }
-  .bill .note { font-size: 9px; color: #334155; }
+  .bill-main .words { text-align: center; border-top: 1px solid #cbd5e1; padding-top: 1mm; font-size: 10px; }
+  .bill-main .note { font-size: 9px; color: #334155; }
 
   .cut {
     height: 6mm; display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -214,71 +234,47 @@ export default function BillingPrintBatchPage() {
                 return (
                   <div key={bill.customerNumber} style={{ display: "contents" }}>
                     <div className="bill">
-                      <div className="head">
-                        <div className="col">
-                          <div>
-                            اشتراك {COMPANY_CODE} — <N>{regionLabel}</N>
-                          </div>
-                          <div className="name">{bill.customerName}</div>
-                          <div className="subno">
-                            <N>{bill.customerNumber}</N>
-                          </div>
-                          <div>
-                            <span className="k">فاتورة #:</span> <N>{bill.customerNumber}</N>
-                          </div>
-                          <div>
-                            <span className="k">المبنى:</span> {bill.building || "—"}
-                            {bill.boxNumber ? (
-                              <>
-                                {" · صندوق "}
-                                <N>{bill.boxNumber}</N>
-                              </>
-                            ) : null}
-                          </div>
-                          <div>
-                            <span className="k">الهاتف:</span> <N>{bill.phone || "—"}</N>
-                          </div>
-                        </div>
-
-                        <div className="col">
-                          <div>
-                            <span className="k">الشهر:</span> <N>{monthKey}</N>
-                          </div>
-                          <div>
-                            <span className="k">تاريخ الطباعة:</span> <N>{printedStr}</N>
-                          </div>
-                          <div>
-                            <span className="k">الامبير:</span> <N>{ampereLabel}</N>
-                          </div>
-                          <div>
-                            <span className="k">سعر KW:</span> <N>{num(bill.kwhPriceSnapshot ?? 0)}</N> {LL}
-                          </div>
-                          <div>
-                            <span className="k">المجموع:</span>{" "}
-                            <strong>
-                              <N>{num(bill.amount)}</N> {LL}
-                            </strong>
-                          </div>
-                          {usd != null ? (
+                      <div className="bill-main">
+                        <div className="head">
+                          <div className="col">
                             <div>
-                              <span className="k">USD:</span> <N>{num(usd, 2)}</N>
+                              اشتراك {COMPANY_CODE} — <N>{regionLabel}</N>
                             </div>
-                          ) : null}
+                            <div className="name">{bill.customerName}</div>
+                            <div className="subno">
+                              <N>{bill.customerNumber}</N>
+                            </div>
+                            <div>
+                              <span className="k">المبنى:</span> {bill.building || "—"}
+                              {bill.boxNumber ? (
+                                <>
+                                  {" · صندوق "}
+                                  <N>{bill.boxNumber}</N>
+                                </>
+                              ) : null}
+                            </div>
+                            <div>
+                              <span className="k">الهاتف:</span> <N>{bill.phone || "—"}</N>
+                            </div>
+                          </div>
+
+                          <div className="col">
+                            <div>
+                              <span className="k">الشهر:</span> <N>{monthKey}</N>
+                            </div>
+                            <div>
+                              <span className="k">تاريخ الطباعة:</span> <N>{printedStr}</N>
+                            </div>
+                            <div>
+                              <span className="k">الامبير:</span> <N>{ampereLabel}</N>
+                            </div>
+                            <div>
+                              <span className="k">سعر KW:</span> <N>{num(bill.kwhPriceSnapshot ?? 0)}</N> {LL}
+                            </div>
+                          </div>
                         </div>
 
-                        {qrByCustomer[bill.customerNumber] ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            className="qr"
-                            src={qrByCustomer[bill.customerNumber]}
-                            alt={`QR ${bill.customerNumber}`}
-                          />
-                        ) : (
-                          <div className="qr" />
-                        )}
-                      </div>
-
-                      <table className="reads">
+                        <table className="reads">
                         <thead>
                           <tr>
                             <th>السابق</th>
@@ -346,6 +342,41 @@ export default function BillingPrintBatchPage() {
                       <div className="note">
                         ملاحظة: الرجاء تسديد الفاتورة قبل <N>10</N> من الشهر والالتزام بالتاريخ تفاديًا من
                         قطع الاشتراك. للصيانة الاتصال على الرقم <N>{MAINTENANCE_PHONE}</N>
+                      </div>
+                      </div>
+
+                      <div className="cut-v">
+                        <span>✂ قص</span>
+                      </div>
+
+                      <div className="bill-stub">
+                        {qrByCustomer[bill.customerNumber] ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            className="qr"
+                            src={qrByCustomer[bill.customerNumber]}
+                            alt={`QR ${bill.customerNumber}`}
+                          />
+                        ) : (
+                          <div className="qr" />
+                        )}
+                        <div className="r name" style={{ fontWeight: 700 }}>
+                          {bill.customerName}
+                        </div>
+                        <div className="r">
+                          <span className="k">رقم:</span> <N>{bill.customerNumber}</N>
+                        </div>
+                        <div className="r">
+                          <span className="k">الشهر:</span> <N>{monthKey}</N>
+                        </div>
+                        <div className="due">
+                          المطلوب: <N>{num(bill.amount)}</N> {LL}
+                        </div>
+                        {usd != null ? (
+                          <div className="r">
+                            <N>USD {num(usd, 2)}</N>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     {i < sheetBills.length - 1 ? (
