@@ -58,15 +58,24 @@ function CollectModal({
   const [currency, setCurrency] = useState<"LBP" | "USD">("LBP");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const amountRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!changeAmount) setAmount(bill > 0 ? String(Math.round(bill)) : "");
+    if (!changeAmount && bill > 0) setAmount(String(Math.round(bill)));
   }, [changeAmount, bill]);
+
+  function enableChange() {
+    setChangeAmount(true);
+    setTimeout(() => {
+      amountRef.current?.focus();
+      amountRef.current?.select();
+    }, 0);
+  }
 
   async function save() {
     const value = Number(amount);
     if (!Number.isFinite(value) || value <= 0) {
-      setError("أدخل مبلغًا أكبر من صفر — enter an amount greater than 0.");
+      setError("أدخل مبلغًا أكبر من صفر.");
       return;
     }
     setSaving(true);
@@ -115,16 +124,27 @@ function CollectModal({
         </p>
         <p style={{ marginTop: 0, marginBottom: 8 }}>
           <span className="muted">المبلغ المطلوب: </span>
-          <strong>{bill > 0 ? `${formatNumber(bill)} LBP` : "مدفوعة — nothing due"}</strong>
+          <strong style={{ fontSize: 18 }}>
+            <span className="num" style={{ direction: "ltr", unicodeBidi: "isolate" }}>
+              {bill > 0 ? formatNumber(bill) : "0"}
+            </span>{" "}
+            LBP
+          </strong>
         </p>
 
         <label>
           المبلغ المحصّل
           <input
+            ref={amountRef}
             type="number"
             value={amount}
             disabled={!changeAmount && bill > 0}
             onChange={(e) => setAmount(e.target.value)}
+            style={
+              changeAmount
+                ? { borderColor: "var(--warning)", background: "#fff7ed", boxShadow: "0 0 0 2px #fdba74" }
+                : undefined
+            }
           />
         </label>
         <label>
@@ -135,29 +155,30 @@ function CollectModal({
           </select>
         </label>
 
-        {bill > 0 ? (
-          <button type="button" style={{ marginTop: 8 }} onClick={() => setChangeAmount((v) => !v)}>
-            {changeAmount ? "المبلغ كامل ✓" : "تغيير المبلغ المحصّل"}
-          </button>
-        ) : null}
         {changeAmount ? (
           <p className="muted" style={{ marginTop: 8, marginBottom: 0 }}>
-            أدخل المبلغ الذي حصّلته فعليًا إذا لم يدفع العميل كامل الفاتورة.
+            أدخل المبلغ الذي حصّلته فعليًا إذا لم يدفع المشترك كامل الفاتورة.
           </p>
         ) : null}
 
         {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
 
-        <div className="card-actions-right" style={{ marginTop: 12 }}>
-          <button type="button" onClick={onClose} disabled={saving}>
-            إلغاء
-          </button>{" "}
-          <button type="button" className="success-btn" onClick={save} disabled={saving}>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button type="button" className="success-btn" style={{ flex: 1 }} onClick={save} disabled={saving}>
             {saving ? "…" : "تسجيل التحصيل"}
           </button>
+          {bill > 0 && !changeAmount ? (
+            <button type="button" style={{ flex: 1 }} onClick={enableChange} disabled={saving}>
+              تغيير المبلغ المحصّل
+            </button>
+          ) : (
+            <button type="button" style={{ flex: 1 }} onClick={onClose} disabled={saving}>
+              إلغاء
+            </button>
+          )}
         </div>
         <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
-          يظهر على لوحتك فورًا؛ يبقى بانتظار توثيق الموظّف في Review QR.
+          يظهر على لوحتك فورًا؛ يبقى بانتظار توثيق الموظّف في صفحة Review QR.
         </p>
       </div>
     </div>

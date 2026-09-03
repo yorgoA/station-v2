@@ -1,302 +1,294 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { collectorNavItems } from "../../_components/role-nav";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
 import { formatNumber } from "../../../lib/format";
-import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type QrCollectionLog = {
   id: string;
-  customerId: string;
   customerNumber: string;
   customerName: string;
-  region: "mrah" | "printania";
   monthKey: string;
   collectedAmount: number;
+  expectedAmount?: number | null;
   currency?: "LBP" | "USD";
   status?: "pending_employee_validation" | "validated_by_employee";
-  billScanImageName?: string;
-  employeeReceiptImageName?: string;
-  validatedByEmployeeAt?: string;
   scannedAt: string;
 };
 type ScanCustomer = {
   id: string;
   customerNumber: string;
   fullName: string;
+  building?: string;
   region: "mrah" | "printania";
+  ongoingBalance?: number;
   ongoingBalanceThisMonth?: number;
 };
 
 function CollectorScanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [qrInput, setQrInput] = useState("");
+  const [customerNumber, setCustomerNumber] = useState("");
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
-  const months = useAvailableMonths();
   const [amount, setAmount] = useState("");
-  const [amountCurrency, setAmountCurrency] = useState<"LBP" | "USD">("LBP");
+  const [currency, setCurrency] = useState<"LBP" | "USD">("LBP");
   const [changeAmount, setChangeAmount] = useState(false);
   const [customers, setCustomers] = useState<ScanCustomer[]>([]);
   const [message, setMessage] = useState("");
+  const [saved, setSaved] = useState(false);
   const [logs, setLogs] = useState<QrCollectionLog[]>([]);
+  const amountRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const qCustomerNumber = searchParams.get("customerNumber");
     const qMonth = searchParams.get("month");
-    const shouldOpenCamera = searchParams.get("openCamera") === "1";
-    if (!qCustomerNumber && !shouldOpenCamera) {
+    if (!qCustomerNumber) {
       router.replace("/collector/dashboard");
       return;
     }
-    if (qCustomerNumber) {
-      setQrInput(qCustomerNumber);
-    }
+    setCustomerNumber(qCustomerNumber);
     if (qMonth && /^\d{4}-\d{2}$/.test(qMonth)) setMonthKey(qMonth);
-    if (shouldOpenCamera) {
-      const cameraInput = document.getElementById("collector-camera-input") as HTMLInputElement | null;
-      cameraInput?.click();
-    }
   }, [router, searchParams]);
 
   useEffect(() => {
+    let cancelled = false;
     fetch(`/api/customers?region=all&month=${monthKey}`)
       .then(async (response) => {
-        if (!response.ok) throw new Error("Failed to load customers.");
+        if (!response.ok) throw new Error("failed");
         const payload = (await response.json()) as { customers: ScanCustomer[] };
-        setCustomers(payload.customers ?? []);
+        if (!cancelled) setCustomers(payload.customers ?? []);
       })
-      .catch(() => setCustomers([]));
+      .catch(() => {
+        if (!cancelled) setCustomers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [monthKey]);
 
   useEffect(() => {
     fetch("/api/qr-collections?status=all")
       .then(async (response) => {
-        if (!response.ok) throw new Error("Failed to load QR logs.");
+        if (!response.ok) throw new Error("failed");
         const payload = (await response.json()) as { logs: QrCollectionLog[] };
         setLogs(payload.logs ?? []);
       })
       .catch(() => setLogs([]));
   }, []);
 
-  const matchedCustomer = useMemo(() => {
-    const normalized = qrInput.trim().toLowerCase();
-    if (!normalized) return undefined;
-    return customers.find(
-      (customer) =>
-        customer.customerNumber.toLowerCase() === normalized ||
-        customer.fullName.toLowerCase().includes(normalized)
-    );
-  }, [customers, qrInput]);
+  const customer = useMemo(() => {
+    const n = customerNumber.trim().toLowerCase();
+    if (!n) return undefined;
+    return customers.find((c) => c.customerNumber.toLowerCase() === n);
+  }, [customers, customerNumber]);
 
-  const billAmount = matchedCustomer?.ongoingBalanceThisMonth ?? 0;
+  const billAmount = useMemo(() => {
+    if (!customer) return 0;
+    const monthDue = customer.ongoingBalanceThisMonth ?? 0;
+    return monthDue > 0 ? monthDue : customer.ongoingBalance ?? 0;
+  }, [customer]);
 
-  // When a customer is resolved, prefill the collected amount with what they owe
-  // for this bill. The collector confirms it as-is or taps "change amount".
+  // Prefill the collected amount with the bill; the collector confirms it or
+  // taps "تغيير المبلغ المحصّل" to enter a different (partial) figure.
   useEffect(() => {
-    if (matchedCustomer && !changeAmount) {
-      setAmount(billAmount > 0 ? String(Math.round(billAmount)) : "");
+    if (customer && !changeAmount && billAmount > 0) {
+      setAmount(String(Math.round(billAmount)));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matchedCustomer?.id, billAmount, changeAmount]);
+  }, [customer, billAmount, changeAmount]);
 
-  const isReadyToSave = useMemo(
-    () =>
-      qrInput.trim() !== "" &&
-      matchedCustomer !== undefined &&
-      monthKey.trim() !== "" &&
-      Number(amount) > 0,
-    [amount, matchedCustomer, monthKey, qrInput]
-  );
+  function enableChange() {
+    setChangeAmount(true);
+    setTimeout(() => {
+      amountRef.current?.focus();
+      amountRef.current?.select();
+    }, 0);
+  }
 
-  async function handleSaveScan() {
-    if (!isReadyToSave) {
-      setMessage("Enter customer number and amount (must match an existing customer).");
+  async function record() {
+    if (!customer) {
+      setMessage("لم يتم العثور على المشترك.");
       return;
     }
-    const parsedAmount = Number(amount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setMessage("Collected amount must be greater than 0.");
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      setMessage("أدخل مبلغًا أكبر من صفر.");
       return;
     }
+    setMessage("");
     try {
       const response = await fetch("/api/qr-collections", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerId: matchedCustomer!.id,
-          customerNumber: matchedCustomer!.customerNumber,
-          customerName: matchedCustomer!.fullName,
-          regionCode: matchedCustomer!.region,
+          customerId: customer.id,
+          customerNumber: customer.customerNumber,
+          customerName: customer.fullName,
+          regionCode: customer.region,
           monthKey,
-          collectedAmount: parsedAmount,
+          collectedAmount: value,
           expectedAmount: billAmount > 0 ? billAmount : undefined,
-          currency: amountCurrency,
-          billScanImageName: `bill-scan-${matchedCustomer!.customerNumber}-${monthKey}.png`,
-          employeeReceiptImageName: `receipt-${matchedCustomer!.customerNumber}-${monthKey}.jpg`,
+          currency,
+          billScanImageName: `bill-scan-${customer.customerNumber}-${monthKey}.png`,
+          employeeReceiptImageName: `receipt-${customer.customerNumber}-${monthKey}.jpg`,
         }),
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
-        setMessage(payload.error ?? "Failed to save QR collection.");
+        setMessage(payload.error ?? "تعذّر تسجيل التحصيل.");
         return;
       }
+      setSaved(true);
+      setMessage("✓ تم تسجيل التحصيل. بانتظار توثيق الموظّف في صفحة Review QR.");
       const refresh = await fetch("/api/qr-collections?status=all");
       const refreshPayload = (await refresh.json()) as { logs: QrCollectionLog[] };
       setLogs(refreshPayload.logs ?? []);
-      setAmount("");
-      setQrInput("");
-      setChangeAmount(false);
-      setMessage(
-        `تم تسجيل التحصيل (${amountCurrency}). يظهر الآن على لوحتك، ويبقى بانتظار توثيق الموظّف في صفحة Review QR.`
-      );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unknown save error.");
+      setMessage(error instanceof Error ? error.message : "تعذّر تسجيل التحصيل.");
     }
   }
 
   return (
     <AppShell
-      title="Scan & Collect"
-      subtitle="Scan customer QR, enter collected amount, and save"
+      title="تحصيل"
+      subtitle="تسجيل المبلغ المحصّل من المشترك"
       navItems={collectorNavItems}
       appName="Station V2 - Collector"
     >
       <div className="collector-mobile-shell">
-      <div className="card">
-        <div className="filters-grid filters-grid-pro">
-          <label htmlFor="collector-qr-input">
-            Scan / QR customer number
-            <input
-              id="collector-qr-input"
-              value={qrInput}
-              onChange={(e) => setQrInput(e.target.value)}
-              placeholder="Example: C-XXXX"
-            />
-          </label>
-          <label htmlFor="collector-month">
-            Bill month
-            <select id="collector-month" value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
-              {months.map((month) => (
-                <option key={month} value={month}>
-                  {month}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="card" style={{ direction: "rtl" }}>
+          <p className="muted" style={{ marginTop: 0, marginBottom: 4 }}>
+            المشترك
+          </p>
+          <p style={{ marginTop: 0, marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
+            {customer ? customer.fullName : customerNumber || "…"}
+          </p>
+          <p className="muted" style={{ marginTop: 0, marginBottom: 12 }}>
+            {customer ? `${customer.customerNumber} · ${customer.building || "—"}` : ""} · {monthKey}
+          </p>
+
+          <p style={{ marginTop: 0, marginBottom: 12 }}>
+            <span className="muted">المبلغ المطلوب: </span>
+            <strong style={{ fontSize: 18 }}>
+              <span className="num" style={{ direction: "ltr", unicodeBidi: "isolate" }}>
+                {billAmount > 0 ? formatNumber(billAmount) : "0"}
+              </span>{" "}
+              LBP
+            </strong>
+          </p>
+
           <label htmlFor="collector-amount">
-            المبلغ المحصّل — Amount collected
+            المبلغ المحصّل
             <input
               id="collector-amount"
+              ref={amountRef}
               type="number"
               value={amount}
-              disabled={Boolean(matchedCustomer) && !changeAmount && billAmount > 0}
+              disabled={Boolean(customer) && !changeAmount && billAmount > 0}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={`Enter amount in ${amountCurrency}`}
+              style={
+                changeAmount
+                  ? { borderColor: "var(--warning)", background: "#fff7ed", boxShadow: "0 0 0 2px #fdba74" }
+                  : undefined
+              }
             />
           </label>
           <label htmlFor="collector-currency">
-            Currency
+            العملة
             <select
               id="collector-currency"
-              value={amountCurrency}
-              onChange={(e) => setAmountCurrency(e.target.value as "LBP" | "USD")}
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as "LBP" | "USD")}
             >
               <option value="LBP">LBP</option>
               <option value="USD">USD</option>
             </select>
           </label>
-        </div>
-        <div className="card">
-          <div>
-            <p className="muted" style={{ marginBottom: 4 }}>
-              Selected customer — العميل
-            </p>
-            <p style={{ marginTop: 0, marginBottom: 8 }}>
-              {matchedCustomer ? `${matchedCustomer.fullName} (${matchedCustomer.customerNumber})` : "—"}
-            </p>
-            {matchedCustomer ? (
-              <>
-                <p style={{ marginTop: 0, marginBottom: 8 }}>
-                  <span className="muted">المبلغ المطلوب — Bill for {monthKey}: </span>
-                  <strong>
-                    {billAmount > 0 ? `${formatNumber(billAmount)} LBP` : "مدفوعة — nothing due"}
-                  </strong>
-                </p>
-                {billAmount > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setChangeAmount((v) => !v)}
-                    style={{ direction: "rtl" }}
-                  >
-                    {changeAmount ? "المبلغ كامل ✓" : "تغيير المبلغ المحصّل"}
-                  </button>
-                ) : null}
-                {changeAmount ? (
-                  <p className="muted" style={{ marginTop: 8, marginBottom: 0, direction: "rtl" }}>
-                    أدخل المبلغ الذي حصّلته فعليًا إذا لم يدفع العميل كامل الفاتورة.
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-          </div>
-        </div>
-        {message ? <p className="muted">{message}</p> : null}
-      </div>
 
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Latest Scans</h3>
-        <table className="collector-scans-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Customer</th>
-              <th>Month</th>
-              <th>Collected</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.slice(0, 8).map((log) => {
-              const validated = log.status === "validated_by_employee";
-              return (
-                <tr key={log.id}>
-                  <td>{new Date(log.scannedAt).toLocaleTimeString()}</td>
-                  <td>{log.customerName}</td>
-                  <td>{log.monthKey}</td>
-                  <td>{formatNumber(log.collectedAmount)} {log.currency ?? "LBP"}</td>
-                  <td style={{ color: validated ? "var(--success)" : "var(--warning)" }}>
-                    {validated ? "Validated" : "Awaiting employee"}
+          {changeAmount ? (
+            <p className="muted" style={{ marginTop: 8, marginBottom: 0 }}>
+              أدخل المبلغ الذي حصّلته فعليًا إذا لم يدفع المشترك كامل الفاتورة.
+            </p>
+          ) : null}
+
+          {message ? (
+            <p style={{ color: saved ? "var(--success)" : "var(--danger)", marginBottom: 0 }}>{message}</p>
+          ) : null}
+
+          {saved ? (
+            <div className="card-actions-right" style={{ marginTop: 12 }}>
+              <button type="button" className="success-btn" onClick={() => router.push("/collector/dashboard")}>
+                العودة إلى اللوحة
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="card" style={{ direction: "rtl" }}>
+          <h3 style={{ marginTop: 0 }}>آخر عمليات التحصيل</h3>
+          <table className="collector-scans-table">
+            <thead>
+              <tr>
+                <th>الوقت</th>
+                <th>المشترك</th>
+                <th>الشهر</th>
+                <th>المحصّل</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.slice(0, 8).map((log) => {
+                const validated = log.status === "validated_by_employee";
+                return (
+                  <tr key={log.id}>
+                    <td>{new Date(log.scannedAt).toLocaleTimeString()}</td>
+                    <td>{log.customerName}</td>
+                    <td>{log.monthKey}</td>
+                    <td>
+                      <span className="num" style={{ direction: "ltr", unicodeBidi: "isolate" }}>
+                        {formatNumber(log.collectedAmount)}
+                      </span>{" "}
+                      {log.currency ?? "LBP"}
+                    </td>
+                    <td style={{ color: validated ? "var(--success)" : "var(--warning)" }}>
+                      {validated ? "موثّقة" : "بانتظار الموظّف"}
+                    </td>
+                  </tr>
+                );
+              })}
+              {logs.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="muted">
+                    لا توجد عمليات بعد.
                   </td>
                 </tr>
-              );
-            })}
-            {logs.length === 0 && (
-              <tr>
-                <td colSpan={5} className="muted">
-                  No scans recorded yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-      </div>
-      <div className="collector-sticky-action">
-        <button type="button" onClick={handleSaveScan}>
-          تسجيل التحصيل — Record Collection
-        </button>
-      </div>
+
+      {!saved ? (
+        <div className="collector-sticky-action" style={{ display: "flex", gap: 8, direction: "rtl" }}>
+          <button type="button" className="success-btn" style={{ flex: 1 }} onClick={record}>
+            تسجيل التحصيل
+          </button>
+          {billAmount > 0 && !changeAmount ? (
+            <button type="button" style={{ flex: 1 }} onClick={enableChange}>
+              تغيير المبلغ المحصّل
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </AppShell>
   );
 }
 
 export default function CollectorScanPage() {
   return (
-    <Suspense fallback={<div className="card">Loading scanner...</div>}>
+    <Suspense fallback={<div className="card">…</div>}>
       <CollectorScanContent />
     </Suspense>
   );
