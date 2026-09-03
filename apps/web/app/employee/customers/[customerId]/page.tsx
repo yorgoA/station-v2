@@ -32,6 +32,7 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
       amount: number;
       remainingAmount: number;
       status: string;
+      counterImageUrl: string | null;
     }>;
     payments: Array<{
       id: string;
@@ -52,6 +53,14 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
+  const [imageModalSrc, setImageModalSrc] = useState("");
+
+  function toImageHref(value?: string | null) {
+    const raw = String(value ?? "").trim();
+    if (raw.startsWith("data:image/")) return raw;
+    if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/")) return raw;
+    return "";
+  }
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [boxNameBlocking, setBoxNameBlocking] = useState(false);
@@ -351,25 +360,48 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                   <th>Amount</th>
                   <th>Remaining</th>
                   <th>Status</th>
+                  <th>Counter photo</th>
                 </tr>
               </thead>
               <tbody>
-                {bills.map((bill) => (
-                  <tr
-                    key={bill.id}
-                    onClick={() => setSelectedBillId(bill.id)}
-                    style={{ cursor: "pointer" }}
-                    title="Click to view details"
-                  >
-                    <td>{bill.monthKey}</td>
-                    <td>{bill.previousCounter}</td>
-                    <td>{bill.newCounter}</td>
-                    <td>{bill.consumptionKwh}</td>
-                    <td>{formatLbp(bill.amount)}</td>
-                    <td>{formatLbp(bill.remainingAmount)}</td>
-                    <td>{bill.status}</td>
-                  </tr>
-                ))}
+                {bills.map((bill) => {
+                  const href = toImageHref(bill.counterImageUrl);
+                  return (
+                    <tr
+                      key={bill.id}
+                      onClick={() => setSelectedBillId(bill.id)}
+                      style={{ cursor: "pointer" }}
+                      title="Click to view details"
+                    >
+                      <td>{bill.monthKey}</td>
+                      <td>{bill.previousCounter}</td>
+                      <td>{bill.newCounter}</td>
+                      <td>{bill.consumptionKwh}</td>
+                      <td>{formatLbp(bill.amount)}</td>
+                      <td>{formatLbp(bill.remainingAmount)}</td>
+                      <td>{bill.status}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        {href ? (
+                          <img
+                            src={href}
+                            alt={`Counter ${bill.monthKey}`}
+                            title="Click to enlarge"
+                            onClick={() => setImageModalSrc(href)}
+                            style={{
+                              width: 56,
+                              height: "auto",
+                              borderRadius: 4,
+                              border: "1px solid #d1d5db",
+                              cursor: "pointer",
+                            }}
+                          />
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -426,6 +458,17 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                 <div><p className="muted">Remaining</p><p>{formatLbp(selectedBill.remainingAmount)}</p></div>
                 <div><p className="muted">Status</p><p>{selectedBill.status}</p></div>
                 <div><p className="muted">Bill ID</p><p>{selectedBill.id}</p></div>
+                {toImageHref(selectedBill.counterImageUrl) ? (
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <p className="muted">Counter photo</p>
+                    <img
+                      src={toImageHref(selectedBill.counterImageUrl)}
+                      alt="Counter"
+                      onClick={() => setImageModalSrc(toImageHref(selectedBill.counterImageUrl))}
+                      style={{ maxWidth: 220, height: "auto", borderRadius: 6, border: "1px solid #d1d5db", cursor: "pointer" }}
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : selectedPayment ? (
               <div className="info-grid">
@@ -450,6 +493,19 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
           </div>
         </div>
       )}
+      {imageModalSrc ? (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Counter photo">
+          <div className="modal-card">
+            <div className="row-between">
+              <h3 style={{ margin: 0 }}>Counter photo</h3>
+              <button type="button" onClick={() => setImageModalSrc("")}>
+                Close
+              </button>
+            </div>
+            <img src={imageModalSrc} alt="Counter full size" style={{ width: "100%", height: "auto" }} />
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

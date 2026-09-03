@@ -35,6 +35,7 @@ type BillRow = {
   amount: number;
   remainingAmount: number;
   status: string;
+  counterImageUrl?: string | null;
 };
 type PaymentRow = {
   id: string;
@@ -79,6 +80,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
 
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [billDraft, setBillDraft] = useState<BillRow | null>(null);
+  const [imageModalSrc, setImageModalSrc] = useState("");
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [paymentDraft, setPaymentDraft] = useState<PaymentRow | null>(null);
 
@@ -623,25 +625,60 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               <th>Amount</th>
               <th>Remaining</th>
               <th>Status</th>
+              <th>Counter photo</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {bills.map((row) => (
-              <tr key={row.id}>
-                <td>{row.monthKey}</td>
-                <td>{row.previousCounter}</td>
-                <td>{row.newCounter}</td>
-                <td>{row.consumptionKwh}</td>
-                <td>{row.amount}</td>
-                <td>{row.remainingAmount}</td>
-                <td>{row.status}</td>
-                <td><button type="button" onClick={() => openBillEdit(row)}>Modify</button></td>
-              </tr>
-            ))}
+            {bills.map((row) => {
+              const href = (() => {
+                const raw = String(row.counterImageUrl ?? "").trim();
+                if (raw.startsWith("data:image/")) return raw;
+                if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/")) return raw;
+                return "";
+              })();
+              return (
+                <tr key={row.id}>
+                  <td>{row.monthKey}</td>
+                  <td>{row.previousCounter}</td>
+                  <td>{row.newCounter}</td>
+                  <td>{row.consumptionKwh}</td>
+                  <td>{formatNumber(row.amount)}</td>
+                  <td>{formatNumber(row.remainingAmount)}</td>
+                  <td>{row.status}</td>
+                  <td>
+                    {href ? (
+                      <img
+                        src={href}
+                        alt={`Counter ${row.monthKey}`}
+                        title="Click to enlarge"
+                        onClick={() => setImageModalSrc(href)}
+                        style={{ width: 56, height: "auto", borderRadius: 4, border: "1px solid #d1d5db", cursor: "pointer" }}
+                      />
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
+                  <td><button type="button" onClick={() => openBillEdit(row)}>Modify</button></td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+      {imageModalSrc ? (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Counter photo">
+          <div className="modal-card">
+            <div className="row-between">
+              <h3 style={{ margin: 0 }}>Counter photo</h3>
+              <button type="button" onClick={() => setImageModalSrc("")}>
+                Close
+              </button>
+            </div>
+            <img src={imageModalSrc} alt="Counter full size" style={{ width: "100%", height: "auto" }} />
+          </div>
+        </div>
+      ) : null}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Payments & Receipts (Editable)</h3>

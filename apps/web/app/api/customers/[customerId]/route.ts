@@ -59,7 +59,9 @@ export async function GET(
         .single(),
       supabase
         .from("bills")
-        .select("id, month_key, previous_counter, new_counter, consumption_kwh, amount, remaining_amount, status")
+        .select(
+          "id, month_key, billing_batch_id, previous_counter, new_counter, consumption_kwh, amount, remaining_amount, status"
+        )
         .eq("customer_id", customerId)
         .order("month_key", { ascending: false }),
       supabase
@@ -68,6 +70,21 @@ export async function GET(
         .eq("customer_id", customerId)
         .order("payment_date", { ascending: false }),
     ]);
+
+    // Counter photo per batch for this customer (bills don't store it; the
+    // billing_batch_items row does), keyed by batch id.
+    const counterImageByBatchId = new Map<string, string>();
+    {
+      const { data: items } = await supabase
+        .from("billing_batch_items")
+        .select("batch_id, counter_image_url")
+        .eq("customer_id", customerId);
+      for (const item of items ?? []) {
+        if (item.counter_image_url) {
+          counterImageByBatchId.set(String(item.batch_id), String(item.counter_image_url));
+        }
+      }
+    }
 
     if (customerRes.error) {
       return NextResponse.json({ error: customerRes.error.message }, { status: 500 });
@@ -134,6 +151,9 @@ export async function GET(
           amount: Number(b.amount ?? 0),
           remainingAmount: Number(b.remaining_amount ?? 0),
           status: String(b.status ?? "unpaid"),
+          counterImageUrl: b.billing_batch_id
+            ? counterImageByBatchId.get(String(b.billing_batch_id)) ?? null
+            : null,
         })) ?? [],
       payments:
         (paymentsRes.data ?? []).map((p) => ({
