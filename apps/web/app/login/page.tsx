@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabasePublicClient } from "../../lib/supabase/browser-public";
+import { BuildBadge } from "../_components/build-badge";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -75,6 +76,7 @@ export default function LoginPage() {
         </form>
         {error && <p style={{ color: "var(--danger)", marginTop: 12 }}>{error}</p>}
       </div>
+      <BuildBadge />
     </main>
   );
 }

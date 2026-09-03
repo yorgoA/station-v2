@@ -889,3 +889,26 @@ select {
     display: none;
   }
 }
+
+/* Build/version badge in the page footer */
+.build-badge {
+  margin-top: 28px;
+  padding: 8px 12px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+  border-top: 1px solid #e2e8f0;
+  user-select: all;
+}
+.build-badge-staging {
+  color: #b45309;
+  background: #fffbeb;
+  border-top-color: #fde68a;
+  font-weight: 600;
+}
+.build-badge-local {
+  color: #6d28d9;
+  background: #f5f3ff;
+  border-top-color: #ddd6fe;
+}

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabasePublicClient } from "../../lib/supabase/browser-public";
+import { BuildBadge } from "./build-badge";
 
 export type NavItem = {
   href: string;
@@ -287,6 +288,7 @@ export function AppShell({
           {subtitle ? <p className="muted">{subtitle}</p> : null}
         </header>
         <main>{children}</main>
+        <BuildBadge />
       </section>
     </div>
   );
