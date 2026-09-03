@@ -46,7 +46,12 @@ const PRINT_CSS = `
     font-family: "Segoe UI", Tahoma, "Noto Naskh Arabic", system-ui, sans-serif; }
   /* keep Latin digits/latin runs left-to-right even inside the RTL bill */
   .num { direction: ltr; unicode-bidi: isolate; display: inline-block; }
-  .usd { color: #64748b; font-size: 8.5px; direction: ltr; unicode-bidi: isolate; display: block; }
+  .usd { color: #334155; font-size: 9px; direction: ltr; unicode-bidi: isolate; display: block; }
+  .total-line {
+    display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+    border-top: 1px solid #0f172a; padding-top: 1.5mm; font-size: 12px;
+  }
+  .total-line strong { font-size: 13px; }
 
   .print-toolbar {
     position: sticky; top: 0; z-index: 10; display: flex; gap: 12px; align-items: center;
@@ -77,7 +82,11 @@ const PRINT_CSS = `
   .bill-stub .qr { width: 30mm; height: 30mm; }
   .bill-stub .r { width: 100%; }
   .bill-stub .r .k { color: #475569; }
-  .bill-stub .due { font-weight: 800; font-size: 12px; border-top: 1px solid #cbd5e1; padding-top: 1mm; width: 100%; }
+  .bill-stub .due {
+    width: 100%; border-top: 1px solid #0f172a; padding-top: 1mm; margin-top: 1mm;
+    display: flex; flex-direction: column; gap: 0.5mm; font-weight: 800; font-size: 12px;
+  }
+  .bill-stub .due .k { font-weight: 600; font-size: 10px; }
 
   /* vertical tear line between the main bill and the detachable stub */
   .cut-v {
@@ -346,11 +355,26 @@ export default function BillingPrintBatchPage() {
                             </td>
                             <td />
                             <td />
-                            <td>سعر الصرف</td>
-                            <td>{hasUsd ? <N>{num(usdRate ?? 0)} {LL} / $1</N> : "—"}</td>
+                            <td>السعر بالدولار</td>
+                            <td>{hasUsd ? <N>{num(usd ?? 0, 2)} USD</N> : "—"}</td>
                           </tr>
                         </tbody>
                       </table>
+
+                      <div className="total-line">
+                        <span className="k">المجموع المستحق:</span>
+                        <strong>
+                          <N>{num(bill.amount)}</N> {LL}
+                        </strong>
+                        {hasUsd ? (
+                          <>
+                            <span className="k">=</span>
+                            <strong>
+                              <N>{num(usd ?? 0, 2)} USD</N>
+                            </strong>
+                          </>
+                        ) : null}
+                      </div>
 
                       <div className="words">المجموع {amountToArabicWords(bill.amount)}</div>
 
@@ -385,8 +409,15 @@ export default function BillingPrintBatchPage() {
                           <span className="k">الشهر:</span> <N>{monthKey}</N>
                         </div>
                         <div className="due">
-                          المطلوب: <N>{num(bill.amount)}</N> {LL}
-                          {usd != null ? <span className="usd">${num(usd, 2)}</span> : null}
+                          <div className="k">المطلوب</div>
+                          <div>
+                            <N>{num(bill.amount)}</N> {LL}
+                          </div>
+                          {usd != null ? (
+                            <div>
+                              <N>{num(usd, 2)} USD</N>
+                            </div>
+                          ) : null}
                         </div>
                         {hasUsd ? (
                           <div className="r">
