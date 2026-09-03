@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import jsQR from "jsqr";
 import { AppShell } from "../../_components/app-shell";
 import { collectorNavItems } from "../../_components/role-nav";
 import { type EmployeeRegion } from "../../../lib/types/employee";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
-import { formatLbp } from "../../../lib/format";
+import { formatLbp, formatNumber } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type CollectorCustomer = {
@@ -14,7 +14,9 @@ type CollectorCustomer = {
   customerNumber: string;
   name: string;
   building: string;
+  region: "mrah" | "printania";
   priceToPay: number;
+  billThisMonth: number;
   paidThisMonth: boolean;
   isMonitor: boolean;
 };
@@ -39,15 +41,140 @@ const STATUS_COLOR: Record<CollectionStatus, string> = {
 };
 const STATUS_ORDER: Record<CollectionStatus, number> = { to_collect: 0, pending: 1, validated: 2 };
 
+function CollectModal({
+  customer,
+  monthKey,
+  onClose,
+  onDone,
+}: {
+  customer: CollectorCustomer;
+  monthKey: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const bill = customer.billThisMonth > 0 ? customer.billThisMonth : customer.priceToPay;
+  const [changeAmount, setChangeAmount] = useState(false);
+  const [amount, setAmount] = useState(bill > 0 ? String(Math.round(bill)) : "");
+  const [currency, setCurrency] = useState<"LBP" | "USD">("LBP");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!changeAmount) setAmount(bill > 0 ? String(Math.round(bill)) : "");
+  }, [changeAmount, bill]);
+
+  async function save() {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      setError("أدخل مبلغًا أكبر من صفر — enter an amount greater than 0.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/qr-collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: customer.id,
+          customerNumber: customer.customerNumber,
+          customerName: customer.name,
+          regionCode: customer.region,
+          monthKey,
+          collectedAmount: value,
+          expectedAmount: bill > 0 ? bill : undefined,
+          currency,
+          billScanImageName: `bill-scan-${customer.customerNumber}-${monthKey}.png`,
+          employeeReceiptImageName: `receipt-${customer.customerNumber}-${monthKey}.jpg`,
+        }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(data.error ?? "Failed to record the collection.");
+        return;
+      }
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to record the collection.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Collect">
+      <div className="modal-card" style={{ direction: "rtl" }}>
+        <div className="row-between">
+          <h3 style={{ margin: 0 }}>تحصيل — {customer.name}</h3>
+          <button type="button" onClick={onClose} disabled={saving}>
+            X
+          </button>
+        </div>
+        <p className="muted" style={{ marginTop: 8, marginBottom: 4 }}>
+          {customer.customerNumber} · {customer.building || "—"} · {monthKey}
+        </p>
+        <p style={{ marginTop: 0, marginBottom: 8 }}>
+          <span className="muted">المبلغ المطلوب: </span>
+          <strong>{bill > 0 ? `${formatNumber(bill)} LBP` : "مدفوعة — nothing due"}</strong>
+        </p>
+
+        <label>
+          المبلغ المحصّل
+          <input
+            type="number"
+            value={amount}
+            disabled={!changeAmount && bill > 0}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </label>
+        <label>
+          العملة
+          <select value={currency} onChange={(e) => setCurrency(e.target.value as "LBP" | "USD")}>
+            <option value="LBP">LBP</option>
+            <option value="USD">USD</option>
+          </select>
+        </label>
+
+        {bill > 0 ? (
+          <button type="button" style={{ marginTop: 8 }} onClick={() => setChangeAmount((v) => !v)}>
+            {changeAmount ? "المبلغ كامل ✓" : "تغيير المبلغ المحصّل"}
+          </button>
+        ) : null}
+        {changeAmount ? (
+          <p className="muted" style={{ marginTop: 8, marginBottom: 0 }}>
+            أدخل المبلغ الذي حصّلته فعليًا إذا لم يدفع العميل كامل الفاتورة.
+          </p>
+        ) : null}
+
+        {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
+
+        <div className="card-actions-right" style={{ marginTop: 12 }}>
+          <button type="button" onClick={onClose} disabled={saving}>
+            إلغاء
+          </button>{" "}
+          <button type="button" className="success-btn" onClick={save} disabled={saving}>
+            {saving ? "…" : "تسجيل التحصيل"}
+          </button>
+        </div>
+        <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
+          يظهر على لوحتك فورًا؛ يبقى بانتظار توثيق الموظّف في Review QR.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function CollectorDashboardPage() {
-  const router = useRouter();
   const [regionFilter, setRegionFilter] = useState<"all" | EmployeeRegion>("all");
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
   const months = useAvailableMonths();
   const [customers, setCustomers] = useState<CollectorCustomer[]>([]);
   const [qrLogs, setQrLogs] = useState<QrLog[]>([]);
+  const [collectTarget, setCollectTarget] = useState<CollectorCustomer | null>(null);
+  const [cameraMsg, setCameraMsg] = useState("");
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const loadCustomers = useCallback(() => {
     fetch(`/api/customers?month=${monthKey}&region=${regionFilter}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed to load collector customers.");
@@ -57,7 +184,9 @@ export default function CollectorDashboardPage() {
             customerNumber: string;
             fullName: string;
             building: string;
+            region: "mrah" | "printania";
             ongoingBalance: number;
+            ongoingBalanceThisMonth?: number;
             paidThisMonth: boolean;
             isMonitor?: boolean;
           }>;
@@ -68,7 +197,9 @@ export default function CollectorDashboardPage() {
             customerNumber: customer.customerNumber,
             name: customer.fullName,
             building: customer.building,
+            region: customer.region,
             priceToPay: customer.ongoingBalance ?? 0,
+            billThisMonth: customer.ongoingBalanceThisMonth ?? 0,
             paidThisMonth: customer.paidThisMonth,
             isMonitor: Boolean(customer.isMonitor),
           }))
@@ -77,7 +208,7 @@ export default function CollectorDashboardPage() {
       .catch(() => setCustomers([]));
   }, [monthKey, regionFilter]);
 
-  useEffect(() => {
+  const loadQrLogs = useCallback(() => {
     fetch(`/api/qr-collections?status=all&month=${monthKey}&region=${regionFilter}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed to load QR collections.");
@@ -87,10 +218,16 @@ export default function CollectorDashboardPage() {
       .catch(() => setQrLogs([]));
   }, [monthKey, regionFilter]);
 
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
+  useEffect(() => {
+    loadQrLogs();
+  }, [loadQrLogs]);
+
   const rows = useMemo(() => {
     const qrByCustomer = new Map<string, QrLog["status"]>();
     for (const log of qrLogs) {
-      // Keep the most advanced status seen for a customer this month.
       const key = log.customerId || log.customerNumber;
       const existing = qrByCustomer.get(key);
       if (existing === "validated_by_employee") continue;
@@ -98,7 +235,13 @@ export default function CollectorDashboardPage() {
     }
     return customers
       .filter((customer) => !customer.isMonitor)
-      .filter((customer) => customer.priceToPay > 0 || customer.paidThisMonth || qrByCustomer.has(customer.id) || qrByCustomer.has(customer.customerNumber))
+      .filter(
+        (customer) =>
+          customer.priceToPay > 0 ||
+          customer.paidThisMonth ||
+          qrByCustomer.has(customer.id) ||
+          qrByCustomer.has(customer.customerNumber)
+      )
       .map((customer) => {
         const qrStatus = qrByCustomer.get(customer.id) ?? qrByCustomer.get(customer.customerNumber);
         const status: CollectionStatus =
@@ -116,6 +259,53 @@ export default function CollectorDashboardPage() {
   const pendingCount = rows.filter((row) => row.status === "pending").length;
   const validatedCount = rows.filter((row) => row.status === "validated").length;
 
+  async function onCameraFile(file: File | undefined) {
+    if (!file) return;
+    setCameraMsg("Reading QR…");
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+      const w = Math.max(1, Math.round(bitmap.width * scale));
+      const h = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        setCameraMsg("Couldn't process the photo.");
+        return;
+      }
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const result = jsQR(imageData.data, w, h);
+      if (!result?.data) {
+        setCameraMsg("No QR code found in that photo — try again, closer and steady.");
+        return;
+      }
+      let customerNumber = "";
+      try {
+        customerNumber = new URL(result.data).searchParams.get("customerNumber") ?? "";
+      } catch {
+        customerNumber = result.data.trim();
+      }
+      if (!customerNumber) {
+        setCameraMsg("That QR doesn't contain a customer number.");
+        return;
+      }
+      const match = customers.find(
+        (c) => c.customerNumber.toLowerCase() === customerNumber.toLowerCase()
+      );
+      if (!match) {
+        setCameraMsg(`Customer ${customerNumber} isn't in the list for ${monthKey} / ${regionFilter}.`);
+        return;
+      }
+      setCameraMsg("");
+      setCollectTarget(match);
+    } catch {
+      setCameraMsg("Couldn't read the photo. Make sure the QR is well lit and in focus.");
+    }
+  }
+
   return (
     <AppShell
       title="Collector Dashboard"
@@ -123,6 +313,18 @@ export default function CollectorDashboardPage() {
       navItems={collectorNavItems}
       appName="Station V2 - Collector"
     >
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => {
+          onCameraFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+
       <div className="card">
         <div className="filters-grid filters-grid-pro">
           <label htmlFor="collector-dashboard-region">
@@ -167,21 +369,22 @@ export default function CollectorDashboardPage() {
           </div>
         </div>
         <div className="card-actions-right">
-          <button
-            type="button"
-            className="show-all-btn"
-            onClick={() => router.push(`/collector/scan?openCamera=1&month=${monthKey}`)}
-          >
+          <button type="button" className="show-all-btn" onClick={() => cameraInputRef.current?.click()}>
             Open Camera
           </button>
         </div>
+        {cameraMsg ? (
+          <p className="muted" style={{ marginBottom: 0 }}>
+            {cameraMsg}
+          </p>
+        ) : null}
       </div>
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Customers — {monthKey}</h3>
         <p className="muted" style={{ marginTop: 0 }}>
-          Scanning marks a bill on this dashboard for your own tracking. The payment is only final once an
-          employee confirms it under Review QR.
+          &ldquo;Open&rdquo; or scanning a bill&apos;s QR records a collection here for your own tracking. The
+          payment is only final once an employee confirms it under Review QR.
         </p>
         <table>
           <thead>
@@ -207,13 +410,9 @@ export default function CollectorDashboardPage() {
                     <button
                       type="button"
                       className="action-link-btn"
-                      onClick={() =>
-                        router.push(
-                          `/collector/scan?customerNumber=${encodeURIComponent(row.customerNumber)}&month=${monthKey}`
-                        )
-                      }
+                      onClick={() => setCollectTarget(row)}
                     >
-                      Scan
+                      Open
                     </button>
                   ) : null}
                 </td>
@@ -229,6 +428,19 @@ export default function CollectorDashboardPage() {
           </tbody>
         </table>
       </div>
+
+      {collectTarget ? (
+        <CollectModal
+          customer={collectTarget}
+          monthKey={monthKey}
+          onClose={() => setCollectTarget(null)}
+          onDone={() => {
+            setCollectTarget(null);
+            loadCustomers();
+            loadQrLogs();
+          }}
+        />
+      ) : null}
     </AppShell>
   );
 }
