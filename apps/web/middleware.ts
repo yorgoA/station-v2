@@ -21,7 +21,9 @@ const legacyRoutes = new Set([
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (legacyRoutes.has(pathname)) {
+  // Bare list routes above, plus the dynamic print-detail route
+  // (/billing/print/<batchId>), reachable only via /employee/billing/print/<id>.
+  if (legacyRoutes.has(pathname) || pathname.startsWith("/billing/print/")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   return NextResponse.next();

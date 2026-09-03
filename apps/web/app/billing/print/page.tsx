@@ -118,9 +118,12 @@ export default function BillingPrintPage() {
             <button
               type="button"
               disabled={!canPrint}
+              onClick={() =>
+                window.open(`/employee/billing/print/${batch.id}`, "_blank", "noopener,noreferrer")
+              }
               title={
                 canPrint
-                  ? "Generate print-ready PDF (3 bills per page)"
+                  ? "Open a print-ready page (3 bills per page) and print / save as PDF"
                   : "Disabled until manager approval"
               }
             >
