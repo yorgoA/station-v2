@@ -30,17 +30,46 @@ production unless you override them (below). Fine for "look before prod" checks
 by yourself, but staging writes (submissions, approvals, QR collections,
 migrations) hit real data.
 
-**B. Separate free Supabase project for staging (isolated).**
-1. Create a new Supabase project (free tier).
-2. Run every migration in order against it:
-   `db/schema.sql` (or `001_init_schema.sql`) then `002` … `011`.
-3. Seed: `db/seed.sql`.
-4. Create a separate Vercel **Blob** store for staging (keep it off prod's).
-5. In Vercel → Project → Settings → Environment Variables, add the staging
-   project's `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-   `SUPABASE_SERVICE_ROLE_KEY`, and the blob token **scoped to `Preview` only**
-   (leave the `Production` values pointing at prod).
-6. Re-deploy the `staging` branch.
+**B. Separate free Supabase project for staging (isolated).** ← chosen
+
+Staging project: **`station-v2-staging`** in the **`Tromba-Staging`** org (free tier).
+Project ref `qfnbnvzlmwlkurijypwa` · URL `https://qfnbnvzlmwlkurijypwa.supabase.co`
+
+Done:
+- [x] Supabase project created.
+- [x] `db/schema.sql` run in the SQL editor (all of `001…011` folded in).
+- [x] `db/seed.sql` run (2 regions, 4 billing_types, 20 ampere tiers).
+- [x] Verified: 16 public tables, 7 functions, seed rows present.
+
+Left to do (all in Vercel + Supabase Auth — must be done by hand because it
+means pasting the service-role key into a field):
+
+1. **Split the 3 Supabase env vars in Vercel** (Project → Settings → Environment
+   Variables). They are currently one value each, scoped to *Production and
+   Preview*. For `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`:
+   - Edit the existing var → set its environment to **Production only**.
+   - Add a new var with the **same name**, the **staging** value, **Preview only**:
+     - `NEXT_PUBLIC_SUPABASE_URL` = `https://qfnbnvzlmwlkurijypwa.supabase.co`
+     - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` = staging *publishable* key
+       (Supabase → Project Settings → API Keys)
+     - `SUPABASE_SERVICE_ROLE_KEY` = staging *secret* key (same page)
+2. **Blob store** — either leave `station-v2-blob` shared (staging test photos
+   land in the prod bucket, no billing impact), or create
+   `station-v2-blob-staging` connected to **Preview only** and flip
+   `station-v2-blob` to **Production only** so `BLOB_READ_WRITE_TOKEN` doesn't
+   collide.
+3. **Redeploy `staging`** (Deployments → latest `staging` build → Redeploy) so it
+   picks up the new Preview vars.
+4. **Bootstrap the first staging manager** (rest of the accounts get made from
+   the app afterwards):
+   - Supabase staging → Authentication → Users → Add user: email + password,
+     and under *User Metadata* set `{ "role": "manager" }`.
+   - Supabase staging → SQL Editor:
+     `insert into app_users (role, display_name, email, is_active)
+      values ('manager', 'Manager', '<that email, lowercased>', true);`
+   - Log in to the staging URL as that manager → Settings → Accounts → create
+     the employee and collector accounts there.
 
 Now `staging` is fully isolated: run new migrations there first, test, then run
 them on prod and merge to `main`.
