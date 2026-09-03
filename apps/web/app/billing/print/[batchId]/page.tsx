@@ -46,6 +46,7 @@ const PRINT_CSS = `
     font-family: "Segoe UI", Tahoma, "Noto Naskh Arabic", system-ui, sans-serif; }
   /* keep Latin digits/latin runs left-to-right even inside the RTL bill */
   .num { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+  .usd { color: #64748b; font-size: 8.5px; direction: ltr; unicode-bidi: isolate; display: block; }
 
   .print-toolbar {
     position: sticky; top: 0; z-index: 10; display: flex; gap: 12px; align-items: center;
@@ -229,7 +230,11 @@ export default function BillingPrintBatchPage() {
                 const consumptionCharge =
                   bill.kwhPriceSnapshot != null ? bill.consumptionKwh * bill.kwhPriceSnapshot : 0;
                 const ampereFee = bill.amperePriceSnapshot ?? 0;
-                const usd = usdRate != null && usdRate > 0 ? bill.amount / usdRate : null;
+                const hasUsd = usdRate != null && usdRate > 0;
+                const toUsd = (lbp: number) => (hasUsd ? lbp / (usdRate as number) : null);
+                const usd = toUsd(bill.amount);
+                const usdCell = (lbp: number) =>
+                  hasUsd ? <span className="usd">${num(toUsd(lbp) ?? 0, 2)}</span> : null;
                 const ampereLabel = bill.subscribedAmpere != null ? `${bill.subscribedAmpere}A` : "—";
                 return (
                   <div key={bill.customerNumber} style={{ display: "contents" }}>
@@ -270,7 +275,13 @@ export default function BillingPrintBatchPage() {
                             </div>
                             <div>
                               <span className="k">سعر KW:</span> <N>{num(bill.kwhPriceSnapshot ?? 0)}</N> {LL}
+                              {hasUsd ? <span className="usd">${num(toUsd(bill.kwhPriceSnapshot ?? 0) ?? 0, 4)}</span> : null}
                             </div>
+                            {hasUsd ? (
+                              <div>
+                                <span className="k">سعر صرف الدولار:</span> <N>{num(usdRate ?? 0)}</N> {LL}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
 
@@ -298,12 +309,15 @@ export default function BillingPrintBatchPage() {
                             </td>
                             <td>
                               <N>{num(consumptionCharge)}</N> {LL}
+                              {usdCell(consumptionCharge)}
                             </td>
                             <td>
                               <N>{num(ampereFee)}</N> {LL}
+                              {usdCell(ampereFee)}
                             </td>
                             <td>
                               <N>{num(bill.amount)}</N> {LL}
+                              {usdCell(bill.amount)}
                             </td>
                           </tr>
                           <tr>
@@ -320,6 +334,7 @@ export default function BillingPrintBatchPage() {
                               <strong>
                                 <N>{num(bill.amount)}</N> {LL}
                               </strong>
+                              {usdCell(bill.amount)}
                             </td>
                           </tr>
                           <tr>
@@ -332,7 +347,7 @@ export default function BillingPrintBatchPage() {
                             <td />
                             <td />
                             <td>سعر الصرف</td>
-                            <td>{usd != null ? <N>USD {num(usd, 2)}</N> : "—"}</td>
+                            <td>{hasUsd ? <N>{num(usdRate ?? 0)} {LL} / $1</N> : "—"}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -371,10 +386,11 @@ export default function BillingPrintBatchPage() {
                         </div>
                         <div className="due">
                           المطلوب: <N>{num(bill.amount)}</N> {LL}
+                          {usd != null ? <span className="usd">${num(usd, 2)}</span> : null}
                         </div>
-                        {usd != null ? (
+                        {hasUsd ? (
                           <div className="r">
-                            <N>USD {num(usd, 2)}</N>
+                            <span className="k">سعر الصرف:</span> <N>{num(usdRate ?? 0)}</N> {LL}
                           </div>
                         ) : null}
                       </div>
