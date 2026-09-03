@@ -28,6 +28,7 @@ type ScanCustomer = {
   customerNumber: string;
   fullName: string;
   region: "mrah" | "printania";
+  ongoingBalanceThisMonth?: number;
 };
 
 function CollectorScanContent() {
@@ -38,6 +39,7 @@ function CollectorScanContent() {
   const months = useAvailableMonths();
   const [amount, setAmount] = useState("");
   const [amountCurrency, setAmountCurrency] = useState<"LBP" | "USD">("LBP");
+  const [changeAmount, setChangeAmount] = useState(false);
   const [customers, setCustomers] = useState<ScanCustomer[]>([]);
   const [message, setMessage] = useState("");
   const [logs, setLogs] = useState<QrCollectionLog[]>([]);
@@ -61,14 +63,14 @@ function CollectorScanContent() {
   }, [router, searchParams]);
 
   useEffect(() => {
-    fetch("/api/customers?region=all")
+    fetch(`/api/customers?region=all&month=${monthKey}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed to load customers.");
         const payload = (await response.json()) as { customers: ScanCustomer[] };
         setCustomers(payload.customers ?? []);
       })
       .catch(() => setCustomers([]));
-  }, []);
+  }, [monthKey]);
 
   useEffect(() => {
     fetch("/api/qr-collections?status=all")
@@ -89,6 +91,17 @@ function CollectorScanContent() {
         customer.fullName.toLowerCase().includes(normalized)
     );
   }, [customers, qrInput]);
+
+  const billAmount = matchedCustomer?.ongoingBalanceThisMonth ?? 0;
+
+  // When a customer is resolved, prefill the collected amount with what they owe
+  // for this bill. The collector confirms it as-is or taps "change amount".
+  useEffect(() => {
+    if (matchedCustomer && !changeAmount) {
+      setAmount(billAmount > 0 ? String(Math.round(billAmount)) : "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedCustomer?.id, billAmount, changeAmount]);
 
   const isReadyToSave = useMemo(
     () =>
@@ -120,6 +133,7 @@ function CollectorScanContent() {
           regionCode: matchedCustomer!.region,
           monthKey,
           collectedAmount: parsedAmount,
+          expectedAmount: billAmount > 0 ? billAmount : undefined,
           currency: amountCurrency,
           billScanImageName: `bill-scan-${matchedCustomer!.customerNumber}-${monthKey}.png`,
           employeeReceiptImageName: `receipt-${matchedCustomer!.customerNumber}-${monthKey}.jpg`,
@@ -135,8 +149,9 @@ function CollectorScanContent() {
       setLogs(refreshPayload.logs ?? []);
       setAmount("");
       setQrInput("");
+      setChangeAmount(false);
       setMessage(
-        `Collection recorded (${amountCurrency}). It shows on your dashboard now; an employee still needs to confirm it under Review QR.`
+        `تم تسجيل التحصيل (${amountCurrency}). يظهر الآن على لوحتك، ويبقى بانتظار توثيق الموظّف في صفحة Review QR.`
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unknown save error.");
@@ -173,11 +188,12 @@ function CollectorScanContent() {
             </select>
           </label>
           <label htmlFor="collector-amount">
-            Amount collected
+            المبلغ المحصّل — Amount collected
             <input
               id="collector-amount"
               type="number"
               value={amount}
+              disabled={Boolean(matchedCustomer) && !changeAmount && billAmount > 0}
               onChange={(e) => setAmount(e.target.value)}
               placeholder={`Enter amount in ${amountCurrency}`}
             />
@@ -197,11 +213,35 @@ function CollectorScanContent() {
         <div className="card">
           <div>
             <p className="muted" style={{ marginBottom: 4 }}>
-              Selected customer
+              Selected customer — العميل
             </p>
-            <p style={{ marginTop: 0, marginBottom: 0 }}>
+            <p style={{ marginTop: 0, marginBottom: 8 }}>
               {matchedCustomer ? `${matchedCustomer.fullName} (${matchedCustomer.customerNumber})` : "—"}
             </p>
+            {matchedCustomer ? (
+              <>
+                <p style={{ marginTop: 0, marginBottom: 8 }}>
+                  <span className="muted">المبلغ المطلوب — Bill for {monthKey}: </span>
+                  <strong>
+                    {billAmount > 0 ? `${formatNumber(billAmount)} LBP` : "مدفوعة — nothing due"}
+                  </strong>
+                </p>
+                {billAmount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setChangeAmount((v) => !v)}
+                    style={{ direction: "rtl" }}
+                  >
+                    {changeAmount ? "المبلغ كامل ✓" : "تغيير المبلغ المحصّل"}
+                  </button>
+                ) : null}
+                {changeAmount ? (
+                  <p className="muted" style={{ marginTop: 8, marginBottom: 0, direction: "rtl" }}>
+                    أدخل المبلغ الذي حصّلته فعليًا إذا لم يدفع العميل كامل الفاتورة.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
           </div>
         </div>
         {message ? <p className="muted">{message}</p> : null}
@@ -247,7 +287,7 @@ function CollectorScanContent() {
       </div>
       <div className="collector-sticky-action">
         <button type="button" onClick={handleSaveScan}>
-          Record Collection
+          تسجيل التحصيل — Record Collection
         </button>
       </div>
     </AppShell>

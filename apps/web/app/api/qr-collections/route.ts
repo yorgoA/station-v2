@@ -9,6 +9,7 @@ type CreateQrCollectionBody = {
   regionCode: "mrah" | "printania";
   monthKey: string;
   collectedAmount: number;
+  expectedAmount?: number;
   currency: "LBP" | "USD";
   billScanImageName?: string;
   employeeReceiptImageName?: string;
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from("qr_collection_logs")
-      .select("id, customer_id, customer_number, customer_name, month_key, collected_amount, currency, status, bill_scan_image_name, employee_receipt_image_name, modification_reason, modified_by_employee, validated_by_employee_at, scanned_at, regions!inner(code)")
+      .select("id, customer_id, customer_number, customer_name, month_key, collected_amount, expected_amount, currency, status, bill_scan_image_name, employee_receipt_image_name, modification_reason, modified_by_employee, validated_by_employee_at, scanned_at, regions!inner(code)")
       .order("scanned_at", { ascending: false });
 
     if (status && status !== "all") query = query.eq("status", status);
@@ -50,6 +51,7 @@ export async function GET(request: Request) {
       region: readRegion(row.regions as { code: string } | Array<{ code: string }> | null)?.code ?? "mrah",
       monthKey: row.month_key,
       collectedAmount: Number(row.collected_amount),
+      expectedAmount: row.expected_amount != null ? Number(row.expected_amount) : null,
       currency: row.currency,
       status: row.status,
       billScanImageName: row.bill_scan_image_name,
@@ -92,6 +94,10 @@ export async function POST(request: Request) {
         region_id: region.id,
         month_key: body.monthKey,
         collected_amount: body.collectedAmount,
+        expected_amount:
+          typeof body.expectedAmount === "number" && Number.isFinite(body.expectedAmount) && body.expectedAmount >= 0
+            ? body.expectedAmount
+            : null,
         currency: body.currency ?? "LBP",
         status: "pending_employee_validation",
         bill_scan_image_name: body.billScanImageName ?? null,

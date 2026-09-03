@@ -16,6 +16,7 @@ type QrCollectionLog = {
   region: "mrah" | "printania";
   monthKey: string;
   collectedAmount: number;
+  expectedAmount?: number | null;
   currency?: "LBP" | "USD";
   status?: "pending_employee_validation" | "validated_by_employee";
   billScanImageName?: string;
@@ -208,27 +209,37 @@ export default function EmployeeReviewQrPage() {
               <th>Scanned At</th>
               <th>Customer</th>
               <th>Bill Month</th>
-              <th>Collected</th>
+              <th>المطلوب — Bill</th>
+              <th>المحصّل — Collected</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {filteredLogs.map((log) => (
-              <tr key={log.id} className="clickable-row" onClick={() => setSelectedLog(log)}>
-                <td>{new Date(log.scannedAt).toLocaleString()}</td>
-                <td>{log.customerName}</td>
-                <td>{log.monthKey}</td>
-                <td>
-                  {formatNumber(log.collectedAmount)} {log.currency ?? "LBP"}
-                </td>
-                <td>
-                  {log.status === "validated_by_employee" ? "Validated by employee" : "Pending employee validation"}
-                </td>
-              </tr>
-            ))}
+            {filteredLogs.map((log) => {
+              const short = log.expectedAmount != null && log.collectedAmount < log.expectedAmount;
+              return (
+                <tr key={log.id} className="clickable-row" onClick={() => setSelectedLog(log)}>
+                  <td>{new Date(log.scannedAt).toLocaleString()}</td>
+                  <td>{log.customerName}</td>
+                  <td>{log.monthKey}</td>
+                  <td>
+                    {log.expectedAmount != null
+                      ? `${formatNumber(log.expectedAmount)} ${log.currency ?? "LBP"}`
+                      : "—"}
+                  </td>
+                  <td style={short ? { color: "var(--warning)", fontWeight: 600 } : undefined}>
+                    {formatNumber(log.collectedAmount)} {log.currency ?? "LBP"}
+                    {short ? " (partial)" : ""}
+                  </td>
+                  <td>
+                    {log.status === "validated_by_employee" ? "Validated by employee" : "Pending employee validation"}
+                  </td>
+                </tr>
+              );
+            })}
             {filteredLogs.length === 0 && (
               <tr>
-                <td colSpan={5} className="muted">
+                <td colSpan={6} className="muted">
                   No QR collection logs yet. Record a payment first to seed scan logs.
                 </td>
               </tr>
@@ -267,9 +278,21 @@ export default function EmployeeReviewQrPage() {
                 <p>{selectedLog.monthKey}</p>
               </div>
               <div>
-                <p className="muted">Collected</p>
+                <p className="muted">المطلوب — Bill amount</p>
+                <p>
+                  {selectedLog.expectedAmount != null
+                    ? `${formatNumber(selectedLog.expectedAmount)} ${selectedLog.currency ?? "LBP"}`
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="muted">المحصّل — Collected</p>
                 <p>
                   {formatNumber(selectedLog.collectedAmount)} {selectedLog.currency ?? "LBP"}
+                  {selectedLog.expectedAmount != null &&
+                  selectedLog.collectedAmount < selectedLog.expectedAmount ? (
+                    <span style={{ color: "var(--warning)" }}> — دفعة جزئية (partial)</span>
+                  ) : null}
                 </p>
               </div>
               <div>
@@ -362,11 +385,11 @@ export default function EmployeeReviewQrPage() {
                 </button>
               ) : modifyMode ? (
                 <button type="button" className="success-btn" onClick={() => validateWithModifications(selectedLog)}>
-                  Validate Modifications
+                  توثيق مع تعديل — Validate with changes
                 </button>
               ) : (
                 <button type="button" className="success-btn" onClick={() => validateCashHandover(selectedLog)}>
-                  Validate (No Modifications)
+                  توثيق — Validate
                 </button>
               )}
             </div>

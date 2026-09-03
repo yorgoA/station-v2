@@ -268,6 +268,8 @@ create table if not exists qr_collection_logs (
   region_id uuid not null references regions(id) on delete restrict,
   month_key text not null,
   collected_amount numeric(14,2) not null check (collected_amount > 0),
+  -- the customer's bill at scan time; collected_amount may be less (partial pay). See migration 011.
+  expected_amount numeric(14,2) check (expected_amount is null or expected_amount >= 0),
   currency text not null default 'LBP',
   status text not null default 'pending_employee_validation',
   bill_scan_image_name text,
