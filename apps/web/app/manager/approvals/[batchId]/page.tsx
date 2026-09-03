@@ -41,6 +41,11 @@ export default function ManagerApprovalBatchPage() {
   const [banner, setBanner] = useState("");
   const [sentToEmployee, setSentToEmployee] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [kwhPriceMissing, setKwhPriceMissing] = useState(false);
+  const [kwhModalOpen, setKwhModalOpen] = useState(false);
+  const [kwhModalPrice, setKwhModalPrice] = useState("");
+  const [kwhModalSaving, setKwhModalSaving] = useState(false);
+  const [kwhModalError, setKwhModalError] = useState("");
   const [imageModalSrc, setImageModalSrc] = useState<string>("");
 
   const selectedBatch = useMemo(
@@ -248,7 +253,7 @@ export default function ManagerApprovalBatchPage() {
     setPendingModificationRows((prev) => ({ ...prev, [rowId]: false }));
   }
 
-  async function approveAndPost() {
+  async function approveAndPost(opts?: { skipConfirm?: boolean }) {
     if (!selectedBatch) return;
     if (!allApproved) {
       setBanner("Every row must be marked Approved before posting the batch.");
@@ -267,6 +272,7 @@ export default function ManagerApprovalBatchPage() {
       return;
     }
     if (
+      !opts?.skipConfirm &&
       typeof window !== "undefined" &&
       !window.confirm("Approve and post this batch? This writes the final bills and cannot be undone.")
     ) {
@@ -278,15 +284,52 @@ export default function ManagerApprovalBatchPage() {
       const response = await fetch(`/api/billing/batches/${batchId}/approve`, { method: "POST" });
       const payload = (await response.json()) as { error?: string; status?: string };
       if (!response.ok) {
-        setBanner(payload.error ?? "Failed to approve and post the batch.");
+        const message = payload.error ?? "Failed to approve and post the batch.";
+        setBanner(message);
+        // Missing month price is fixable right here via the modal, without
+        // leaving the page and losing the row-by-row review that's in progress.
+        setKwhPriceMissing(/no kwh price/i.test(message));
         return;
       }
       setBanner("Batch approved and posted — the final bills have been written.");
+      setKwhPriceMissing(false);
       await loadBatch();
     } catch (error) {
       setBanner(error instanceof Error ? error.message : "Failed to approve and post the batch.");
     } finally {
       setPosting(false);
+    }
+  }
+
+  async function saveKwhPriceAndPost() {
+    if (!selectedBatch) return;
+    const price = Number(kwhModalPrice);
+    if (!Number.isFinite(price) || price <= 0) {
+      setKwhModalError("Enter a price per kWh greater than 0.");
+      return;
+    }
+    setKwhModalSaving(true);
+    setKwhModalError("");
+    try {
+      const response = await fetch("/api/settings/pricing/kwh-tariff", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ monthKey: selectedBatch.monthKey, kwhPrice: price }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setKwhModalError(data.error ?? "Failed to save the kWh price.");
+        return;
+      }
+      setKwhModalOpen(false);
+      setKwhPriceMissing(false);
+      setKwhModalPrice("");
+      setBanner(`kWh price for ${selectedBatch.monthKey} saved. Posting the batch…`);
+      await approveAndPost({ skipConfirm: true });
+    } catch (error) {
+      setKwhModalError(error instanceof Error ? error.message : "Failed to save the kWh price.");
+    } finally {
+      setKwhModalSaving(false);
     }
   }
 
@@ -588,7 +631,7 @@ export default function ManagerApprovalBatchPage() {
             <button
               type="button"
               className="success-btn"
-              onClick={approveAndPost}
+              onClick={() => approveAndPost()}
               disabled={!allApproved || hasUndecidedFixProposal || zeroAmountFixedRows.length > 0 || posting}
               title={
                 !allApproved
@@ -616,6 +659,19 @@ export default function ManagerApprovalBatchPage() {
             >
               Send to Employee
             </button>
+            {kwhPriceMissing && (
+              <button
+                type="button"
+                className="success-btn"
+                onClick={() => {
+                  setKwhModalPrice("");
+                  setKwhModalError("");
+                  setKwhModalOpen(true);
+                }}
+              >
+                Set kWh price for {selectedBatch.monthKey}
+              </button>
+            )}
           </div>
         ) : (
           <p className="muted" style={{ margin: 0 }}>
@@ -626,6 +682,49 @@ export default function ManagerApprovalBatchPage() {
         )}
         {banner && <p>{banner}</p>}
       </div>
+      {kwhModalOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Set kWh price">
+          <div className="modal-card">
+            <div className="row-between">
+              <h3 style={{ margin: 0 }}>Set kWh price — {selectedBatch.monthKey}</h3>
+              <button type="button" onClick={() => setKwhModalOpen(false)} disabled={kwhModalSaving}>
+                X
+              </button>
+            </div>
+            <p className="muted" style={{ marginTop: 8 }}>
+              This month has no kWh price yet. Set it here to post the batch without leaving this
+              review — it saves to the same place as Settings → Pricing.
+            </p>
+            <label style={{ display: "block", marginTop: 8 }}>
+              Price per kWh (LBP)
+              <input
+                type="number"
+                value={kwhModalPrice}
+                onChange={(e) => setKwhModalPrice(e.target.value)}
+                placeholder="e.g. 54335"
+                autoFocus
+              />
+            </label>
+            {kwhModalError && <p style={{ color: "var(--danger)" }}>{kwhModalError}</p>}
+            <div className="card-actions-right" style={{ marginTop: 12 }}>
+              <button type="button" onClick={() => setKwhModalOpen(false)} disabled={kwhModalSaving}>
+                Cancel
+              </button>{" "}
+              <button
+                type="button"
+                className="success-btn"
+                onClick={saveKwhPriceAndPost}
+                disabled={kwhModalSaving}
+              >
+                {kwhModalSaving ? "Saving…" : "Save Price & Post Batch"}
+              </button>
+            </div>
+            <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
+              <Link href="/manager/settings/pricing">Open the full pricing page</Link>
+            </p>
+          </div>
+        </div>
+      )}
       {imageModalSrc ? (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Counter image preview">
           <div className="modal-card">
