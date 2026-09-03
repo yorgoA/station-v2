@@ -6,8 +6,7 @@ import QRCode from "qrcode";
 import { formatNumber } from "../../../../lib/format";
 import { amountToArabicWords } from "../../../../lib/arabic-amount";
 
-// Give me the real maintenance number and I'll drop it in here.
-const MAINTENANCE_PHONE = "XX-XXXXXX";
+const MAINTENANCE_PHONE = "81 455 211";
 const COMPANY_CODE = "CGA";
 
 type PrintBill = {
