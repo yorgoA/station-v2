@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { type BillingEntryRow } from "../../../../lib/types/billing";
@@ -10,6 +10,7 @@ import { billingTypeNeedsMeterReading } from "../../../../lib/billing/billing-ty
 
 export default function ManagerApprovalBatchPage() {
   const params = useParams<{ batchId: string }>();
+  const router = useRouter();
   const batchId = params?.batchId ?? "";
   const [serverBatch, setServerBatch] = useState<{
     id: string;
@@ -280,6 +281,7 @@ export default function ManagerApprovalBatchPage() {
     }
     setPosting(true);
     setBanner("");
+    let navigatingAway = false;
     try {
       const response = await fetch(`/api/billing/batches/${batchId}/approve`, { method: "POST" });
       const payload = (await response.json()) as { error?: string; status?: string };
@@ -291,13 +293,14 @@ export default function ManagerApprovalBatchPage() {
         setKwhPriceMissing(/no kwh price/i.test(message));
         return;
       }
-      setBanner("Batch approved and posted — the final bills have been written.");
       setKwhPriceMissing(false);
-      await loadBatch();
+      setBanner("Batch approved and posted — the final bills have been written. Returning to Approvals…");
+      navigatingAway = true;
+      setTimeout(() => router.push("/manager/approvals"), 1200);
     } catch (error) {
       setBanner(error instanceof Error ? error.message : "Failed to approve and post the batch.");
     } finally {
-      setPosting(false);
+      if (!navigatingAway) setPosting(false);
     }
   }
 
