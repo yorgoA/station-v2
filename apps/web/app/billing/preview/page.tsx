@@ -29,6 +29,14 @@ function BillingPreviewContent() {
   const [entryWindowOpen, setEntryWindowOpen] = useState(false);
   const [unlockDateLabel, setUnlockDateLabel] = useState("");
   const [lockDateLabel, setLockDateLabel] = useState("");
+  const [imageModalSrc, setImageModalSrc] = useState("");
+
+  function toImageHref(value?: string) {
+    const raw = String(value ?? "").trim();
+    if (raw.startsWith("data:image/")) return raw;
+    if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/")) return raw;
+    return "";
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -513,28 +521,64 @@ function BillingPreviewContent() {
                     <th>Previous</th>
                     <th>New</th>
                     <th>kWh</th>
+                    <th>Counter photo</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {previewModal.rows.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.customerName || "-"}</td>
-                      <td>{row.customerNumber || "-"}</td>
-                      <td>{row.previousCounter}</td>
-                      <td>{row.newCounter ?? "-"}</td>
-                      <td>
-                        {row.newCounter !== undefined && row.newCounter >= row.previousCounter
-                          ? row.newCounter - row.previousCounter
-                          : "-"}
-                      </td>
-                    </tr>
-                  ))}
+                  {previewModal.rows.map((row) => {
+                    const href = toImageHref(row.counterImageName);
+                    return (
+                      <tr key={row.id}>
+                        <td>{row.customerName || "-"}</td>
+                        <td>{row.customerNumber || "-"}</td>
+                        <td>{row.previousCounter}</td>
+                        <td>{row.newCounter ?? "-"}</td>
+                        <td>
+                          {row.newCounter !== undefined && row.newCounter >= row.previousCounter
+                            ? row.newCounter - row.previousCounter
+                            : "-"}
+                        </td>
+                        <td>
+                          {href ? (
+                            <img
+                              src={href}
+                              alt={`Counter ${row.customerNumber}`}
+                              title="Click to enlarge"
+                              onClick={() => setImageModalSrc(href)}
+                              style={{
+                                width: 64,
+                                height: "auto",
+                                borderRadius: 4,
+                                border: "1px solid #d1d5db",
+                                cursor: "pointer",
+                              }}
+                            />
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
           </div>
         </div>
       )}
+      {imageModalSrc ? (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Counter photo">
+          <div className="modal-card">
+            <div className="row-between">
+              <h3 style={{ margin: 0 }}>Counter photo</h3>
+              <button type="button" onClick={() => setImageModalSrc("")}>
+                Close
+              </button>
+            </div>
+            <img src={imageModalSrc} alt="Counter full size" style={{ width: "100%", height: "auto" }} />
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 }
