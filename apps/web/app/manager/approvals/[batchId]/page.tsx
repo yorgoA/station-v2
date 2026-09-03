@@ -380,7 +380,18 @@ export default function ManagerApprovalBatchPage() {
             </div>
           )}
           {canEdit && rowStates[row.id] === "changes_needed" && !pendingModificationRows[row.id] && initialReviewStates[row.id] !== "approved" && (
-            <div className="card-actions-right" style={{ marginTop: 0 }}>
+            <div className="card-actions-right" style={{ marginTop: 0, display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                className="success-btn"
+                onClick={() => {
+                  setRowStates((prev) => ({ ...prev, [row.id]: "approved" }));
+                  setBanner("");
+                }}
+                title="Accept the employee's fix for this row"
+              >
+                Approve
+              </button>
               <button
                 type="button"
                 className="warning-btn"
