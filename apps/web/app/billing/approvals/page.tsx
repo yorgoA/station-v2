@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../_components/app-shell";
+import { formatLbp } from "../../../lib/format";
 
 function badgeColor(status: string) {
   if (status === "pending_review") return "#92400e";
@@ -188,7 +189,8 @@ export default function BillingApprovalsPage() {
             Submitted by {"submittedBy" in batch ? batch.submittedBy : "System"} at {batch.submittedAt ?? "-"}
           </p>
           <p>
-            Items: {"itemsCount" in batch ? batch.itemsCount : 0} | Total amount: {"totalAmount" in batch ? batch.totalAmount.toFixed(2) : "0.00"}
+            Items: {"itemsCount" in batch ? batch.itemsCount : 0} | Total amount:{" "}
+            {formatLbp("totalAmount" in batch ? batch.totalAmount : 0)}
           </p>
           {batch.managerNote && <p>Manager note: {formatManagerNote(batch.managerNote)}</p>}
           <Link href={`/manager/approvals/${batch.id}`} className="action-link-btn">

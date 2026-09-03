@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin
 import { requireRole } from "../../../../lib/auth/require-role";
 import { getEntryLockState } from "../../../../lib/billing/entry-window";
 import { billingTypeNeedsMeterReading } from "../../../../lib/billing/billing-types";
+import { formatNumber } from "../../../../lib/format";
 
 type SubmissionRowInput = {
   customerNumber: string;
@@ -206,7 +207,7 @@ export async function POST(request: Request) {
         }
         if (proposedFixedMonthlyAmount !== null) {
           parts.push(
-            `proposed fixed monthly ${Number.isFinite(currentFixedAmount) ? currentFixedAmount.toLocaleString() : "?"} -> ${proposedFixedMonthlyAmount.toLocaleString()} LBP`
+            `proposed fixed monthly ${Number.isFinite(currentFixedAmount) ? formatNumber(currentFixedAmount) : "?"} -> ${formatNumber(proposedFixedMonthlyAmount)} LBP`
           );
         }
         employeeChangeSummaries.push({

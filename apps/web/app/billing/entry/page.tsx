@@ -14,6 +14,7 @@ import {
 } from "../../../lib/billing/draft-storage";
 import { ACTIVE_ENTRY_MONTH_KEY } from "../../../lib/constants/months";
 import { billingTypeNeedsMeterReading } from "../../../lib/billing/billing-types";
+import { formatLbp } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 import { AppShell } from "../../_components/app-shell";
 
@@ -876,7 +877,7 @@ function BillingEntryContent() {
                     <p style={{ margin: "6px 0 0" }}>
                       <strong>Fixed monthly amount:</strong>{" "}
                       {currentFixedAmount > 0
-                        ? `${currentFixedAmount.toLocaleString()} LBP`
+                        ? formatLbp(currentFixedAmount)
                         : "not set — a manager must set it on the customer profile"}
                     </p>
                     {!isProposingFix ? (
@@ -953,8 +954,8 @@ function BillingEntryContent() {
                         </button>
                         {hasFixProposal && (
                           <p style={{ margin: "6px 0 0", color: "var(--warning)" }}>
-                            Will send to manager: {currentFixedAmount.toLocaleString()} →{" "}
-                            {(row.proposedFixedMonthlyAmount as number).toLocaleString()} LBP
+                            Will send to manager: {formatLbp(currentFixedAmount)} →{" "}
+                            {formatLbp(row.proposedFixedMonthlyAmount as number)}
                           </p>
                         )}
                       </div>

@@ -8,6 +8,7 @@ import { managerNavItems } from "../../../_components/role-nav";
 import { KpiCard, KpiGrid } from "../_components/kpi-components";
 import { ReportTable } from "../_components/report-table";
 import { ReportScopeFilters, useReportScope } from "../_components/report-scope-controls";
+import { formatLbp, formatNumber } from "../../../../lib/format";
 
 function ManagerPaymentsReportContent() {
   const searchParams = useSearchParams();
@@ -57,9 +58,9 @@ function ManagerPaymentsReportContent() {
       </div>
 
       <KpiGrid>
-        <KpiCard label="Total collected" value={`${kpis.totalCollected.toLocaleString()} LBP`} />
+        <KpiCard label="Total collected" value={formatLbp(kpis.totalCollected)} />
         <KpiCard label="Payments count" value={kpis.count} />
-        <KpiCard label="Average payment" value={`${kpis.avg.toLocaleString(undefined, { maximumFractionDigits: 2 })} LBP`} />
+        <KpiCard label="Average payment" value={`${formatNumber(kpis.avg, { maxDecimals: 2 })} LBP`} />
         <KpiCard label="Collection coverage" value="0.0%" />
       </KpiGrid>
 

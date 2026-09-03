@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
+import { formatNumber } from "../../../../lib/format";
 
 type AmpereTier = {
   amp: number;
@@ -264,7 +265,7 @@ export default function ManagerPricingSettingsPage() {
               sortedMonthlyTariffs.map((row) => (
                 <tr key={row.monthKey}>
                   <td>{row.monthKey}</td>
-                  <td>{row.kwhPrice.toLocaleString()}</td>
+                  <td>{formatNumber(row.kwhPrice, { maxDecimals: 2 })}</td>
                 </tr>
               ))
             )}

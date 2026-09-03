@@ -12,6 +12,7 @@ import {
   type BillStatus,
 } from "../../../../lib/types/reports";
 import { ReportScopeFilters, useReportScope } from "../_components/report-scope-controls";
+import { formatNumber } from "../../../../lib/format";
 
 function ManagerBillsReportContent() {
   const searchParams = useSearchParams();
@@ -91,7 +92,7 @@ function ManagerBillsReportContent() {
             { key: "customer", header: "Customer", render: (row) => row.customer },
             { key: "region", header: "Region", render: (row) => row.region },
             { key: "monthKey", header: "Bill Month", render: (row) => row.monthKey },
-            { key: "amount", header: "Bill Amount", render: (row) => `${row.amount} ${row.currency}` },
+            { key: "amount", header: "Bill Amount", render: (row) => `${formatNumber(row.amount)} ${row.currency}` },
             { key: "status", header: "Status", render: (row) => (row.status === "paid" ? "Paid" : "Unpaid") },
             { key: "billingType", header: "Billing Type", render: (row) => row.billingType },
           ]}

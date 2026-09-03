@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../lib/auth/require-role";
+import { formatLbp } from "../../../../lib/format";
 
 type RegionCode = "mrah" | "printania";
 
@@ -177,7 +178,7 @@ export async function GET(request: Request) {
         customer: String(customer?.full_name ?? "-"),
         region: (readRegionCode(customer?.regions) || "mrah") as RegionCode,
         date: String((row as Record<string, unknown>).payment_date ?? ""),
-        amount: `${Number((row as Record<string, unknown>).amount ?? 0).toLocaleString()} LBP`,
+        amount: formatLbp(Number((row as Record<string, unknown>).amount ?? 0)),
         method: String((row as Record<string, unknown>).method ?? "manual"),
         receiptRef: String((row as Record<string, unknown>).receipt_image_url ?? "-"),
       };

@@ -11,6 +11,7 @@ import {
   ReportScopeLabel,
   useReportScope,
 } from "../_components/report-scope-controls";
+import { formatKwh, formatLbp } from "../../../../lib/format";
 
 function ManagerOverviewReportContent() {
   const searchParams = useSearchParams();
@@ -61,35 +62,35 @@ function ManagerOverviewReportContent() {
         <KpiCard
           tone="money"
           label="Total to be paid"
-          value={overview ? `${overview.totalToBePaid.toLocaleString()} LBP` : "—"}
+          value={overview ? formatLbp(overview.totalToBePaid) : "—"}
           actionHref={`/manager/reports/money_overview?${query}`}
           actionLabel="Open Money Overview"
         />
         <KpiCard
           tone="money"
           label="Collected"
-          value={overview ? `${overview.collected.toLocaleString()} LBP` : "—"}
+          value={overview ? formatLbp(overview.collected) : "—"}
           actionHref={`/manager/reports/money_overview?${query}`}
           actionLabel="Open Money Overview"
         />
         <KpiCard
           tone="money"
           label="Unpaid (till today)"
-          value={overview ? `${overview.unpaidTillToday.toLocaleString()} LBP` : "—"}
+          value={overview ? formatLbp(overview.unpaidTillToday) : "—"}
           actionHref={`/manager/reports/money_overview?${query}`}
           actionLabel="Open Money Overview"
         />
         <KpiCard
           tone="kwh"
           label="Total kWh produced"
-          value={overview ? `${overview.totalKwhProduced.toLocaleString()} kWh` : "—"}
+          value={overview ? formatKwh(overview.totalKwhProduced) : "—"}
           actionHref={`/manager/reports/kwh_overview?${query}`}
           actionLabel="Open kWh Overview"
         />
         <KpiCard
           tone="kwh"
           label="Paying kWh"
-          value={overview ? `${overview.payingKwh.toLocaleString()} kWh` : "—"}
+          value={overview ? formatKwh(overview.payingKwh) : "—"}
           actionHref={`/manager/reports/kwh_overview?${query}`}
           actionLabel="Open kWh Overview"
         />

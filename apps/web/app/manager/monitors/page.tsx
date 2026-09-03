@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { managerNavItems } from "../../_components/role-nav";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { formatNumber } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type MonitorRow = {
@@ -127,10 +128,10 @@ export default function ManagerMonitorsPage() {
                     "Missing link"
                   )}
                 </td>
-                <td>{(row.startingCounter ?? 0).toLocaleString()}</td>
-                <td>{(row.monitorKwh ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                <td>{(row.linkedIncludedKwh ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                <td>{(row.monitorMatchKwh ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                <td>{formatNumber(row.startingCounter ?? 0)}</td>
+                <td>{formatNumber(row.monitorKwh ?? 0, { maxDecimals: 1 })}</td>
+                <td>{formatNumber(row.linkedIncludedKwh ?? 0, { maxDecimals: 1 })}</td>
+                <td>{formatNumber(row.monitorMatchKwh ?? 0, { maxDecimals: 1 })}</td>
               </tr>
             ))}
           </tbody>

@@ -11,6 +11,7 @@ import {
   ReportScopeLabel,
   useReportScope,
 } from "../_components/report-scope-controls";
+import { formatKwh } from "../../../../lib/format";
 
 function KwhOverviewReportContent() {
   const searchParams = useSearchParams();
@@ -51,9 +52,9 @@ function KwhOverviewReportContent() {
         />
         <ReportScopeLabel monthKey={monthKey} region={region} />
         <KpiGrid>
-          <KpiCard tone="kwh" label="Total kWh produced" value={`${(kwh?.totalKwhProduced ?? 0).toLocaleString()} kWh`} />
-          <KpiCard tone="kwh" label="Paying kWh" value={`${(kwh?.payingKwh ?? 0).toLocaleString()} kWh`} />
-          <KpiCard tone="kwh" label="Free customers kWh" value={`${(kwh?.freeKwh ?? 0).toLocaleString()} kWh`} />
+          <KpiCard tone="kwh" label="Total kWh produced" value={formatKwh(kwh?.totalKwhProduced ?? 0)} />
+          <KpiCard tone="kwh" label="Paying kWh" value={formatKwh(kwh?.payingKwh ?? 0)} />
+          <KpiCard tone="kwh" label="Free customers kWh" value={formatKwh(kwh?.freeKwh ?? 0)} />
         </KpiGrid>
       </div>
     </AppShell>

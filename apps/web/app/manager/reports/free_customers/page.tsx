@@ -9,6 +9,7 @@ import { KpiCard, KpiGrid } from "../_components/kpi-components";
 import { ReportTable } from "../_components/report-table";
 import { ReportScopeFilters, useReportScope } from "../_components/report-scope-controls";
 import { resolveAmperePrice, type AmpereTier, type MonthlyTariff } from "../../../../lib/reports/pricing";
+import { formatKwh, formatLbp } from "../../../../lib/format";
 
 type FreeCustomerRow = {
   customer: string;
@@ -93,9 +94,9 @@ function ManagerFreeCustomersReportContent() {
       ) : null}
       <KpiGrid>
         <KpiCard label="Total free customers" value={rows.length} />
-        <KpiCard label="Free customers kWh" value={`${totalFreeKwh.toLocaleString()} kWh`} />
-        <KpiCard label="kWh price used" value={`${kwhPrice.toLocaleString()} LBP`} />
-        <KpiCard label="Estimated value impact" value={`${totalEstimatedValue.toLocaleString()} LBP`} />
+        <KpiCard label="Free customers kWh" value={formatKwh(totalFreeKwh)} />
+        <KpiCard label="kWh price used" value={formatLbp(kwhPrice)} />
+        <KpiCard label="Estimated value impact" value={formatLbp(totalEstimatedValue)} />
       </KpiGrid>
       <div className="card">
         <ReportTable
@@ -105,9 +106,9 @@ function ManagerFreeCustomersReportContent() {
             { key: "customer", header: "Customer", render: (row) => row.customer },
             { key: "region", header: "Region", render: (row) => row.region },
             { key: "consumedKwh", header: "Consumed kWh", render: (row) => row.consumedKwh },
-            { key: "ampereCharge", header: "Ampere charge", render: (row) => `${row.ampereCharge.toLocaleString()} LBP` },
-            { key: "consumptionCharge", header: "kWh charge", render: (row) => `${row.consumptionCharge.toLocaleString()} LBP` },
-            { key: "estimatedValue", header: "Estimated value", render: (row) => `${row.estimatedValue.toLocaleString()} LBP` },
+            { key: "ampereCharge", header: "Ampere charge", render: (row) => formatLbp(row.ampereCharge) },
+            { key: "consumptionCharge", header: "kWh charge", render: (row) => formatLbp(row.consumptionCharge) },
+            { key: "estimatedValue", header: "Estimated value", render: (row) => formatLbp(row.estimatedValue) },
             { key: "reason", header: "Reason", render: (row) => row.reason },
           ]}
         />

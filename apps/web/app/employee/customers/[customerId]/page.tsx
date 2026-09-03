@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../../_components/app-shell";
 import { employeeNavItems } from "../../../_components/role-nav";
 import { SimilarValueGuard } from "../../../_components/similar-value-guard";
+import { formatLbp } from "../../../../lib/format";
 type Props = { params: { customerId: string } };
 
 export default function EmployeeCustomerDetailsPage({ params }: Props) {
@@ -364,8 +365,8 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                     <td>{bill.previousCounter}</td>
                     <td>{bill.newCounter}</td>
                     <td>{bill.consumptionKwh}</td>
-                    <td>{bill.amount.toLocaleString()}</td>
-                    <td>{bill.remainingAmount.toLocaleString()}</td>
+                    <td>{formatLbp(bill.amount)}</td>
+                    <td>{formatLbp(bill.remainingAmount)}</td>
                     <td>{bill.status}</td>
                   </tr>
                 ))}
@@ -397,7 +398,7 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                     title="Click to view details"
                   >
                     <td>{payment.paymentDate || "-"}</td>
-                    <td>{payment.amount.toLocaleString()}</td>
+                    <td>{formatLbp(payment.amount)}</td>
                     <td>{payment.receiptRef || "-"}</td>
                   </tr>
                 ))}
@@ -421,15 +422,15 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                 <div><p className="muted">Previous Counter</p><p>{selectedBill.previousCounter}</p></div>
                 <div><p className="muted">New Counter</p><p>{selectedBill.newCounter}</p></div>
                 <div><p className="muted">Consumption (kWh)</p><p>{selectedBill.consumptionKwh}</p></div>
-                <div><p className="muted">Amount</p><p>{selectedBill.amount.toLocaleString()}</p></div>
-                <div><p className="muted">Remaining</p><p>{selectedBill.remainingAmount.toLocaleString()}</p></div>
+                <div><p className="muted">Amount</p><p>{formatLbp(selectedBill.amount)}</p></div>
+                <div><p className="muted">Remaining</p><p>{formatLbp(selectedBill.remainingAmount)}</p></div>
                 <div><p className="muted">Status</p><p>{selectedBill.status}</p></div>
                 <div><p className="muted">Bill ID</p><p>{selectedBill.id}</p></div>
               </div>
             ) : selectedPayment ? (
               <div className="info-grid">
                 <div><p className="muted">Date</p><p>{selectedPayment.paymentDate || "-"}</p></div>
-                <div><p className="muted">Amount</p><p>{selectedPayment.amount.toLocaleString()}</p></div>
+                <div><p className="muted">Amount</p><p>{formatLbp(selectedPayment.amount)}</p></div>
                 <div><p className="muted">Receipt Ref</p><p>{selectedPayment.receiptRef || "-"}</p></div>
                 <div><p className="muted">Payment ID</p><p>{selectedPayment.id}</p></div>
               </div>

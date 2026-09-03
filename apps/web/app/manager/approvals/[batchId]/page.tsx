@@ -7,6 +7,7 @@ import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { type BillingEntryRow } from "../../../../lib/types/billing";
 import { billingTypeNeedsMeterReading } from "../../../../lib/billing/billing-types";
+import { formatLbp } from "../../../../lib/format";
 
 export default function ManagerApprovalBatchPage() {
   const params = useParams<{ batchId: string }>();
@@ -461,7 +462,7 @@ export default function ManagerApprovalBatchPage() {
             <p className="muted">
               Flat monthly charge — billed the customer&apos;s set amount:{" "}
               <strong>
-                {(fixProposalByRowId[row.id]?.currentAmount ?? row.fixedMonthlyAmount ?? 0).toLocaleString()} LBP
+                {formatLbp(fixProposalByRowId[row.id]?.currentAmount ?? row.fixedMonthlyAmount ?? 0)}
               </strong>
             </p>
           ) : (
@@ -479,8 +480,8 @@ export default function ManagerApprovalBatchPage() {
                 <strong>Employee proposes a fixed-monthly correction</strong>
               </p>
               <p className="muted" style={{ margin: "0 0 4px" }}>
-                {fixProposalByRowId[row.id].currentAmount.toLocaleString()} LBP →{" "}
-                {fixProposalByRowId[row.id].proposedAmount.toLocaleString()} LBP
+                {formatLbp(fixProposalByRowId[row.id].currentAmount)} →{" "}
+                {formatLbp(fixProposalByRowId[row.id].proposedAmount)}
               </p>
               {fixProposalByRowId[row.id].note ? (
                 <p className="muted" style={{ margin: "0 0 4px" }}>
@@ -490,12 +491,12 @@ export default function ManagerApprovalBatchPage() {
               {fixProposalByRowId[row.id].decision === "approved" ? (
                 <p style={{ margin: 0, color: "var(--success)" }}>
                   Approved — customer&apos;s amount updated to{" "}
-                  {fixProposalByRowId[row.id].proposedAmount.toLocaleString()} LBP. This bill will use it.
+                  {formatLbp(fixProposalByRowId[row.id].proposedAmount)}. This bill will use it.
                 </p>
               ) : fixProposalByRowId[row.id].decision === "rejected" ? (
                 <p style={{ margin: 0, color: "var(--danger)" }}>
                   Rejected — customer&apos;s amount stays at{" "}
-                  {fixProposalByRowId[row.id].currentAmount.toLocaleString()} LBP.
+                  {formatLbp(fixProposalByRowId[row.id].currentAmount)}.
                 </p>
               ) : selectedBatch.status === "pending_review" || selectedBatch.status === "changes_requested" ? (
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>

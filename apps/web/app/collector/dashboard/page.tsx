@@ -6,6 +6,7 @@ import { AppShell } from "../../_components/app-shell";
 import { collectorNavItems } from "../../_components/role-nav";
 import { type EmployeeRegion } from "../../../lib/types/employee";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { formatLbp } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 export default function CollectorDashboardPage() {
@@ -128,7 +129,7 @@ export default function CollectorDashboardPage() {
                     {customer.phone}
                   </a>
                 </td>
-                <td>{customer.billAmount.toFixed(2)} LBP</td>
+                <td>{formatLbp(customer.billAmount)}</td>
                 <td>{customer.boxNumber}</td>
                 <td>{customer.building}</td>
               </tr>

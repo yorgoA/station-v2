@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../_components/app-shell";
 import { managerNavItems } from "../../_components/role-nav";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { formatNumber } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 export default function ManagerDashboardPage() {
@@ -175,7 +176,8 @@ export default function ManagerDashboardPage() {
                   <td>{String(ticket.customerName ?? "-")}</td>
                   <td>{String(ticket.monthKey ?? "-")}</td>
                   <td>
-                    {String(ticket.collectedAmount ?? "-")} {String(ticket.currency ?? "LBP")}
+                    {ticket.collectedAmount != null ? formatNumber(Number(ticket.collectedAmount)) : "-"}{" "}
+                    {String(ticket.currency ?? "LBP")}
                   </td>
                   <td>{String(ticket.reason ?? "-")}</td>
                 </tr>

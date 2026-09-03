@@ -6,6 +6,7 @@ import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
 import { type EmployeePayment, type EmployeeRegion } from "../../../lib/types/employee";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { formatLbp } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 export default function EmployeePaymentsPage() {
@@ -191,15 +192,15 @@ export default function EmployeePaymentsPage() {
         <div className="info-grid" style={{ marginTop: 10 }}>
           <div>
             <p className="muted">Previous balance carry-over</p>
-            <p className="kpi-value">{selectedCustomerPreviousBalance.toFixed(2)} LBP</p>
+            <p className="kpi-value">{formatLbp(selectedCustomerPreviousBalance)}</p>
           </div>
           <div>
             <p className="muted">This month ({monthKey})</p>
-            <p className="kpi-value">{selectedCustomerThisMonthBalance.toFixed(2)} LBP</p>
+            <p className="kpi-value">{formatLbp(selectedCustomerThisMonthBalance)}</p>
           </div>
           <div>
             <p className="muted">Total due (through {monthKey})</p>
-            <p className="kpi-value">{selectedCustomerBalance.toFixed(2)} LBP</p>
+            <p className="kpi-value">{formatLbp(selectedCustomerBalance)}</p>
           </div>
         </div>
         <p className="muted" style={{ marginTop: 8, marginBottom: 8 }}>
@@ -288,7 +289,7 @@ export default function EmployeePaymentsPage() {
                 <td>{p.date}</td>
                 <td>{p.customerName}</td>
                 <td>{p.region}</td>
-                <td>{p.amount.toFixed(2)} LBP</td>
+                <td>{formatLbp(p.amount)}</td>
                 <td>{p.receipt}</td>
                 <td>
                   <button

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { collectorNavItems } from "../../_components/role-nav";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { formatNumber } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type QrCollectionLog = {
@@ -221,7 +222,7 @@ function CollectorScanContent() {
                 <td>{new Date(log.scannedAt).toLocaleTimeString()}</td>
                 <td>{log.customerName}</td>
                 <td>{log.monthKey}</td>
-                <td>{log.collectedAmount.toFixed(2)} {log.currency ?? "LBP"}</td>
+                <td>{formatNumber(log.collectedAmount)} {log.currency ?? "LBP"}</td>
               </tr>
             ))}
             {logs.length === 0 && (

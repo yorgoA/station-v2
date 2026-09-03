@@ -6,6 +6,7 @@ import { AppShell } from "../../_components/app-shell";
 import { managerNavItems } from "../../_components/role-nav";
 import { type EmployeeBillingType, type EmployeeRegion, type EmployeeStatus } from "../../../lib/types/employee";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { formatLbp } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type ManagerCustomerRow = {
@@ -290,7 +291,7 @@ export default function ManagerCustomersPage() {
                 <td>{customer.boxNumber}</td>
                 <td>{customer.status}</td>
                 <td>{customer.paidThisMonth ? "Yes" : "No"}</td>
-                <td>${(customer.ongoingBalance ?? 0).toFixed(2)}</td>
+                <td>{formatLbp(customer.ongoingBalance)}</td>
               </tr>
             ))}
           </tbody>

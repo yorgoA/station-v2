@@ -20,6 +20,7 @@ import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { ReportScopeFilters, ReportScopeLabel, useReportScope } from "../_components/report-scope-controls";
 import { CURRENT_MONTH_KEY, MONTH_OPTIONS } from "../../../../lib/constants/months";
+import { formatLbp, formatNumber } from "../../../../lib/format";
 
 type SavedLossInput = {
   generatedKwh: number;
@@ -227,15 +228,15 @@ function LossMrahReportContent() {
           <tbody>
             <tr>
               <td>Generated (manual)</td>
-              <td>{Number(generatedKwh || "0").toLocaleString()} kWh</td>
+              <td>{formatNumber(Number(generatedKwh || "0"))} kWh</td>
             </tr>
             <tr>
               <td>App calculated</td>
-              <td>{appCalculatedKwh.toLocaleString()} kWh</td>
+              <td>{formatNumber(appCalculatedKwh, { maxDecimals: 1 })} kWh</td>
             </tr>
             <tr>
               <td>kWh Difference</td>
-              <td>{diff.toLocaleString()} kWh</td>
+              <td>{formatNumber(diff, { maxDecimals: 1 })} kWh</td>
             </tr>
             <tr>
               <td>Loss %</td>
@@ -243,15 +244,15 @@ function LossMrahReportContent() {
             </tr>
             <tr>
               <td>Actual amount (manual)</td>
-              <td>{actualAmount.toLocaleString()} LBP</td>
+              <td>{formatLbp(actualAmount)}</td>
             </tr>
             <tr>
               <td>Reported amount (app)</td>
-              <td>{reportedAmount.toLocaleString()} LBP</td>
+              <td>{formatLbp(reportedAmount)}</td>
             </tr>
             <tr>
               <td>Money gap</td>
-              <td>{moneyGap.toLocaleString()} LBP</td>
+              <td>{formatLbp(moneyGap)}</td>
             </tr>
           </tbody>
         </table>
@@ -265,7 +266,7 @@ function LossMrahReportContent() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="metric" />
               <YAxis />
-              <Tooltip formatter={(value) => `${Number(value).toLocaleString()} kWh`} />
+              <Tooltip formatter={(value) => `${formatNumber(Number(value), { maxDecimals: 1 })} kWh`} />
               <Legend />
               <Bar dataKey="kwh" name="kWh" radius={[8, 8, 0, 0]}>
                 {comparisonChartData.map((entry) => (
@@ -293,7 +294,7 @@ function LossMrahReportContent() {
                 formatter={(value, name) =>
                   name === "Loss %"
                     ? `${Number(value).toFixed(2)}%`
-                    : `${Number(value).toLocaleString()} kWh`
+                    : `${formatNumber(Number(value), { maxDecimals: 1 })} kWh`
                 }
               />
               <Legend />
@@ -314,7 +315,7 @@ function LossMrahReportContent() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="metric" />
               <YAxis />
-              <Tooltip formatter={(value) => `${Number(value).toLocaleString()} LBP`} />
+              <Tooltip formatter={(value) => formatLbp(Number(value))} />
               <Legend />
               <Bar dataKey="amount" name="Amount (LBP)" radius={[8, 8, 0, 0]}>
                 {moneyComparisonData.map((entry) => (

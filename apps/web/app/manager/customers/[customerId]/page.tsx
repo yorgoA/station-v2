@@ -6,6 +6,7 @@ import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { SimilarValueGuard } from "../../../_components/similar-value-guard";
 import { MultiSelect } from "../../../_components/multi-select";
+import { formatLbp, formatNumber } from "../../../../lib/format";
 
 type Props = { params: { customerId: string } };
 
@@ -560,10 +561,10 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               <div><p className="muted">Subscribed Ampere</p><p>{customer.subscribedAmpere ?? "not set"}</p></div>
             ) : null}
             {customer.billingType === "fixed-monthly" ? (
-              <div><p className="muted">Fixed Monthly Amount</p><p>{customer.fixedMonthlyAmount.toLocaleString()} LBP</p></div>
+              <div><p className="muted">Fixed Monthly Amount</p><p>{formatLbp(customer.fixedMonthlyAmount)}</p></div>
             ) : null}
             {customer.isMonitor || customer.billingType === "both" ? (
-              <div><p className="muted">Starting Counter</p><p>{(customer.startingCounter ?? 0).toLocaleString()} kWh</p></div>
+              <div><p className="muted">Starting Counter</p><p>{formatNumber(customer.startingCounter ?? 0)} kWh</p></div>
             ) : null}
             <div><p className="muted">Status</p><p>{customer.status}</p></div>
           </div>

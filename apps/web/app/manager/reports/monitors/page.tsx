@@ -8,6 +8,7 @@ import { KpiCard, KpiGrid } from "../_components/kpi-components";
 import { ReportTable } from "../_components/report-table";
 import { ReportScopeFilters, useReportScope } from "../_components/report-scope-controls";
 import type { MonthlyTariff } from "../../../../lib/reports/pricing";
+import { formatKwh, formatNumber } from "../../../../lib/format";
 
 type MonitorRow = {
   customer: string;
@@ -94,7 +95,7 @@ function ManagerMonitorsReportContent() {
         <KpiCard label="Total monitor customers" value={rows.length} />
         <KpiCard label="Unlinked obligatory monitors" value={unlinkedCount} />
         <KpiCard label="Overusing monitors" value={overusingCount} />
-        <KpiCard label="Overuse total" value={`${totalOveruseKwh.toLocaleString(undefined, { maximumFractionDigits: 1 })} kWh`} />
+        <KpiCard label="Overuse total" value={formatKwh(totalOveruseKwh)} />
       </KpiGrid>
       <div className="card">
         {rows.length === 0 ? (
@@ -112,17 +113,17 @@ function ManagerMonitorsReportContent() {
             {
               key: "linkedIncludedKwh",
               header: "Linked included kWh",
-              render: (row) => row.linkedIncludedKwh.toLocaleString(undefined, { maximumFractionDigits: 1 }),
+              render: (row) => formatNumber(row.linkedIncludedKwh, { maxDecimals: 1 }),
             },
             {
               key: "matchKwh",
               header: "Match (monitor - linked)",
-              render: (row) => row.matchKwh.toLocaleString(undefined, { maximumFractionDigits: 1 }),
+              render: (row) => formatNumber(row.matchKwh, { maxDecimals: 1 }),
             },
             {
               key: "overuseKwh",
               header: "Overuse kWh",
-              render: (row) => row.overuseKwh.toLocaleString(undefined, { maximumFractionDigits: 1 }),
+              render: (row) => formatNumber(row.overuseKwh, { maxDecimals: 1 }),
             },
             { key: "status", header: "Assessment", render: (row) => row.status },
             {

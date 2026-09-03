@@ -6,6 +6,7 @@ import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
 import { type EmployeeBillingType, type EmployeeRegion, type EmployeeStatus } from "../../../lib/types/employee";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { formatLbp } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type EmployeeCustomerRow = {
@@ -140,7 +141,8 @@ export default function EmployeeCustomersPage() {
         values.push(c.paidThisMonth ? "Yes" : "No");
       }
       if (visibleColumns.ongoingBalance) {
-        values.push((c.ongoingBalance ?? 0).toFixed(2));
+        // Raw integer in the export so spreadsheets read it as a number.
+        values.push(String(Math.round(c.ongoingBalance ?? 0)));
       }
       return values.map((v) => csvEscape(String(v))).join(",");
     });
@@ -388,7 +390,7 @@ export default function EmployeeCustomersPage() {
                   <td>{c.paidThisMonth ? "Yes" : "No"}</td>
                 )}
                 {visibleColumns.ongoingBalance && (
-                  <td>${(c.ongoingBalance ?? 0).toFixed(2)}</td>
+                  <td>{formatLbp(c.ongoingBalance)}</td>
                 )}
               </tr>
             ))}

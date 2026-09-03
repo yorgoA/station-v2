@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { formatNumber } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 type QrCollectionLog = {
@@ -218,7 +219,7 @@ export default function EmployeeReviewQrPage() {
                 <td>{log.customerName}</td>
                 <td>{log.monthKey}</td>
                 <td>
-                  {log.collectedAmount.toFixed(2)} {log.currency ?? "LBP"}
+                  {formatNumber(log.collectedAmount)} {log.currency ?? "LBP"}
                 </td>
                 <td>
                   {log.status === "validated_by_employee" ? "Validated by employee" : "Pending employee validation"}
@@ -268,7 +269,7 @@ export default function EmployeeReviewQrPage() {
               <div>
                 <p className="muted">Collected</p>
                 <p>
-                  {selectedLog.collectedAmount.toFixed(2)} {selectedLog.currency ?? "LBP"}
+                  {formatNumber(selectedLog.collectedAmount)} {selectedLog.currency ?? "LBP"}
                 </p>
               </div>
               <div>

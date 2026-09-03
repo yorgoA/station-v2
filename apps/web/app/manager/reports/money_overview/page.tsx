@@ -11,6 +11,7 @@ import {
   ReportScopeLabel,
   useReportScope,
 } from "../_components/report-scope-controls";
+import { formatLbp } from "../../../../lib/format";
 
 function MoneyOverviewReportContent() {
   const searchParams = useSearchParams();
@@ -55,29 +56,17 @@ function MoneyOverviewReportContent() {
         <ReportScopeLabel monthKey={monthKey} region={region} />
         <KpiGrid>
           <KpiCard tone="money" label="Total customers" value={money?.totalCustomers ?? 0} />
-          <KpiCard
-            tone="money"
-            label="Total to be paid"
-            value={`${(money?.totalToBePaid ?? 0).toLocaleString()} LBP`}
-          />
-          <KpiCard tone="money" label="Collected" value={`${(money?.collected ?? 0).toLocaleString()} LBP`} />
+          <KpiCard tone="money" label="Total to be paid" value={formatLbp(money?.totalToBePaid)} />
+          <KpiCard tone="money" label="Collected" value={formatLbp(money?.collected)} />
           <KpiCard
             tone="money"
             label="Unpaid total (current month)"
-            value={`${(money?.unpaidCurrent ?? 0).toLocaleString()} LBP`}
+            value={formatLbp(money?.unpaidCurrent)}
             actionHref={`/manager/reports/bills?${query}&status=unpaid`}
             actionLabel="Check Unpaid Bills"
           />
-          <KpiCard
-            tone="money"
-            label="Previous unpaid"
-            value={`${(money?.previousUnpaid ?? 0).toLocaleString()} LBP`}
-          />
-          <KpiCard
-            tone="money"
-            label="Unpaid total (till today)"
-            value={`${(money?.unpaidTillToday ?? 0).toLocaleString()} LBP`}
-          />
+          <KpiCard tone="money" label="Previous unpaid" value={formatLbp(money?.previousUnpaid)} />
+          <KpiCard tone="money" label="Unpaid total (till today)" value={formatLbp(money?.unpaidTillToday)} />
         </KpiGrid>
       </div>
     </AppShell>
