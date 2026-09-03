@@ -32,6 +32,8 @@ station-*.json
 
 # local DB snapshots (keep out of git; store elsewhere if needed)
 .db-snapshots/
+prod_public_data.sql
+db/clone-prod-to-staging.sh
 
 # typescript
 tsconfig.tsbuildinfo
