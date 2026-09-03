@@ -36,6 +36,8 @@ type SubmittedRowBaseline = {
   billingType: BillingEntryRow["billingType"];
   isMonitor: boolean;
   obligatoryLinkedToCustomerNumber?: string;
+  proposedFixedMonthlyAmount?: number;
+  proposedFixedMonthlyNote?: string;
 };
 
 type BatchReviewItem = {
@@ -408,6 +410,8 @@ function BillingEntryContent() {
               billingType: row.billingType,
               isMonitor: row.isMonitor,
               obligatoryLinkedToCustomerNumber: row.obligatoryLinkedToCustomerNumber,
+              proposedFixedMonthlyAmount: row.proposedFixedMonthlyAmount,
+              proposedFixedMonthlyNote: row.proposedFixedMonthlyNote,
             };
           }
         }
@@ -644,20 +648,6 @@ function BillingEntryContent() {
             const rowFeedback = reviewFeedback[normalizeCustomerNumber(row.customerNumber)];
             const rowWasChangesRequested = rowFeedback?.state === "changes_needed";
             const baseline = submittedBaselineByRowId[row.id];
-            const rowHasModificationSinceSubmit = baseline
-              ? row.previousCounter !== baseline.previousCounter ||
-                row.newCounter !== baseline.newCounter ||
-                row.counterImageName !== baseline.counterImageName ||
-                row.billingType !== baseline.billingType ||
-                row.isMonitor !== baseline.isMonitor ||
-                row.obligatoryLinkedToCustomerNumber !== baseline.obligatoryLinkedToCustomerNumber ||
-                Boolean(counterImageDataByRowId[row.id])
-              : false;
-            const rowIsApprovedByFix = rowWasChangesRequested && Boolean(validatedFixRows[row.id]);
-            const rowIsApproved = rowFeedback?.state === "approved" || rowIsApprovedByFix;
-            const rowNeedsChange = rowWasChangesRequested && !rowIsApprovedByFix;
-            const rowLocked = isChangesRequested && (rowFeedback?.state === "approved" || rowIsApprovedByFix);
-            const rowReadOnly = rowLocked || row.isFreeCustomer || !entryUnlockedForEdit;
             const needsMeterReading = billingTypeNeedsMeterReading(row.billingType);
             const currentFixedAmount = row.fixedMonthlyAmount ?? 0;
             const isProposingFix =
@@ -669,6 +659,29 @@ function BillingEntryContent() {
               Number.isFinite(row.proposedFixedMonthlyAmount) &&
               (row.proposedFixedMonthlyAmount as number) > 0 &&
               row.proposedFixedMonthlyAmount !== currentFixedAmount;
+            // Only an *effective* proposal (a positive amount that differs from the
+            // customer's current amount) counts as a change the manager can act on.
+            const effectiveProposedAmount = hasFixProposal ? (row.proposedFixedMonthlyAmount as number) : null;
+            const effectiveProposedNote = hasFixProposal ? row.proposedFixedMonthlyNote ?? "" : "";
+            const baselineProposedAmount = baseline?.proposedFixedMonthlyAmount ?? null;
+            const baselineProposedNote =
+              baseline?.proposedFixedMonthlyAmount != null ? baseline.proposedFixedMonthlyNote ?? "" : "";
+            const rowHasModificationSinceSubmit = baseline
+              ? row.previousCounter !== baseline.previousCounter ||
+                row.newCounter !== baseline.newCounter ||
+                row.counterImageName !== baseline.counterImageName ||
+                row.billingType !== baseline.billingType ||
+                row.isMonitor !== baseline.isMonitor ||
+                row.obligatoryLinkedToCustomerNumber !== baseline.obligatoryLinkedToCustomerNumber ||
+                effectiveProposedAmount !== baselineProposedAmount ||
+                effectiveProposedNote !== baselineProposedNote ||
+                Boolean(counterImageDataByRowId[row.id])
+              : false;
+            const rowIsApprovedByFix = rowWasChangesRequested && Boolean(validatedFixRows[row.id]);
+            const rowIsApproved = rowFeedback?.state === "approved" || rowIsApprovedByFix;
+            const rowNeedsChange = rowWasChangesRequested && !rowIsApprovedByFix;
+            const rowLocked = isChangesRequested && (rowFeedback?.state === "approved" || rowIsApprovedByFix);
+            const rowReadOnly = rowLocked || row.isFreeCustomer || !entryUnlockedForEdit;
             const consumption =
               needsMeterReading &&
               row.newCounter !== undefined &&

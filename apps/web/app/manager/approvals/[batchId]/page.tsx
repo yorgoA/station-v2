@@ -40,6 +40,7 @@ export default function ManagerApprovalBatchPage() {
   const [modificationStartNotes, setModificationStartNotes] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState("");
   const [sentToEmployee, setSentToEmployee] = useState(false);
+  const [posting, setPosting] = useState(false);
   const [imageModalSrc, setImageModalSrc] = useState<string>("");
 
   const selectedBatch = useMemo(
@@ -59,6 +60,15 @@ export default function ManagerApprovalBatchPage() {
     return [];
   }, [serverItems]);
   const allRowsDecided = activeRows.length > 0 && activeRows.every((row) => Boolean(rowStates[row.id]));
+  const hasChangesNeeded = activeRows.some((row) => rowStates[row.id] === "changes_needed");
+  const allApproved = activeRows.length > 0 && activeRows.every((row) => rowStates[row.id] === "approved");
+  const hasUndecidedFixProposal = Object.values(fixProposalByRowId).some((p) => !p.decision);
+  const zeroAmountFixedRows = activeRows.filter(
+    (row) =>
+      row.billingType === "fixed-monthly" &&
+      !row.isFreeCustomer &&
+      (row.fixedMonthlyAmount ?? 0) <= 0
+  );
   const toImageHref = (value?: string) => {
     const raw = String(value ?? "").trim();
     if (!raw) return "";
@@ -236,6 +246,48 @@ export default function ManagerApprovalBatchPage() {
       return next;
     });
     setPendingModificationRows((prev) => ({ ...prev, [rowId]: false }));
+  }
+
+  async function approveAndPost() {
+    if (!selectedBatch) return;
+    if (!allApproved) {
+      setBanner("Every row must be marked Approved before posting the batch.");
+      return;
+    }
+    if (hasUndecidedFixProposal) {
+      setBanner("Decide every proposed fixed-monthly correction (Approve / Reject) before posting.");
+      return;
+    }
+    if (zeroAmountFixedRows.length > 0) {
+      setBanner(
+        `These fixed-monthly customers have no amount set (bill would be 0): ${zeroAmountFixedRows
+          .map((row) => row.customerNumber)
+          .join(", ")}. Set it on the customer profile, or approve a proposed correction, before posting.`
+      );
+      return;
+    }
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Approve and post this batch? This writes the final bills and cannot be undone.")
+    ) {
+      return;
+    }
+    setPosting(true);
+    setBanner("");
+    try {
+      const response = await fetch(`/api/billing/batches/${batchId}/approve`, { method: "POST" });
+      const payload = (await response.json()) as { error?: string; status?: string };
+      if (!response.ok) {
+        setBanner(payload.error ?? "Failed to approve and post the batch.");
+        return;
+      }
+      setBanner("Batch approved and posted — the final bills have been written.");
+      await loadBatch();
+    } catch (error) {
+      setBanner(error instanceof Error ? error.message : "Failed to approve and post the batch.");
+    } finally {
+      setPosting(false);
+    }
   }
 
   async function finalizeReview() {
@@ -521,12 +573,44 @@ export default function ManagerApprovalBatchPage() {
       )}
       <div className="card">
         {canEdit ? (
-          <button type="button" className="success-btn" onClick={finalizeReview} disabled={!allRowsDecided}>
-            Send to Employee
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              className="success-btn"
+              onClick={approveAndPost}
+              disabled={!allApproved || hasUndecidedFixProposal || zeroAmountFixedRows.length > 0 || posting}
+              title={
+                !allApproved
+                  ? "Mark every row Approved first"
+                  : hasUndecidedFixProposal
+                    ? "Decide every proposed fixed-monthly correction first"
+                    : zeroAmountFixedRows.length > 0
+                      ? "Some fixed-monthly customers have no amount set"
+                      : "Write the final bills for this batch"
+              }
+            >
+              {posting ? "Posting…" : "Approve & Post Batch"}
+            </button>
+            <button
+              type="button"
+              onClick={finalizeReview}
+              disabled={!allRowsDecided || !hasChangesNeeded || posting}
+              title={
+                !allRowsDecided
+                  ? "Decide every row first"
+                  : !hasChangesNeeded
+                    ? "No rows are marked for changes — use Approve & Post instead"
+                    : "Send the flagged rows back to the employee to fix"
+              }
+            >
+              Send to Employee
+            </button>
+          </div>
         ) : (
           <p className="muted" style={{ margin: 0 }}>
-            This batch was already sent to employee. Review is read-only.
+            {selectedBatch.status === "approved_posted"
+              ? "This batch is approved and posted. The final bills have been written."
+              : "This batch was already sent to the employee. Review is read-only."}
           </p>
         )}
         {banner && <p>{banner}</p>}
