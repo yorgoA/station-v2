@@ -46,6 +46,7 @@ export default function ManagerApprovalBatchPage() {
   const [kwhPriceMissing, setKwhPriceMissing] = useState(false);
   const [kwhModalOpen, setKwhModalOpen] = useState(false);
   const [kwhModalPrice, setKwhModalPrice] = useState("");
+  const [kwhModalUsdRate, setKwhModalUsdRate] = useState("");
   const [kwhModalSaving, setKwhModalSaving] = useState(false);
   const [kwhModalError, setKwhModalError] = useState("");
   const [imageModalSrc, setImageModalSrc] = useState<string>("");
@@ -312,13 +313,19 @@ export default function ManagerApprovalBatchPage() {
       setKwhModalError("Enter a price per kWh greater than 0.");
       return;
     }
+    const usdRateTrimmed = kwhModalUsdRate.trim();
+    const usdRate = usdRateTrimmed === "" ? null : Number(usdRateTrimmed);
+    if (usdRate !== null && (!Number.isFinite(usdRate) || usdRate <= 0)) {
+      setKwhModalError("USD rate must be a positive number (LBP per 1 USD), or left blank.");
+      return;
+    }
     setKwhModalSaving(true);
     setKwhModalError("");
     try {
       const response = await fetch("/api/settings/pricing/kwh-tariff", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ monthKey: selectedBatch.monthKey, kwhPrice: price }),
+        body: JSON.stringify({ monthKey: selectedBatch.monthKey, kwhPrice: price, usdRate }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -328,6 +335,7 @@ export default function ManagerApprovalBatchPage() {
       setKwhModalOpen(false);
       setKwhPriceMissing(false);
       setKwhModalPrice("");
+      setKwhModalUsdRate("");
       setBanner(`kWh price for ${selectedBatch.monthKey} saved. Posting the batch…`);
       await approveAndPost({ skipConfirm: true });
     } catch (error) {
@@ -669,6 +677,7 @@ export default function ManagerApprovalBatchPage() {
                 className="success-btn"
                 onClick={() => {
                   setKwhModalPrice("");
+                  setKwhModalUsdRate("");
                   setKwhModalError("");
                   setKwhModalOpen(true);
                 }}
@@ -687,10 +696,10 @@ export default function ManagerApprovalBatchPage() {
         {banner && <p>{banner}</p>}
       </div>
       {kwhModalOpen && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Set kWh price">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Set month pricing">
           <div className="modal-card">
             <div className="row-between">
-              <h3 style={{ margin: 0 }}>Set kWh price — {selectedBatch.monthKey}</h3>
+              <h3 style={{ margin: 0 }}>Set month pricing — {selectedBatch.monthKey}</h3>
               <button type="button" onClick={() => setKwhModalOpen(false)} disabled={kwhModalSaving}>
                 X
               </button>
@@ -707,6 +716,15 @@ export default function ManagerApprovalBatchPage() {
                 onChange={(e) => setKwhModalPrice(e.target.value)}
                 placeholder="e.g. 54335"
                 autoFocus
+              />
+            </label>
+            <label style={{ display: "block", marginTop: 8 }}>
+              USD rate (LBP per 1 USD) — optional, for the printed bill
+              <input
+                type="number"
+                value={kwhModalUsdRate}
+                onChange={(e) => setKwhModalUsdRate(e.target.value)}
+                placeholder="e.g. 89700"
               />
             </label>
             {kwhModalError && <p style={{ color: "var(--danger)" }}>{kwhModalError}</p>}

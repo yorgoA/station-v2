@@ -14,6 +14,7 @@ type AmpereTier = {
 type MonthlyTariff = {
   monthKey: string;
   kwhPrice: number;
+  usdRate: number | null;
 };
 
 const MONTH_KEY_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -29,6 +30,7 @@ export default function ManagerPricingSettingsPage() {
 
   const [tariffMonth, setTariffMonth] = useState(currentMonthKey());
   const [tariffPrice, setTariffPrice] = useState("");
+  const [tariffUsdRate, setTariffUsdRate] = useState("");
   const [monthlyTariffs, setMonthlyTariffs] = useState<MonthlyTariff[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -119,17 +121,24 @@ export default function ManagerPricingSettingsPage() {
       setError("kWh price must be a positive number.");
       return;
     }
+    const usdRateTrimmed = tariffUsdRate.trim();
+    const usdRate = usdRateTrimmed === "" ? null : Number(usdRateTrimmed);
+    if (usdRate !== null && (!Number.isFinite(usdRate) || usdRate <= 0)) {
+      setError("USD rate must be a positive number (LBP per 1 USD), or left blank.");
+      return;
+    }
     setTariffSaving(true);
     try {
       const response = await fetch("/api/settings/pricing/kwh-tariff", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ monthKey: tariffMonth, kwhPrice: price })
+        body: JSON.stringify({ monthKey: tariffMonth, kwhPrice: price, usdRate })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Failed to save monthly tariff.");
       setBanner(`kWh price for ${tariffMonth} saved. Batches for that month can now be approved.`);
       setTariffPrice("");
+      setTariffUsdRate("");
       await loadPricing();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save monthly tariff.");
@@ -239,7 +248,20 @@ export default function ManagerPricingSettingsPage() {
               onChange={(e) => setTariffPrice(e.target.value)}
             />
           </label>
+          <label htmlFor="monthly-tariff-usd-rate">
+            USD rate (LBP per 1 USD) — optional
+            <input
+              id="monthly-tariff-usd-rate"
+              type="number"
+              placeholder="e.g. 89700"
+              value={tariffUsdRate}
+              onChange={(e) => setTariffUsdRate(e.target.value)}
+            />
+          </label>
         </div>
+        <p className="muted" style={{ marginTop: 0 }}>
+          The USD rate only drives the USD line on the printed bill. Leave it blank to print LBP only.
+        </p>
         <div className="card-actions-right">
           <button type="button" className="success-btn" onClick={handleMonthlyTariffSave} disabled={tariffSaving}>
             {tariffSaving ? "Saving…" : "Save Monthly Tariff"}
@@ -252,12 +274,13 @@ export default function ManagerPricingSettingsPage() {
             <tr>
               <th>Month</th>
               <th>kWh Price (LBP)</th>
+              <th>USD rate (LBP/USD)</th>
             </tr>
           </thead>
           <tbody>
             {sortedMonthlyTariffs.length === 0 ? (
               <tr>
-                <td colSpan={2} className="muted">
+                <td colSpan={3} className="muted">
                   No monthly tariffs set yet.
                 </td>
               </tr>
@@ -266,6 +289,7 @@ export default function ManagerPricingSettingsPage() {
                 <tr key={row.monthKey}>
                   <td>{row.monthKey}</td>
                   <td>{formatNumber(row.kwhPrice, { maxDecimals: 2 })}</td>
+                  <td>{row.usdRate != null ? formatNumber(row.usdRate, { maxDecimals: 2 }) : "—"}</td>
                 </tr>
               ))
             )}

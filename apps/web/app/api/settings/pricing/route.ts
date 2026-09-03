@@ -13,7 +13,7 @@ export async function GET() {
       supabase.from("ampere_price_tiers").select("amp, price").order("amp", { ascending: true }),
       supabase
         .from("monthly_kwh_tariffs")
-        .select("month_key, kwh_price, entered_at")
+        .select("month_key, kwh_price, usd_rate, entered_at")
         .order("month_key", { ascending: false })
     ]);
 
@@ -25,6 +25,7 @@ export async function GET() {
       monthlyTariffs: (tariffs ?? []).map((row) => ({
         monthKey: row.month_key,
         kwhPrice: Number(row.kwh_price),
+        usdRate: row.usd_rate != null ? Number(row.usd_rate) : null,
         enteredAt: row.entered_at
       }))
     });

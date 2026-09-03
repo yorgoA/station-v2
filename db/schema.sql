@@ -76,6 +76,9 @@ create table if not exists ampere_price_tiers (
 create table if not exists monthly_kwh_tariffs (
   month_key text primary key,
   kwh_price numeric(14,2) not null check (kwh_price > 0),
+  -- LBP per 1 USD for this month; drives the USD line on the printed bill.
+  -- Optional (see migration 010) -- NULL means the bill prints LBP only.
+  usd_rate numeric(14,2) check (usd_rate is null or usd_rate > 0),
   entered_by_user_id uuid references app_users(id),
   entered_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
