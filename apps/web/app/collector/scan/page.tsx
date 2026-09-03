@@ -135,7 +135,9 @@ function CollectorScanContent() {
       setLogs(refreshPayload.logs ?? []);
       setAmount("");
       setQrInput("");
-      setMessage(`Collection validated (${amountCurrency}) and saved.`);
+      setMessage(
+        `Collection recorded (${amountCurrency}). It shows on your dashboard now; an employee still needs to confirm it under Review QR.`
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unknown save error.");
     }
@@ -214,20 +216,27 @@ function CollectorScanContent() {
               <th>Customer</th>
               <th>Month</th>
               <th>Collected</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {logs.slice(0, 8).map((log) => (
-              <tr key={log.id}>
-                <td>{new Date(log.scannedAt).toLocaleTimeString()}</td>
-                <td>{log.customerName}</td>
-                <td>{log.monthKey}</td>
-                <td>{formatNumber(log.collectedAmount)} {log.currency ?? "LBP"}</td>
-              </tr>
-            ))}
+            {logs.slice(0, 8).map((log) => {
+              const validated = log.status === "validated_by_employee";
+              return (
+                <tr key={log.id}>
+                  <td>{new Date(log.scannedAt).toLocaleTimeString()}</td>
+                  <td>{log.customerName}</td>
+                  <td>{log.monthKey}</td>
+                  <td>{formatNumber(log.collectedAmount)} {log.currency ?? "LBP"}</td>
+                  <td style={{ color: validated ? "var(--success)" : "var(--warning)" }}>
+                    {validated ? "Validated" : "Awaiting employee"}
+                  </td>
+                </tr>
+              );
+            })}
             {logs.length === 0 && (
               <tr>
-                <td colSpan={4} className="muted">
+                <td colSpan={5} className="muted">
                   No scans recorded yet.
                 </td>
               </tr>
@@ -238,7 +247,7 @@ function CollectorScanContent() {
       </div>
       <div className="collector-sticky-action">
         <button type="button" onClick={handleSaveScan}>
-          Validate
+          Record Collection
         </button>
       </div>
     </AppShell>
