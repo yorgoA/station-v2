@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
-import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
+import { ACTIVE_ENTRY_MONTH_KEY } from "../../../lib/constants/months";
 import { formatNumber } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
@@ -27,7 +27,11 @@ type MonitorRow = {
 
 export default function EmployeeMonitorsPage() {
   const router = useRouter();
-  const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
+  // Defaults to the month currently open for billing entry (the previous
+  // calendar month, until the 27th) rather than today's bare calendar month --
+  // that one usually has no readings or kWh price yet, which made this page
+  // look broken when it was just empty.
+  const [monthKey, setMonthKey] = useState(ACTIVE_ENTRY_MONTH_KEY);
   const months = useAvailableMonths();
   const [region, setRegion] = useState<"all" | "mrah" | "printania">("all");
   const [rows, setRows] = useState<MonitorRow[]>([]);
@@ -58,10 +62,13 @@ export default function EmployeeMonitorsPage() {
   const totals = useMemo(() => {
     const monitorKwh = sortedRows.reduce((sum, row) => sum + (row.monitorKwh ?? 0), 0);
     const linkedIncludedKwh = sortedRows.reduce((sum, row) => sum + (row.linkedIncludedKwh ?? 0), 0);
-    return { monitorKwh, linkedIncludedKwh, matchKwh: linkedIncludedKwh - monitorKwh };
+    // Monitor - linked: positive means the monitor reads more than its linked
+    // customers' pricing accounts for (bad); negative means they're paying for
+    // more than the monitor shows (fine).
+    return { monitorKwh, linkedIncludedKwh, matchKwh: monitorKwh - linkedIncludedKwh };
   }, [sortedRows]);
   const matchColor =
-    totals.matchKwh < 0 ? "var(--danger)" : totals.matchKwh > 0 ? "var(--success)" : "var(--text)";
+    totals.matchKwh > 0 ? "var(--danger)" : totals.matchKwh < 0 ? "var(--success)" : "var(--text)";
 
   return (
     <AppShell title="Monitors" subtitle="Monitor-linked customers" navItems={employeeNavItems}>
@@ -115,7 +122,7 @@ export default function EmployeeMonitorsPage() {
           </div>
           <div className="card">
             <p className="muted" style={{ margin: 0 }}>
-              Match (linked − monitor)
+              Match (monitor − linked)
             </p>
             <p className="kpi-value" style={{ color: matchColor }}>
               {formatNumber(totals.matchKwh, { maxDecimals: 1 })} kWh

@@ -232,17 +232,16 @@ export async function GET(request: Request) {
           if (tracked !== undefined) linkedDataFound = true;
           return sum + (tracked ?? 0);
         }, 0);
-        // Loss/discrepancy = sum(linked customers' kWh) - monitor's own kWh.
-        const monitorMatchKwh = linkedIncludedKwh - monitorKwh;
+        // Match = monitor's own kWh - what its linked customers' pricing
+        // accounts for. Positive means the monitor is reading more than that --
+        // real usage has outgrown what's being paid for.
+        const monitorMatchKwh = monitorKwh - linkedIncludedKwh;
         // The point of linking a monitor to fixed-price customers is to catch
-        // when real usage has outgrown what they're paying for. Flag it only
-        // once we actually have both sides of the comparison, with a tolerance
-        // (5 kWh, or 10% of the linked figure) to absorb rounding/meter-timing noise.
+        // exactly that. Flag it only once we actually have both sides of the
+        // comparison, with a tolerance (5 kWh, or 10% of the linked figure) to
+        // absorb rounding/meter-timing noise.
         const monitorOverBudget =
-          isMonitor &&
-          linkedDataFound &&
-          monitorKwh > 0 &&
-          monitorKwh - linkedIncludedKwh > Math.max(5, linkedIncludedKwh * 0.1);
+          isMonitor && linkedDataFound && monitorKwh > 0 && monitorMatchKwh > Math.max(5, linkedIncludedKwh * 0.1);
         return {
           id,
           customerNumber,
