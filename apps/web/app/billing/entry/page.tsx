@@ -10,7 +10,7 @@ import {
   pruneOversizedBillingDrafts,
   readBillingDraftRows,
   writeBillingDraftImages,
-  writeBillingDraftRows,
+  writeBillingDraftRows
 } from "../../../lib/billing/draft-storage";
 import { ACTIVE_ENTRY_MONTH_KEY } from "../../../lib/constants/months";
 import { billingTypeNeedsMeterReading } from "../../../lib/billing/billing-types";
@@ -178,7 +178,9 @@ function BillingEntryContent() {
   }).length;
 
   function normalizeCustomerNumber(value?: string) {
-    return String(value ?? "").trim().toLowerCase();
+    return String(value ?? "")
+      .trim()
+      .toLowerCase();
   }
 
   function toImageHref(value?: string) {
@@ -264,7 +266,7 @@ function BillingEntryContent() {
         const items = (payload.items ?? []).map((item) => ({
           customerNumber: item.customerNumber,
           reviewState: item.reviewState,
-          reviewNote: item.reviewNote,
+          reviewNote: item.reviewNote
         }));
         setBatchReviewItems(items);
       })
@@ -292,7 +294,7 @@ function BillingEntryContent() {
       if (!customerKey) continue;
       map[customerKey] = {
         state: item.reviewState,
-        note: item.reviewNote,
+        note: item.reviewNote
       };
     }
     setReviewFeedback(map);
@@ -324,7 +326,7 @@ function BillingEntryContent() {
       fetch(`/api/billing/entry-rows?month=${monthKey}&region=${regionFilter}`),
       serverCurrentStatus === "changes_requested"
         ? fetch(`/api/billing/submissions?month=${monthKey}&region=${regionFilter}`)
-        : Promise.resolve(null),
+        : Promise.resolve(null)
     ])
       .then(async ([entryRowsResponse, submissionResponse]) => {
         if (!entryRowsResponse.ok) throw new Error("Failed to load starter rows.");
@@ -332,7 +334,7 @@ function BillingEntryContent() {
         const starterRows = (payload.rows ?? []).map((r) => ({
           ...r,
           newCounter: undefined,
-          counterImageName: undefined,
+          counterImageName: undefined
         }));
         let submittedByCustomerNumber = new Map<
           string,
@@ -363,8 +365,8 @@ function BillingEntryContent() {
                 newCounter: Number(r.newCounter),
                 counterImageName: r.counterImageName,
                 proposedFixedMonthlyAmount: r.proposedFixedMonthlyAmount,
-                proposedFixedMonthlyNote: r.proposedFixedMonthlyNote,
-              },
+                proposedFixedMonthlyNote: r.proposedFixedMonthlyNote
+              }
             ])
           );
         }
@@ -380,7 +382,7 @@ function BillingEntryContent() {
                   newCounter: fromSubmitted.newCounter,
                   counterImageName: fromSubmitted.counterImageName,
                   proposedFixedMonthlyAmount: fromSubmitted.proposedFixedMonthlyAmount,
-                  proposedFixedMonthlyNote: fromSubmitted.proposedFixedMonthlyNote,
+                  proposedFixedMonthlyNote: fromSubmitted.proposedFixedMonthlyNote
                 }
               : starter;
           if (!draft) return base;
@@ -396,7 +398,7 @@ function BillingEntryContent() {
             newCounter: draft.newCounter,
             counterImageName: draft.counterImageName,
             proposedFixedMonthlyAmount: draft.proposedFixedMonthlyAmount ?? base.proposedFixedMonthlyAmount,
-            proposedFixedMonthlyNote: draft.proposedFixedMonthlyNote ?? base.proposedFixedMonthlyNote,
+            proposedFixedMonthlyNote: draft.proposedFixedMonthlyNote ?? base.proposedFixedMonthlyNote
           };
         });
         const draftOnlyRows = parsedDraftRows.filter((draft) => !starterRows.some((s) => s.id === draft.id));
@@ -412,7 +414,7 @@ function BillingEntryContent() {
               isMonitor: row.isMonitor,
               obligatoryLinkedToCustomerNumber: row.obligatoryLinkedToCustomerNumber,
               proposedFixedMonthlyAmount: row.proposedFixedMonthlyAmount,
-              proposedFixedMonthlyNote: row.proposedFixedMonthlyNote,
+              proposedFixedMonthlyNote: row.proposedFixedMonthlyNote
             };
           }
         }
@@ -540,9 +542,9 @@ function BillingEntryContent() {
             ...row,
             counterImageDataUrl: counterImageDataByRowId[row.id],
             previousSubmittedNewCounter: submittedBaselineByRowId[row.id]?.newCounter,
-            previousSubmittedCounterImageName: submittedBaselineByRowId[row.id]?.counterImageName,
-          })),
-        }),
+            previousSubmittedCounterImageName: submittedBaselineByRowId[row.id]?.counterImageName
+          }))
+        })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -568,11 +570,7 @@ function BillingEntryContent() {
         <div className="filters-grid">
           <label htmlFor="monthKey">
             Month
-            <select
-              id="monthKey"
-              value={monthKey}
-              onChange={(e) => setMonthKey(e.target.value)}
-            >
+            <select id="monthKey" value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
               {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
@@ -614,9 +612,7 @@ function BillingEntryContent() {
           )}
           {isChangesRequested && (
             <div className="card">
-              <p style={{ color: "var(--warning)", marginTop: 0 }}>
-                Manager requested fixes.
-              </p>
+              <p style={{ color: "var(--warning)", marginTop: 0 }}>Manager requested fixes.</p>
               <div className="status-legend status-legend-page" aria-label="status color pattern explanation">
                 <span className="status-legend-item success">Green: approved</span>
                 <span className="status-legend-item warning">Yellow: pending review</span>
@@ -645,370 +641,373 @@ function BillingEntryContent() {
               </div>
 
               {visibleRows.map((row) => {
-            const errors = rowErrors[row.id];
-            const rowFeedback = reviewFeedback[normalizeCustomerNumber(row.customerNumber)];
-            const rowWasChangesRequested = rowFeedback?.state === "changes_needed";
-            const baseline = submittedBaselineByRowId[row.id];
-            const needsMeterReading = billingTypeNeedsMeterReading(row.billingType);
-            const currentFixedAmount = row.fixedMonthlyAmount ?? 0;
-            const isProposingFix =
-              row.billingType === "fixed-monthly" &&
-              (proposingFixRows[row.id] === true || row.proposedFixedMonthlyAmount !== undefined);
-            const hasFixProposal =
-              row.billingType === "fixed-monthly" &&
-              row.proposedFixedMonthlyAmount !== undefined &&
-              Number.isFinite(row.proposedFixedMonthlyAmount) &&
-              (row.proposedFixedMonthlyAmount as number) > 0 &&
-              row.proposedFixedMonthlyAmount !== currentFixedAmount;
-            // Only an *effective* proposal (a positive amount that differs from the
-            // customer's current amount) counts as a change the manager can act on.
-            const effectiveProposedAmount = hasFixProposal ? (row.proposedFixedMonthlyAmount as number) : null;
-            const effectiveProposedNote = hasFixProposal ? row.proposedFixedMonthlyNote ?? "" : "";
-            const baselineProposedAmount = baseline?.proposedFixedMonthlyAmount ?? null;
-            const baselineProposedNote =
-              baseline?.proposedFixedMonthlyAmount != null ? baseline.proposedFixedMonthlyNote ?? "" : "";
-            const rowHasModificationSinceSubmit = baseline
-              ? row.previousCounter !== baseline.previousCounter ||
-                row.newCounter !== baseline.newCounter ||
-                row.counterImageName !== baseline.counterImageName ||
-                row.billingType !== baseline.billingType ||
-                row.isMonitor !== baseline.isMonitor ||
-                row.obligatoryLinkedToCustomerNumber !== baseline.obligatoryLinkedToCustomerNumber ||
-                effectiveProposedAmount !== baselineProposedAmount ||
-                effectiveProposedNote !== baselineProposedNote ||
-                Boolean(counterImageDataByRowId[row.id])
-              : false;
-            const rowIsApprovedByFix = rowWasChangesRequested && Boolean(validatedFixRows[row.id]);
-            const rowIsApproved = rowFeedback?.state === "approved" || rowIsApprovedByFix;
-            const rowNeedsChange = rowWasChangesRequested && !rowIsApprovedByFix;
-            const rowLocked = isChangesRequested && (rowFeedback?.state === "approved" || rowIsApprovedByFix);
-            const rowReadOnly = rowLocked || row.isFreeCustomer || !entryUnlockedForEdit;
-            const consumption =
-              needsMeterReading &&
-              row.newCounter !== undefined &&
-              row.newCounter >= row.previousCounter
-                ? row.newCounter - row.previousCounter
-                : undefined;
-            return (
-              <div
-                className={`card ${rowIsApproved ? "row-approved" : ""} ${rowNeedsChange ? "row-needs-change" : ""}`}
-                key={row.id}
-                style={row.isFreeCustomer ? { background: "#f1f5f9", borderColor: "#cbd5e1" } : undefined}
-              >
-                <strong>
-                  {row.customerName || "New customer row"}{" "}
-                  {row.customerNumber ? `(${row.customerNumber})` : ""}
-                </strong>
-                <p className="muted">
-                  Region: {row.regionCode} | Billing type: {row.billingType} | Free:{" "}
-                  {row.isFreeCustomer ? "yes" : "no"} | Monitor: {row.isMonitor ? "yes" : "no"}
-                  {row.billingType === "amp-only" || row.billingType === "both" ? (
-                    <>
-                      {" "}
-                      | Subscribed ampere:{" "}
-                      {row.subscribedAmpere ? (
-                        `${row.subscribedAmpere}A`
-                      ) : (
-                        <strong style={{ color: "var(--danger)" }}>
-                          not set — approval will fail until set on the customer profile
-                        </strong>
-                      )}
-                    </>
-                  ) : null}
-                </p>
-                <label>
-                  Customer name:{" "}
-                  <input
-                    value={row.customerName}
-                    disabled={rowReadOnly}
-                    onChange={(e) => updateRow(row.id, { customerName: e.target.value })}
-                  />
-                </label>
-                <br />
-                <label>
-                  Customer number:{" "}
-                  <input
-                    value={row.customerNumber}
-                    disabled={rowReadOnly}
-                    onChange={(e) => updateRow(row.id, { customerNumber: e.target.value })}
-                  />
-                </label>
-                <br />
-                {needsMeterReading && (
-                  <>
-                    <label>
-                      Previous counter:{" "}
-                      <input
-                        type="number"
-                        value={row.previousCounter}
-                        disabled={rowReadOnly}
-                        onChange={(e) =>
-                          updateRow(row.id, {
-                            previousCounter: Number(e.target.value || "0")
-                          })
-                        }
-                      />
-                    </label>
-                    <br />
-                  </>
-                )}
-                <label>
-                  Billing type:{" "}
-                  <select
-                    value={row.billingType}
-                    disabled={rowReadOnly}
-                    onChange={(e) =>
-                      updateRow(row.id, { billingType: e.target.value as BillingEntryRow["billingType"] })
-                    }
+                const errors = rowErrors[row.id];
+                const rowFeedback = reviewFeedback[normalizeCustomerNumber(row.customerNumber)];
+                const rowWasChangesRequested = rowFeedback?.state === "changes_needed";
+                const baseline = submittedBaselineByRowId[row.id];
+                const needsMeterReading = billingTypeNeedsMeterReading(row.billingType);
+                const currentFixedAmount = row.fixedMonthlyAmount ?? 0;
+                const isProposingFix =
+                  row.billingType === "fixed-monthly" &&
+                  (proposingFixRows[row.id] === true || row.proposedFixedMonthlyAmount !== undefined);
+                const hasFixProposal =
+                  row.billingType === "fixed-monthly" &&
+                  row.proposedFixedMonthlyAmount !== undefined &&
+                  Number.isFinite(row.proposedFixedMonthlyAmount) &&
+                  (row.proposedFixedMonthlyAmount as number) > 0 &&
+                  row.proposedFixedMonthlyAmount !== currentFixedAmount;
+                // Only an *effective* proposal (a positive amount that differs from the
+                // customer's current amount) counts as a change the manager can act on.
+                const effectiveProposedAmount = hasFixProposal
+                  ? (row.proposedFixedMonthlyAmount as number)
+                  : null;
+                const effectiveProposedNote = hasFixProposal ? (row.proposedFixedMonthlyNote ?? "") : "";
+                const baselineProposedAmount = baseline?.proposedFixedMonthlyAmount ?? null;
+                const baselineProposedNote =
+                  baseline?.proposedFixedMonthlyAmount != null
+                    ? (baseline.proposedFixedMonthlyNote ?? "")
+                    : "";
+                const rowHasModificationSinceSubmit = baseline
+                  ? row.previousCounter !== baseline.previousCounter ||
+                    row.newCounter !== baseline.newCounter ||
+                    row.counterImageName !== baseline.counterImageName ||
+                    row.billingType !== baseline.billingType ||
+                    row.isMonitor !== baseline.isMonitor ||
+                    row.obligatoryLinkedToCustomerNumber !== baseline.obligatoryLinkedToCustomerNumber ||
+                    effectiveProposedAmount !== baselineProposedAmount ||
+                    effectiveProposedNote !== baselineProposedNote ||
+                    Boolean(counterImageDataByRowId[row.id])
+                  : false;
+                const rowIsApprovedByFix = rowWasChangesRequested && Boolean(validatedFixRows[row.id]);
+                const rowIsApproved = rowFeedback?.state === "approved" || rowIsApprovedByFix;
+                const rowNeedsChange = rowWasChangesRequested && !rowIsApprovedByFix;
+                const rowLocked =
+                  isChangesRequested && (rowFeedback?.state === "approved" || rowIsApprovedByFix);
+                const rowReadOnly = rowLocked || row.isFreeCustomer || !entryUnlockedForEdit;
+                const consumption =
+                  needsMeterReading && row.newCounter !== undefined && row.newCounter >= row.previousCounter
+                    ? row.newCounter - row.previousCounter
+                    : undefined;
+                return (
+                  <div
+                    className={`card ${rowIsApproved ? "row-approved" : ""} ${rowNeedsChange ? "row-needs-change" : ""}`}
+                    key={row.id}
+                    style={row.isFreeCustomer ? { background: "#f1f5f9", borderColor: "#cbd5e1" } : undefined}
                   >
-                    <option value="both">both</option>
-                    <option value="fixed-monthly">fixed-monthly</option>
-                  </select>
-                </label>{" "}
-                <label>
-                  <input type="checkbox" checked={row.isFreeCustomer} disabled /> Free customer
-                </label>
-                {!row.isFreeCustomer && (
-                  <p className="muted" style={{ marginTop: 6, marginBottom: 0 }}>
-                    Free status is manager-only — edit under Manager → Customers (customer profile).
-                  </p>
-                )}
-                {" "}
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={row.isMonitor}
-                    disabled={rowReadOnly}
-                    onChange={(e) =>
-                      updateRow(row.id, {
-                        isMonitor: e.target.checked,
-                        obligatoryLinkedToCustomerNumber: e.target.checked
-                          ? row.obligatoryLinkedToCustomerNumber
-                          : undefined
-                      })
-                    }
-                  />{" "}
-                  Monitor customer
-                </label>
-                {row.isMonitor && (
-                  <>
-                    <br />
+                    <strong>
+                      {row.customerName || "New customer row"}{" "}
+                      {row.customerNumber ? `(${row.customerNumber})` : ""}
+                    </strong>
+                    <p className="muted">
+                      Region: {row.regionCode} | Billing type: {row.billingType} | Free:{" "}
+                      {row.isFreeCustomer ? "yes" : "no"} | Monitor: {row.isMonitor ? "yes" : "no"}
+                      {row.billingType === "amp-only" || row.billingType === "both" ? (
+                        <>
+                          {" "}
+                          | Subscribed ampere:{" "}
+                          {row.subscribedAmpere ? (
+                            `${row.subscribedAmpere}A`
+                          ) : (
+                            <strong style={{ color: "var(--danger)" }}>
+                              not set — approval will fail until set on the customer profile
+                            </strong>
+                          )}
+                        </>
+                      ) : null}
+                    </p>
                     <label>
-                      Linked obligatory customer:{" "}
-                      <select
-                        value={row.obligatoryLinkedToCustomerNumber ?? ""}
-                        disabled={rowReadOnly}
-                        onChange={(e) =>
-                          updateRow(row.id, {
-                            obligatoryLinkedToCustomerNumber: e.target.value || undefined
-                          })
-                        }
-                      >
-                        <option value="">Select obligatory customer</option>
-                        {visibleRows
-                          .filter(
-                            (candidate) =>
-                              candidate.id !== row.id &&
-                              !candidate.isMonitor &&
-                              Boolean(candidate.customerNumber)
-                          )
-                          .map((candidate) => (
-                            <option key={candidate.id} value={candidate.customerNumber}>
-                              {candidate.customerName || "Unnamed"} ({candidate.customerNumber})
-                            </option>
-                          ))}
-                      </select>
-                    </label>
-                  </>
-                )}
-                <br />
-                {needsMeterReading ? (
-                  <>
-                    <label>
-                      New counter:{" "}
+                      Customer name:{" "}
                       <input
-                        type="number"
-                        value={row.newCounter ?? ""}
+                        value={row.customerName}
                         disabled={rowReadOnly}
-                        onChange={(e) =>
-                          updateRow(row.id, {
-                            newCounter:
-                              e.target.value === "" ? undefined : Number(e.target.value)
-                          })
-                        }
+                        onChange={(e) => updateRow(row.id, { customerName: e.target.value })}
                       />
                     </label>
                     <br />
                     <label>
-                      {row.counterImageName
-                        ? "Counter image (click preview, choose file to replace): "
-                        : "Counter image (exactly 1): "}
+                      Customer number:{" "}
                       <input
-                        type="file"
-                        accept="image/*"
+                        value={row.customerNumber}
                         disabled={rowReadOnly}
-                        onChange={(e) => handleImageChange(row.id, e.target.files?.[0])}
+                        onChange={(e) => updateRow(row.id, { customerNumber: e.target.value })}
                       />
                     </label>
-                    {getRowPreviewImage(row.id, row.counterImageName) ? (
-                      <div style={{ marginTop: 8 }}>
-                        <img
-                          src={getRowPreviewImage(row.id, row.counterImageName)}
-                          alt={`Counter ${row.customerNumber}`}
-                          title="Click to preview"
-                          onClick={() => setImageModalSrc(getRowPreviewImage(row.id, row.counterImageName))}
-                          style={{
-                            width: 140,
-                            height: "auto",
-                            borderRadius: 6,
-                            border: "1px solid #d1d5db",
-                            cursor: "pointer",
-                          }}
-                        />
-                      </div>
-                    ) : null}
-                  </>
-                ) : row.billingType === "fixed-monthly" ? (
-                  <div style={{ marginTop: 4 }}>
-                    <p className="muted" style={{ margin: 0 }}>
-                      Flat monthly charge — no counter reading or photo. The bill is the
-                      customer&apos;s set monthly amount, the same every month.
-                    </p>
-                    <p style={{ margin: "6px 0 0" }}>
-                      <strong>Fixed monthly amount:</strong>{" "}
-                      {currentFixedAmount > 0
-                        ? formatLbp(currentFixedAmount)
-                        : "not set — a manager must set it on the customer profile"}
-                    </p>
-                    {!isProposingFix ? (
-                      <button
-                        type="button"
-                        className="link-btn"
-                        disabled={rowReadOnly}
-                        onClick={() => {
-                          setProposingFixRows((prev) => ({ ...prev, [row.id]: true }));
-                          updateRow(row.id, {
-                            proposedFixedMonthlyAmount:
-                              row.proposedFixedMonthlyAmount ?? (currentFixedAmount || undefined),
-                          });
-                        }}
-                      >
-                        Propose a different amount
-                      </button>
-                    ) : (
-                      <div
-                        style={{
-                          marginTop: 8,
-                          padding: 10,
-                          borderRadius: 6,
-                          border: "1px solid #fdba74",
-                          background: "#fff7ed",
-                        }}
-                      >
-                        <p className="muted" style={{ margin: "0 0 6px" }}>
-                          Proposed correction — the manager approves or rejects this when validating the
-                          batch. Nothing changes until then.
-                        </p>
+                    <br />
+                    {needsMeterReading && (
+                      <>
                         <label>
-                          Proposed amount (LBP):{" "}
+                          Previous counter:{" "}
                           <input
                             type="number"
-                            value={row.proposedFixedMonthlyAmount ?? ""}
+                            value={row.previousCounter}
                             disabled={rowReadOnly}
                             onChange={(e) =>
                               updateRow(row.id, {
-                                proposedFixedMonthlyAmount:
-                                  e.target.value === "" ? undefined : Number(e.target.value),
+                                previousCounter: Number(e.target.value || "0")
+                              })
+                            }
+                          />
+                        </label>
+                        <br />
+                      </>
+                    )}
+                    <label>
+                      Billing type:{" "}
+                      <select
+                        value={row.billingType}
+                        disabled={rowReadOnly}
+                        onChange={(e) =>
+                          updateRow(row.id, { billingType: e.target.value as BillingEntryRow["billingType"] })
+                        }
+                      >
+                        <option value="both">both</option>
+                        <option value="fixed-monthly">fixed-monthly</option>
+                      </select>
+                    </label>{" "}
+                    <label>
+                      <input type="checkbox" checked={row.isFreeCustomer} disabled /> Free customer
+                    </label>
+                    {!row.isFreeCustomer && (
+                      <p className="muted" style={{ marginTop: 6, marginBottom: 0 }}>
+                        Free status is manager-only — edit under Manager → Customers (customer profile).
+                      </p>
+                    )}{" "}
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={row.isMonitor}
+                        disabled={rowReadOnly}
+                        onChange={(e) =>
+                          updateRow(row.id, {
+                            isMonitor: e.target.checked,
+                            obligatoryLinkedToCustomerNumber: e.target.checked
+                              ? row.obligatoryLinkedToCustomerNumber
+                              : undefined
+                          })
+                        }
+                      />{" "}
+                      Monitor customer
+                    </label>
+                    {row.isMonitor && (
+                      <>
+                        <br />
+                        <label>
+                          Linked obligatory customer:{" "}
+                          <select
+                            value={row.obligatoryLinkedToCustomerNumber ?? ""}
+                            disabled={rowReadOnly}
+                            onChange={(e) =>
+                              updateRow(row.id, {
+                                obligatoryLinkedToCustomerNumber: e.target.value || undefined
+                              })
+                            }
+                          >
+                            <option value="">Select obligatory customer</option>
+                            {visibleRows
+                              .filter(
+                                (candidate) =>
+                                  candidate.id !== row.id &&
+                                  !candidate.isMonitor &&
+                                  Boolean(candidate.customerNumber)
+                              )
+                              .map((candidate) => (
+                                <option key={candidate.id} value={candidate.customerNumber}>
+                                  {candidate.customerName || "Unnamed"} ({candidate.customerNumber})
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                      </>
+                    )}
+                    <br />
+                    {needsMeterReading ? (
+                      <>
+                        <label>
+                          New counter:{" "}
+                          <input
+                            type="number"
+                            value={row.newCounter ?? ""}
+                            disabled={rowReadOnly}
+                            onChange={(e) =>
+                              updateRow(row.id, {
+                                newCounter: e.target.value === "" ? undefined : Number(e.target.value)
                               })
                             }
                           />
                         </label>
                         <br />
                         <label>
-                          Reason (optional):{" "}
+                          {row.counterImageName
+                            ? "Counter image (click preview, choose file to replace): "
+                            : "Counter image (exactly 1): "}
                           <input
-                            type="text"
-                            value={row.proposedFixedMonthlyNote ?? ""}
+                            type="file"
+                            accept="image/*"
                             disabled={rowReadOnly}
-                            onChange={(e) =>
-                              updateRow(row.id, {
-                                proposedFixedMonthlyNote: e.target.value || undefined,
-                              })
-                            }
+                            onChange={(e) => handleImageChange(row.id, e.target.files?.[0])}
                           />
                         </label>
-                        <br />
+                        {getRowPreviewImage(row.id, row.counterImageName) ? (
+                          <div style={{ marginTop: 8 }}>
+                            <img
+                              src={getRowPreviewImage(row.id, row.counterImageName)}
+                              alt={`Counter ${row.customerNumber}`}
+                              title="Click to preview"
+                              onClick={() =>
+                                setImageModalSrc(getRowPreviewImage(row.id, row.counterImageName))
+                              }
+                              style={{
+                                width: 140,
+                                height: "auto",
+                                borderRadius: 6,
+                                border: "1px solid #d1d5db",
+                                cursor: "pointer"
+                              }}
+                            />
+                          </div>
+                        ) : null}
+                      </>
+                    ) : row.billingType === "fixed-monthly" ? (
+                      <div style={{ marginTop: 4 }}>
+                        <p className="muted" style={{ margin: 0 }}>
+                          Flat monthly charge — no counter reading or photo. The bill is the customer&apos;s
+                          set monthly amount, the same every month.
+                        </p>
+                        <p style={{ margin: "6px 0 0" }}>
+                          <strong>Fixed monthly amount:</strong>{" "}
+                          {currentFixedAmount > 0
+                            ? formatLbp(currentFixedAmount)
+                            : "not set — a manager must set it on the customer profile"}
+                        </p>
+                        {!isProposingFix ? (
+                          <button
+                            type="button"
+                            className="link-btn"
+                            disabled={rowReadOnly}
+                            onClick={() => {
+                              setProposingFixRows((prev) => ({ ...prev, [row.id]: true }));
+                              updateRow(row.id, {
+                                proposedFixedMonthlyAmount:
+                                  row.proposedFixedMonthlyAmount ?? (currentFixedAmount || undefined)
+                              });
+                            }}
+                          >
+                            Propose a different amount
+                          </button>
+                        ) : (
+                          <div
+                            style={{
+                              marginTop: 8,
+                              padding: 10,
+                              borderRadius: 6,
+                              border: "1px solid #fdba74",
+                              background: "#fff7ed"
+                            }}
+                          >
+                            <p className="muted" style={{ margin: "0 0 6px" }}>
+                              Proposed correction — the manager approves or rejects this when validating the
+                              batch. Nothing changes until then.
+                            </p>
+                            <label>
+                              Proposed amount (LBP):{" "}
+                              <input
+                                type="number"
+                                value={row.proposedFixedMonthlyAmount ?? ""}
+                                disabled={rowReadOnly}
+                                onChange={(e) =>
+                                  updateRow(row.id, {
+                                    proposedFixedMonthlyAmount:
+                                      e.target.value === "" ? undefined : Number(e.target.value)
+                                  })
+                                }
+                              />
+                            </label>
+                            <br />
+                            <label>
+                              Reason (optional):{" "}
+                              <input
+                                type="text"
+                                value={row.proposedFixedMonthlyNote ?? ""}
+                                disabled={rowReadOnly}
+                                onChange={(e) =>
+                                  updateRow(row.id, {
+                                    proposedFixedMonthlyNote: e.target.value || undefined
+                                  })
+                                }
+                              />
+                            </label>
+                            <br />
+                            <button
+                              type="button"
+                              className="link-btn"
+                              disabled={rowReadOnly}
+                              onClick={() => {
+                                setProposingFixRows((prev) => ({ ...prev, [row.id]: false }));
+                                updateRow(row.id, {
+                                  proposedFixedMonthlyAmount: undefined,
+                                  proposedFixedMonthlyNote: undefined
+                                });
+                              }}
+                            >
+                              Remove proposal
+                            </button>
+                            {hasFixProposal && (
+                              <p style={{ margin: "6px 0 0", color: "var(--warning)" }}>
+                                Will send to manager: {formatLbp(currentFixedAmount)} →{" "}
+                                {formatLbp(row.proposedFixedMonthlyAmount as number)}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="muted" style={{ marginTop: 4 }}>
+                        Flat monthly charge ({row.billingType}) — no counter reading or photo needed.
+                      </p>
+                    )}
+                    {row.isFreeCustomer && (
+                      <p className="muted">
+                        Free customer — excluded from meter entry. Managers change free status on the customer
+                        profile (Manager → Customers).
+                      </p>
+                    )}
+                    {rowFeedback?.note && (
+                      <p style={{ color: rowNeedsChange ? "var(--danger)" : "var(--success)" }}>
+                        Manager note: {rowFeedback.note}
+                      </p>
+                    )}
+                    {consumption !== undefined && <p>Consumption (kWh): {consumption}</p>}
+                    {submitAttempted && errors?.newCounter && (
+                      <p style={{ color: "#b91c1c" }}>{errors.newCounter}</p>
+                    )}
+                    {submitAttempted && errors?.counterImageName && (
+                      <p style={{ color: "#b91c1c" }}>{errors.counterImageName}</p>
+                    )}
+                    {submitAttempted && errors?.obligatoryLinkedToCustomerNumber && (
+                      <p style={{ color: "#b91c1c" }}>{errors.obligatoryLinkedToCustomerNumber}</p>
+                    )}
+                    {submitAttempted && errors?.proposedFixedMonthlyAmount && (
+                      <p style={{ color: "#b91c1c" }}>{errors.proposedFixedMonthlyAmount}</p>
+                    )}
+                    {rowNeedsChange && (
+                      <div className="card-actions-right" style={{ marginTop: 10 }}>
                         <button
                           type="button"
-                          className="link-btn"
-                          disabled={rowReadOnly}
-                          onClick={() => {
-                            setProposingFixRows((prev) => ({ ...prev, [row.id]: false }));
-                            updateRow(row.id, {
-                              proposedFixedMonthlyAmount: undefined,
-                              proposedFixedMonthlyNote: undefined,
-                            });
-                          }}
+                          className="warning-btn"
+                          disabled={!rowHasModificationSinceSubmit}
+                          onClick={() => setValidatedFixRows((prev) => ({ ...prev, [row.id]: true }))}
+                          title={
+                            rowHasModificationSinceSubmit
+                              ? "Mark this corrected row as validated."
+                              : "Modify this row first, then validate fix."
+                          }
                         >
-                          Remove proposal
+                          Validate Fix
                         </button>
-                        {hasFixProposal && (
-                          <p style={{ margin: "6px 0 0", color: "var(--warning)" }}>
-                            Will send to manager: {formatLbp(currentFixedAmount)} →{" "}
-                            {formatLbp(row.proposedFixedMonthlyAmount as number)}
-                          </p>
-                        )}
                       </div>
                     )}
                   </div>
-                ) : (
-                  <p className="muted" style={{ marginTop: 4 }}>
-                    Flat monthly charge ({row.billingType}) — no counter reading or photo needed.
-                  </p>
-                )}
-                {row.isFreeCustomer && (
-                  <p className="muted">
-                    Free customer — excluded from meter entry. Managers change free status on the customer
-                    profile (Manager → Customers).
-                  </p>
-                )}
-                {rowFeedback?.note && (
-                  <p style={{ color: rowNeedsChange ? "var(--danger)" : "var(--success)" }}>
-                    Manager note: {rowFeedback.note}
-                  </p>
-                )}
-                {consumption !== undefined && <p>Consumption (kWh): {consumption}</p>}
-                {submitAttempted && errors?.newCounter && (
-                  <p style={{ color: "#b91c1c" }}>{errors.newCounter}</p>
-                )}
-                {submitAttempted && errors?.counterImageName && (
-                  <p style={{ color: "#b91c1c" }}>{errors.counterImageName}</p>
-                )}
-                {submitAttempted && errors?.obligatoryLinkedToCustomerNumber && (
-                  <p style={{ color: "#b91c1c" }}>{errors.obligatoryLinkedToCustomerNumber}</p>
-                )}
-                {submitAttempted && errors?.proposedFixedMonthlyAmount && (
-                  <p style={{ color: "#b91c1c" }}>{errors.proposedFixedMonthlyAmount}</p>
-                )}
-                {rowNeedsChange && (
-                  <div className="card-actions-right" style={{ marginTop: 10 }}>
-                    <button
-                      type="button"
-                      className="warning-btn"
-                      disabled={!rowHasModificationSinceSubmit}
-                      onClick={() => setValidatedFixRows((prev) => ({ ...prev, [row.id]: true }))}
-                      title={
-                        rowHasModificationSinceSubmit
-                          ? "Mark this corrected row as validated."
-                          : "Modify this row first, then validate fix."
-                      }
-                    >
-                      Validate Fix
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
+                );
               })}
 
               <div className="card">
@@ -1022,9 +1021,7 @@ function BillingEntryContent() {
               </div>
             </>
           ) : (
-            <div className="card">
-              {banner && <p>{banner}</p>}
-            </div>
+            <div className="card">{banner && <p>{banner}</p>}</div>
           )}
           {imageModalSrc ? (
             <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Counter image preview">
@@ -1035,7 +1032,11 @@ function BillingEntryContent() {
                     X
                   </button>
                 </div>
-                <img src={imageModalSrc} alt="Counter full preview" style={{ width: "100%", height: "auto" }} />
+                <img
+                  src={imageModalSrc}
+                  alt="Counter full preview"
+                  style={{ width: "100%", height: "auto" }}
+                />
               </div>
             </div>
           ) : null}

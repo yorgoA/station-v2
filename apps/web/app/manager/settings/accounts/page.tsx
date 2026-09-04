@@ -152,15 +152,28 @@ export default function ManagerAccountsSettingsPage() {
         ← Back to Settings
       </Link>
 
-      {message ? <p className="muted" role="status">{message}</p> : null}
-      {error ? <p style={{ color: "var(--danger)" }} role="alert">{error}</p> : null}
+      {message ? (
+        <p className="muted" role="status">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p style={{ color: "var(--danger)" }} role="alert">
+          {error}
+        </p>
+      ) : null}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Create Account</h3>
         <div className="filters-grid filters-grid-pro">
           <label htmlFor="account-name">
             Full name
-            <input id="account-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
+            <input
+              id="account-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Name"
+            />
           </label>
           <label htmlFor="account-email">
             Email

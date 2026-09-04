@@ -25,10 +25,13 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from("payments")
-      .select("id, amount, payment_date, receipt_image_url, customers!inner(id, full_name, regions!inner(code))")
+      .select(
+        "id, amount, payment_date, receipt_image_url, customers!inner(id, full_name, regions!inner(code))"
+      )
       .order("payment_date", { ascending: false });
 
-    if (month && month !== "all") query = query.gte("payment_date", `${month}-01`).lte("payment_date", `${month}-31`);
+    if (month && month !== "all")
+      query = query.gte("payment_date", `${month}-01`).lte("payment_date", `${month}-31`);
     if (region && region !== "all") query = query.eq("customers.regions.code", region);
 
     const { data, error } = await query;
@@ -41,7 +44,11 @@ export async function GET(request: Request) {
     const readCustomer = (
       value:
         | { id: string; full_name: string; regions?: { code: string } | Array<{ code: string }> | null }
-        | Array<{ id: string; full_name: string; regions?: { code: string } | Array<{ code: string }> | null }>
+        | Array<{
+            id: string;
+            full_name: string;
+            regions?: { code: string } | Array<{ code: string }> | null;
+          }>
         | null
     ) => {
       if (Array.isArray(value)) return value[0] ?? null;
@@ -52,7 +59,11 @@ export async function GET(request: Request) {
       const customer = readCustomer(
         row.customers as
           | { id: string; full_name: string; regions?: { code: string } | Array<{ code: string }> | null }
-          | Array<{ id: string; full_name: string; regions?: { code: string } | Array<{ code: string }> | null }>
+          | Array<{
+              id: string;
+              full_name: string;
+              regions?: { code: string } | Array<{ code: string }> | null;
+            }>
           | null
       );
       return {
@@ -62,7 +73,7 @@ export async function GET(request: Request) {
         region: (readRegion(customer?.regions)?.code as "mrah" | "printania" | undefined) ?? "mrah",
         amount: Number(row.amount),
         date: row.payment_date,
-        receipt: row.receipt_image_url ?? "-",
+        receipt: row.receipt_image_url ?? "-"
       };
     });
 

@@ -12,12 +12,7 @@ import type { NextRequest } from "next/server";
  * /reports/*, /dashboard, /supabase-check placeholders) don't need an entry here
  * anymore since they 404 on their own.
  */
-const legacyRoutes = new Set([
-  "/billing/entry",
-  "/billing/preview",
-  "/billing/approvals",
-  "/billing/print"
-]);
+const legacyRoutes = new Set(["/billing/entry", "/billing/preview", "/billing/approvals", "/billing/print"]);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

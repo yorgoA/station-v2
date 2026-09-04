@@ -6,11 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { KpiCard, KpiGrid } from "../_components/kpi-components";
-import {
-  ReportScopeFilters,
-  ReportScopeLabel,
-  useReportScope,
-} from "../_components/report-scope-controls";
+import { ReportScopeFilters, ReportScopeLabel, useReportScope } from "../_components/report-scope-controls";
 import { formatLbp } from "../../../../lib/format";
 
 function MoneyOverviewReportContent() {

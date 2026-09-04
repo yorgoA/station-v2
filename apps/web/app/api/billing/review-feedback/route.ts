@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({
-      rowsToCorrectByPeriod: Object.fromEntries(counter),
+      rowsToCorrectByPeriod: Object.fromEntries(counter)
     });
   } catch (error) {
     return serverError(error);

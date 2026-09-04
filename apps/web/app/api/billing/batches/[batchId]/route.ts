@@ -41,7 +41,9 @@ export async function GET(_request: Request, context: Context) {
       .from("billing_types")
       .select("id, key");
     if (billingTypesError) return NextResponse.json({ error: billingTypesError.message }, { status: 500 });
-    const billingTypeKeyById = new Map((billingTypes ?? []).map((row) => [row.id as string, row.key as string]));
+    const billingTypeKeyById = new Map(
+      (billingTypes ?? []).map((row) => [row.id as string, row.key as string])
+    );
 
     const { data: reviews, error: reviewsError } = await supabase
       .from("billing_batch_item_reviews")
@@ -51,7 +53,7 @@ export async function GET(_request: Request, context: Context) {
     const reviewByItemId = new Map(
       (reviews ?? []).map((row) => [
         row.batch_item_id as string,
-        { decision: row.decision as "approved" | "changes_needed", note: row.note as string | null },
+        { decision: row.decision as "approved" | "changes_needed", note: row.note as string | null }
       ])
     );
 
@@ -114,8 +116,10 @@ export async function GET(_request: Request, context: Context) {
         reviewState: reviewByItemId.get(row.id)?.decision,
         reviewNote: reviewByItemId.get(row.id)?.note ?? undefined,
         employeeChangeSummary: employeeChangeByCustomerNumber.get(
-          String(customer?.customer_number ?? "").trim().toLowerCase()
-        ),
+          String(customer?.customer_number ?? "")
+            .trim()
+            .toLowerCase()
+        )
       };
     });
 
@@ -123,12 +127,13 @@ export async function GET(_request: Request, context: Context) {
       batch: {
         id: batch.id,
         monthKey: batch.month_key,
-        regionCode: readRegion(batch.regions as { code: string } | Array<{ code: string }> | null)?.code ?? "unknown",
+        regionCode:
+          readRegion(batch.regions as { code: string } | Array<{ code: string }> | null)?.code ?? "unknown",
         status: batch.status,
         managerNote: batch.manager_note,
-        submittedAt: batch.submitted_at,
+        submittedAt: batch.submitted_at
       },
-      items: mappedItems,
+      items: mappedItems
     });
   } catch (error) {
     return serverError(error);

@@ -29,7 +29,9 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from("qr_collection_logs")
-      .select("id, customer_id, customer_number, customer_name, month_key, collected_amount, expected_amount, currency, status, bill_scan_image_name, employee_receipt_image_name, modification_reason, modified_by_employee, validated_by_employee_at, scanned_at, regions!inner(code)")
+      .select(
+        "id, customer_id, customer_number, customer_name, month_key, collected_amount, expected_amount, currency, status, bill_scan_image_name, employee_receipt_image_name, modification_reason, modified_by_employee, validated_by_employee_at, scanned_at, regions!inner(code)"
+      )
       .order("scanned_at", { ascending: false });
 
     if (status && status !== "all") query = query.eq("status", status);
@@ -60,7 +62,7 @@ export async function GET(request: Request) {
       modificationReason: row.modification_reason,
       modifiedByEmployee: row.modified_by_employee,
       validatedByEmployeeAt: row.validated_by_employee_at,
-      scannedAt: row.scanned_at,
+      scannedAt: row.scanned_at
     }));
     return NextResponse.json({ logs: rows });
   } catch (error) {
@@ -74,7 +76,13 @@ export async function POST(request: Request) {
     if ("response" in auth) return auth.response;
 
     const body = (await request.json()) as CreateQrCollectionBody;
-    if (!body.customerId || !body.customerNumber || !body.regionCode || !body.monthKey || !body.collectedAmount) {
+    if (
+      !body.customerId ||
+      !body.customerNumber ||
+      !body.regionCode ||
+      !body.monthKey ||
+      !body.collectedAmount
+    ) {
       return NextResponse.json({ error: "Invalid QR collection payload." }, { status: 400 });
     }
     const supabase = createSupabaseAdminClient();
@@ -96,13 +104,15 @@ export async function POST(request: Request) {
         month_key: body.monthKey,
         collected_amount: body.collectedAmount,
         expected_amount:
-          typeof body.expectedAmount === "number" && Number.isFinite(body.expectedAmount) && body.expectedAmount >= 0
+          typeof body.expectedAmount === "number" &&
+          Number.isFinite(body.expectedAmount) &&
+          body.expectedAmount >= 0
             ? body.expectedAmount
             : null,
         currency: body.currency ?? "LBP",
         status: "pending_employee_validation",
         bill_scan_image_name: body.billScanImageName ?? null,
-        employee_receipt_image_name: body.employeeReceiptImageName ?? null,
+        employee_receipt_image_name: body.employeeReceiptImageName ?? null
       })
       .select("id")
       .single();

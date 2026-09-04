@@ -38,7 +38,8 @@ export async function GET(request: Request) {
     const { data: events, error: eventsError } = await eventsQuery;
     if (eventsError) return NextResponse.json({ error: eventsError.message }, { status: 500 });
 
-    const readOne = <T,>(value: T | T[] | null): T | null => (Array.isArray(value) ? value[0] ?? null : value);
+    const readOne = <T>(value: T | T[] | null): T | null =>
+      Array.isArray(value) ? (value[0] ?? null) : value;
 
     const rows = (events ?? []).map((row) => {
       const batch = readOne(
@@ -49,7 +50,8 @@ export async function GET(request: Request) {
       );
       const regionInfo = readOne(batch?.regions ?? null);
       const actor = readOne(
-        row.app_users as { display_name: string; email: string } | Array<{ display_name: string; email: string }> | null
+        row.app_users as
+          { display_name: string; email: string } | Array<{ display_name: string; email: string }> | null
       );
 
       return {

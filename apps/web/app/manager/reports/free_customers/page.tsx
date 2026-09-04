@@ -31,7 +31,10 @@ function ManagerFreeCustomersReportContent() {
     fetch("/api/settings/pricing")
       .then(async (response) => {
         if (!response.ok) return;
-        const payload = (await response.json()) as { ampereTiers: AmpereTier[]; monthlyTariffs: MonthlyTariff[] };
+        const payload = (await response.json()) as {
+          ampereTiers: AmpereTier[];
+          monthlyTariffs: MonthlyTariff[];
+        };
         setAmpereTiers(payload.ampereTiers ?? []);
         setMonthlyTariffs(payload.monthlyTariffs ?? []);
       })
@@ -63,7 +66,7 @@ function ManagerFreeCustomersReportContent() {
             ...row,
             ampereCharge,
             consumptionCharge,
-            estimatedValue,
+            estimatedValue
           };
         }),
     [baseRows, ampereTiers, kwhPrice, region]
@@ -90,7 +93,10 @@ function ManagerFreeCustomersReportContent() {
         />
       </div>
       {kwhPrice === 0 ? (
-        <p className="muted">No kWh price is set for {monthKey} yet (Settings → Pricing) — estimated values below will show as 0 until it is.</p>
+        <p className="muted">
+          No kWh price is set for {monthKey} yet (Settings → Pricing) — estimated values below will show as 0
+          until it is.
+        </p>
       ) : null}
       <KpiGrid>
         <KpiCard label="Total free customers" value={rows.length} />
@@ -107,9 +113,17 @@ function ManagerFreeCustomersReportContent() {
             { key: "region", header: "Region", render: (row) => row.region },
             { key: "consumedKwh", header: "Consumed kWh", render: (row) => row.consumedKwh },
             { key: "ampereCharge", header: "Ampere charge", render: (row) => formatLbp(row.ampereCharge) },
-            { key: "consumptionCharge", header: "kWh charge", render: (row) => formatLbp(row.consumptionCharge) },
-            { key: "estimatedValue", header: "Estimated value", render: (row) => formatLbp(row.estimatedValue) },
-            { key: "reason", header: "Reason", render: (row) => row.reason },
+            {
+              key: "consumptionCharge",
+              header: "kWh charge",
+              render: (row) => formatLbp(row.consumptionCharge)
+            },
+            {
+              key: "estimatedValue",
+              header: "Estimated value",
+              render: (row) => formatLbp(row.estimatedValue)
+            },
+            { key: "reason", header: "Reason", render: (row) => row.reason }
           ]}
         />
       </div>

@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -15,9 +15,7 @@ function BillingPreviewContent() {
   const months = useAvailableMonths();
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
   const [filteredRows, setFilteredRows] = useState<BillingEntryRow[]>([]);
-  const [workflowStatusByPeriod, setWorkflowStatusByPeriod] = useState<Map<string, string>>(
-    () => new Map()
-  );
+  const [workflowStatusByPeriod, setWorkflowStatusByPeriod] = useState<Map<string, string>>(() => new Map());
   const [rowsToCorrectByPeriod, setRowsToCorrectByPeriod] = useState<Record<string, number>>({});
   const [previewModal, setPreviewModal] = useState<{
     open: boolean;
@@ -129,7 +127,7 @@ function BillingPreviewContent() {
         const rows = (payload.rows ?? []).map((row) => ({
           ...row,
           newCounter: undefined,
-          counterImageName: undefined,
+          counterImageName: undefined
         }));
         setFilteredRows(rows);
       })
@@ -143,20 +141,17 @@ function BillingPreviewContent() {
   const readyRows = filteredRows.filter(
     (row) =>
       !billingTypeNeedsMeterReading(row.billingType) ||
-      (row.newCounter !== undefined &&
-        row.newCounter >= row.previousCounter &&
-        Boolean(row.counterImageName))
+      (row.newCounter !== undefined && row.newCounter >= row.previousCounter && Boolean(row.counterImageName))
   ).length;
   const previewStatus =
     completedRows === 0
       ? "empty"
       : readyRows === 0
         ? "draft_incomplete"
-      : readyRows < completedRows
-      ? "in_progress"
-      : "ready_to_submit";
-  const persistedWorkflowStatus =
-    regionFilter === "all" ? undefined : workflowStatusByPeriod.get(periodKey);
+        : readyRows < completedRows
+          ? "in_progress"
+          : "ready_to_submit";
+  const persistedWorkflowStatus = regionFilter === "all" ? undefined : workflowStatusByPeriod.get(periodKey);
 
   const statusTone =
     persistedWorkflowStatus === "approved_posted"
@@ -164,13 +159,13 @@ function BillingPreviewContent() {
       : persistedWorkflowStatus === "changes_requested"
         ? "changes"
         : persistedWorkflowStatus === "pending_review" || isCurrentPeriodSubmitted
-        ? "warning"
-        : previewStatus === "draft_incomplete" ||
-          previewStatus === "in_progress" ||
-            previewStatus === "empty" ||
-            previewStatus === "ready_to_submit"
-        ? "danger"
-        : "neutral";
+          ? "warning"
+          : previewStatus === "draft_incomplete" ||
+              previewStatus === "in_progress" ||
+              previewStatus === "empty" ||
+              previewStatus === "ready_to_submit"
+            ? "danger"
+            : "neutral";
 
   const statusTitle =
     persistedWorkflowStatus === "approved_posted"
@@ -244,7 +239,7 @@ function BillingPreviewContent() {
             ? "warning"
             : regionIsCalendarLocked
               ? "danger"
-            : "danger";
+              : "danger";
     const regionTitle =
       regionWorkflowStatus === "approved_posted"
         ? "Approved and posted"
@@ -254,9 +249,9 @@ function BillingPreviewContent() {
             ? "Changes requested"
             : regionIsCalendarLocked
               ? "Closed by billing calendar"
-            : regionPreviewStatus === "ready_to_submit"
-              ? "Ready to submit"
-              : "Draft in progress";
+              : regionPreviewStatus === "ready_to_submit"
+                ? "Ready to submit"
+                : "Draft in progress";
 
     return {
       region,
@@ -296,7 +291,7 @@ function BillingPreviewContent() {
           counterImageName: row.counterImageName,
           billingType: "metered",
           isFreeCustomer: false,
-          isMonitor: false,
+          isMonitor: false
         }));
         setPreviewModal({ open: true, title, rows });
       })
@@ -308,10 +303,7 @@ function BillingPreviewContent() {
   }
 
   return (
-    <AppShell
-      title="Billing Preview"
-      subtitle="Review totals before sending the batch to manager"
-    >
+    <AppShell title="Billing Preview" subtitle="Review totals before sending the batch to manager">
       <div className="status-legend status-legend-page" aria-label="status color pattern explanation">
         <span className="status-legend-item success">Green: approved</span>
         <span className="status-legend-item warning">Yellow: pending review</span>
@@ -321,11 +313,7 @@ function BillingPreviewContent() {
       <div className="card">
         <label htmlFor="preview-month-filter">
           Month:{" "}
-          <select
-            id="preview-month-filter"
-            value={monthKey}
-            onChange={(e) => setMonthKey(e.target.value)}
-          >
+          <select id="preview-month-filter" value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
             {months.map((month) => (
               <option key={month} value={month}>
                 {month}
@@ -427,79 +415,79 @@ function BillingPreviewContent() {
           );
         })
       ) : (
-      <div className={`card batch-status-card tone-${statusTone}`}>
-        <div className="row-between">
-          <div>
-            <p className="muted" style={{ marginTop: 0, marginBottom: 8 }}>
-              Batch status
-            </p>
-            <h3 style={{ margin: 0 }}>{statusTitle}</h3>
-            <p style={{ marginTop: 8, marginBottom: 0 }}>
-              {!entryWindowOpen && !persistedWorkflowStatus
-                ? `Closed by the billing calendar. Entry window: ${entryWindowLabel}.`
-                : statusDescription}
-            </p>
-          </div>
-          <div className="notify-chip" aria-label="status badge">
-            {statusTone === "success"
-              ? "Approved"
-              : statusTone === "warning"
-                ? "Pending"
-                : statusTone === "danger"
-                  ? "Attention"
-                  : "Info"}
-          </div>
-        </div>
-        <div className="kpi-grid" style={{ marginTop: 14 }}>
-          <div>
-            <p className="muted">Batch month</p>
-            <p className="kpi-value">{monthKey}</p>
-          </div>
-          <div>
-            <p className="muted">Rows in batch</p>
-            <p className="kpi-value">{completedRows}</p>
-          </div>
-          <div>
-            <p className="muted">Rows ready</p>
-            <p className="kpi-value">{readyRows}</p>
-          </div>
-          <div>
-            <p className="muted">Estimated kWh</p>
-            <p className="kpi-value">{estimatedConsumption}</p>
-          </div>
-          {statusTone === "changes" && (
+        <div className={`card batch-status-card tone-${statusTone}`}>
+          <div className="row-between">
             <div>
-              <p className="muted">Rows to correct</p>
-              <p className="kpi-value">{readRowsToCorrectCount(periodKey)}</p>
+              <p className="muted" style={{ marginTop: 0, marginBottom: 8 }}>
+                Batch status
+              </p>
+              <h3 style={{ margin: 0 }}>{statusTitle}</h3>
+              <p style={{ marginTop: 8, marginBottom: 0 }}>
+                {!entryWindowOpen && !persistedWorkflowStatus
+                  ? `Closed by the billing calendar. Entry window: ${entryWindowLabel}.`
+                  : statusDescription}
+              </p>
+            </div>
+            <div className="notify-chip" aria-label="status badge">
+              {statusTone === "success"
+                ? "Approved"
+                : statusTone === "warning"
+                  ? "Pending"
+                  : statusTone === "danger"
+                    ? "Attention"
+                    : "Info"}
+            </div>
+          </div>
+          <div className="kpi-grid" style={{ marginTop: 14 }}>
+            <div>
+              <p className="muted">Batch month</p>
+              <p className="kpi-value">{monthKey}</p>
+            </div>
+            <div>
+              <p className="muted">Rows in batch</p>
+              <p className="kpi-value">{completedRows}</p>
+            </div>
+            <div>
+              <p className="muted">Rows ready</p>
+              <p className="kpi-value">{readyRows}</p>
+            </div>
+            <div>
+              <p className="muted">Estimated kWh</p>
+              <p className="kpi-value">{estimatedConsumption}</p>
+            </div>
+            {statusTone === "changes" && (
+              <div>
+                <p className="muted">Rows to correct</p>
+                <p className="kpi-value">{readRowsToCorrectCount(periodKey)}</p>
+              </div>
+            )}
+          </div>
+          {(statusTone === "warning" || statusTone === "success") && (
+            <div style={{ marginTop: 14 }}>
+              <button
+                type="button"
+                onClick={() =>
+                  openSubmissionPreview(
+                    `Submitted bills - ${regionFilter === "mrah" ? "Mrah" : "Printania"} (${monthKey})`,
+                    periodKey
+                  )
+                }
+              >
+                Preview Submission
+              </button>
+            </div>
+          )}
+          {(statusTone === "changes" || (statusTone === "danger" && entryWindowOpen)) && (
+            <div className="card-actions-right">
+              <Link
+                href={`/employee/billing/entry?month=${monthKey}&region=${regionFilter}`}
+                className="action-link-btn"
+              >
+                {statusTone === "changes" ? "Correct Entries" : "Continue Entry"}
+              </Link>
             </div>
           )}
         </div>
-        {(statusTone === "warning" || statusTone === "success") && (
-          <div style={{ marginTop: 14 }}>
-            <button
-              type="button"
-              onClick={() =>
-                openSubmissionPreview(
-                  `Submitted bills - ${regionFilter === "mrah" ? "Mrah" : "Printania"} (${monthKey})`,
-                  periodKey
-                )
-              }
-            >
-              Preview Submission
-            </button>
-          </div>
-        )}
-        {(statusTone === "changes" || (statusTone === "danger" && entryWindowOpen)) && (
-          <div className="card-actions-right">
-            <Link
-              href={`/employee/billing/entry?month=${monthKey}&region=${regionFilter}`}
-              className="action-link-btn"
-            >
-              {statusTone === "changes" ? "Correct Entries" : "Continue Entry"}
-            </Link>
-          </div>
-        )}
-      </div>
       )}
       {previewModal.open && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Submitted bills preview">
@@ -550,7 +538,7 @@ function BillingPreviewContent() {
                                 height: "auto",
                                 borderRadius: 4,
                                 border: "1px solid #d1d5db",
-                                cursor: "pointer",
+                                cursor: "pointer"
                               }}
                             />
                           ) : (

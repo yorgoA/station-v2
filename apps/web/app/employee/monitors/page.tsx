@@ -63,10 +63,7 @@ export default function EmployeeMonitorsPage() {
       .catch(() => setRows([]));
   }, [monthKey, region]);
 
-  const sortedRows = useMemo(
-    () => [...rows].sort((a, b) => a.fullName.localeCompare(b.fullName)),
-    [rows]
-  );
+  const sortedRows = useMemo(() => [...rows].sort((a, b) => a.fullName.localeCompare(b.fullName)), [rows]);
 
   const totals = useMemo(() => {
     const monitorKwh = sortedRows.reduce((sum, row) => sum + (row.monitorKwh ?? 0), 0);
@@ -94,7 +91,10 @@ export default function EmployeeMonitorsPage() {
           </label>
           <label>
             Region
-            <select value={region} onChange={(e) => setRegion(e.target.value as "all" | "mrah" | "printania")}>
+            <select
+              value={region}
+              onChange={(e) => setRegion(e.target.value as "all" | "mrah" | "printania")}
+            >
               <option value="all">All</option>
               <option value="mrah">Mrah</option>
               <option value="printania">Printania</option>
@@ -144,17 +144,16 @@ export default function EmployeeMonitorsPage() {
           Total monitor customers: <strong>{sortedRows.length}</strong>
         </p>
         <p className="muted" style={{ marginTop: 0, fontSize: "0.85rem" }}>
-          Linked kWh sums every customer linked to a monitor. For a
-          fixed-monthly customer it&apos;s implied from what they pay this month
-          divided by this month&apos;s kWh price (they never get a real meter
-          reading) — shown as <strong>—</strong> when there&apos;s nothing to base
-          that on yet. Rows in red read meaningfully more on the monitor than
-          their linked pricing accounts for — flag these for the manager.
+          Linked kWh sums every customer linked to a monitor. For a fixed-monthly customer it&apos;s implied
+          from what they pay this month divided by this month&apos;s kWh price (they never get a real meter
+          reading) — shown as <strong>—</strong> when there&apos;s nothing to base that on yet. Rows in red
+          read meaningfully more on the monitor than their linked pricing accounts for — flag these for the
+          manager.
         </p>
         {!kwhPriceAvailable && (
           <p className="muted" style={{ marginTop: 0, fontSize: "0.85rem" }}>
-            No kWh price is set for {monthKey} yet — fixed-monthly customers&apos;
-            linked kWh will show as <strong>—</strong> until a manager sets it.
+            No kWh price is set for {monthKey} yet — fixed-monthly customers&apos; linked kWh will show as{" "}
+            <strong>—</strong> until a manager sets it.
           </p>
         )}
         <table>
@@ -198,25 +197,23 @@ export default function EmployeeMonitorsPage() {
                 </td>
                 <td>{row.monitorCategory}</td>
                 <td>
-                  {row.linkedCustomers.length > 0 ? (
-                    row.linkedCustomers.map((linked, index) => (
-                      <span key={linked.id}>
-                        {index > 0 ? ", " : ""}
-                        <button
-                          type="button"
-                          className="link-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/employee/customers/${linked.id}`);
-                          }}
-                        >
-                          {linked.fullName}
-                        </button>
-                      </span>
-                    ))
-                  ) : (
-                    "Missing link"
-                  )}
+                  {row.linkedCustomers.length > 0
+                    ? row.linkedCustomers.map((linked, index) => (
+                        <span key={linked.id}>
+                          {index > 0 ? ", " : ""}
+                          <button
+                            type="button"
+                            className="link-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/employee/customers/${linked.id}`);
+                            }}
+                          >
+                            {linked.fullName}
+                          </button>
+                        </span>
+                      ))
+                    : "Missing link"}
                 </td>
                 <td>{formatNumber(row.startingCounter ?? 0)}</td>
                 <td>{formatNumber(row.monitorKwh ?? 0, { maxDecimals: 1 })}</td>

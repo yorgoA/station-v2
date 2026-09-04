@@ -91,7 +91,11 @@ function ManagerAuditReportContent() {
         <KpiCard label="Batches affected" value={summary.uniqueBatches} />
       </KpiGrid>
       <div className="card">
-        {loading ? <p className="muted" style={{ marginTop: 0 }}>Loading...</p> : null}
+        {loading ? (
+          <p className="muted" style={{ marginTop: 0 }}>
+            Loading...
+          </p>
+        ) : null}
         <ReportTable
           rows={events}
           getRowKey={(row) => row.id}

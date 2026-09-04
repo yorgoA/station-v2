@@ -11,9 +11,9 @@ import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 export default function ManagerDashboardPage() {
   const [showPendingDetails, setShowPendingDetails] = useState(false);
   const [qrModificationTickets, setQrModificationTickets] = useState<Array<Record<string, unknown>>>([]);
-  const [monitorRows, setMonitorRows] = useState<Array<{ id: string; fullName: string; monitorOverBudget: boolean }>>(
-    []
-  );
+  const [monitorRows, setMonitorRows] = useState<
+    Array<{ id: string; fullName: string; monitorOverBudget: boolean }>
+  >([]);
   const [approvalBatches, setApprovalBatches] = useState<
     Array<{
       id: string;
@@ -110,9 +110,7 @@ export default function ManagerDashboardPage() {
     [monitorRows]
   );
   const hasNotifications =
-    pendingApprovalCount > 0 ||
-    filteredQrModificationTickets.length > 0 ||
-    monitorExcessCount > 0;
+    pendingApprovalCount > 0 || filteredQrModificationTickets.length > 0 || monitorExcessCount > 0;
 
   return (
     <AppShell
@@ -180,9 +178,7 @@ export default function ManagerDashboardPage() {
       {filteredQrModificationTickets.length > 0 && (
         <div className="card row-needs-change">
           <h3 style={{ marginTop: 0 }}>QR Modification Alerts</h3>
-          <p className="muted">
-            Employee-edited collector tickets requiring manager visibility.
-          </p>
+          <p className="muted">Employee-edited collector tickets requiring manager visibility.</p>
           <table>
             <thead>
               <tr>
@@ -212,7 +208,11 @@ export default function ManagerDashboardPage() {
       <div className={`card ${hasNotifications ? "row-needs-change" : ""}`}>
         <h3 style={{ marginTop: 0 }}>Notifications</h3>
         <ul>
-          {pendingApprovalCount > 0 && <li>Pending approvals ({monthKey}): {pendingApprovalCount}</li>}
+          {pendingApprovalCount > 0 && (
+            <li>
+              Pending approvals ({monthKey}): {pendingApprovalCount}
+            </li>
+          )}
           {filteredQrModificationTickets.length > 0 && (
             <li>QR modification alerts: {filteredQrModificationTickets.length}</li>
           )}
@@ -235,7 +235,6 @@ export default function ManagerDashboardPage() {
           Open Reports
         </Link>
       </div>
-
     </AppShell>
   );
 }

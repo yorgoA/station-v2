@@ -48,7 +48,13 @@ export default function LoginPage() {
   return (
     <main
       className="page"
-      style={{ maxWidth: 420, minHeight: "100dvh", display: "flex", flexDirection: "column", justifyContent: "center" }}
+      style={{
+        maxWidth: 420,
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center"
+      }}
     >
       <ThemeToggle fixed />
       <div
@@ -64,7 +70,16 @@ export default function LoginPage() {
           marginBottom: 16
         }}
       >
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--accent-fg)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          viewBox="0 0 24 24"
+          width="22"
+          height="22"
+          fill="none"
+          stroke="var(--accent-fg)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
         </svg>
       </div>

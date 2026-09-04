@@ -40,7 +40,9 @@ export async function PATCH(request: Request, context: Context) {
 
     if (body.role !== undefined || body.newPassword) {
       const { error: updateAuthError } = await supabase.auth.admin.updateUserById(targetUserId, {
-        ...(body.role !== undefined ? { user_metadata: { ...targetUser.user.user_metadata, role: body.role } } : {}),
+        ...(body.role !== undefined
+          ? { user_metadata: { ...targetUser.user.user_metadata, role: body.role } }
+          : {}),
         ...(body.newPassword ? { password: body.newPassword } : {})
       });
       if (updateAuthError) return NextResponse.json({ error: updateAuthError.message }, { status: 400 });

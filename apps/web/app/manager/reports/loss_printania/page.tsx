@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis,
+  YAxis
 } from "recharts";
 import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
@@ -31,7 +31,9 @@ type SavedLossInput = {
 const STORAGE_KEY = "station_v2_loss_printania_manual_inputs";
 const MONEY_RATE_PER_KWH = 400;
 // Last 6 real months up to the current one, oldest first -- no future months (no bills exist yet).
-const TREND_MONTHS = MONTH_OPTIONS.filter((m) => m <= CURRENT_MONTH_KEY).slice(0, 6).reverse();
+const TREND_MONTHS = MONTH_OPTIONS.filter((m) => m <= CURRENT_MONTH_KEY)
+  .slice(0, 6)
+  .reverse();
 
 async function fetchAppCalculatedKwh(monthKey: string): Promise<number> {
   const response = await fetch(`/api/reports/manager?month=${monthKey}&region=printania`);
@@ -107,7 +109,7 @@ function LossPrintaniaReportContent() {
     stored[storageEntryKey] = {
       generatedKwh: Number(generatedKwh),
       validated,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   }, [generatedKwh, validated, isHydrated, storageEntryKey]);
@@ -122,7 +124,7 @@ function LossPrintaniaReportContent() {
   const comparisonChartData = useMemo(
     () => [
       { metric: "Generated (manual)", kwh: Number(generatedKwh || "0"), color: "#0f766e" },
-      { metric: "App calculated", kwh: appCalculatedKwh, color: "#2563eb" },
+      { metric: "App calculated", kwh: appCalculatedKwh, color: "#2563eb" }
     ],
     [generatedKwh, appCalculatedKwh]
   );
@@ -148,7 +150,7 @@ function LossPrintaniaReportContent() {
     () => [
       { metric: "Actual (manual)", amount: actualAmount, color: "#0f766e" },
       { metric: "Reported (app)", amount: reportedAmount, color: "#2563eb" },
-      { metric: "Money gap", amount: moneyGap, color: "#b91c1c" },
+      { metric: "Money gap", amount: moneyGap, color: "#b91c1c" }
     ],
     [actualAmount, reportedAmount, moneyGap]
   );
@@ -299,8 +301,21 @@ function LossPrintaniaReportContent() {
                 }
               />
               <Legend />
-              <Bar yAxisId="left" dataKey="diffKwh" name="kWh Difference" fill="#dc2626" radius={[8, 8, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="lossPercent" name="Loss %" stroke="#f59e0b" strokeWidth={3} />
+              <Bar
+                yAxisId="left"
+                dataKey="diffKwh"
+                name="kWh Difference"
+                fill="#dc2626"
+                radius={[8, 8, 0, 0]}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="lossPercent"
+                name="Loss %"
+                stroke="#f59e0b"
+                strokeWidth={3}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>

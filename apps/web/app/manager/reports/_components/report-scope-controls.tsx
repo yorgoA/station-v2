@@ -14,9 +14,7 @@ type UseReportScopeArgs = {
 export function useReportScope({ searchParams }: UseReportScopeArgs) {
   const router = useRouter();
   const pathname = usePathname();
-  const [monthKey, setMonthKey] = useState<ReportMonthKey>(
-    searchParams.get("month") ?? DEFAULT_REPORT_MONTH
-  );
+  const [monthKey, setMonthKey] = useState<ReportMonthKey>(searchParams.get("month") ?? DEFAULT_REPORT_MONTH);
   const [region, setRegion] = useState<ReportRegionFilter>(
     (searchParams.get("region") as ReportRegionFilter) ?? DEFAULT_REPORT_REGION
   );
@@ -56,18 +54,14 @@ export function ReportScopeFilters({
   region,
   onRegionChange,
   allRegionsLabel = "All regions",
-  children,
+  children
 }: ReportScopeFiltersProps) {
   const months = useAvailableMonths();
   return (
     <div className="filters-grid filters-grid-pro">
       <label htmlFor={`${idPrefix}-month`}>
         Month
-        <select
-          id={`${idPrefix}-month`}
-          value={monthKey}
-          onChange={(e) => onMonthChange(e.target.value)}
-        >
+        <select id={`${idPrefix}-month`} value={monthKey} onChange={(e) => onMonthChange(e.target.value)}>
           {months.map((month) => (
             <option key={month} value={month}>
               {month}

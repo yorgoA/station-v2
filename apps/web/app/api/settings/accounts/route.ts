@@ -16,10 +16,11 @@ export async function GET() {
     if ("response" in auth) return auth.response;
 
     const supabase = createSupabaseAdminClient();
-    const [{ data: authUsers, error: authError }, { data: appUsers, error: appUsersError }] = await Promise.all([
-      supabase.auth.admin.listUsers({ perPage: 200 }),
-      supabase.from("app_users").select("email, display_name, role, is_active")
-    ]);
+    const [{ data: authUsers, error: authError }, { data: appUsers, error: appUsersError }] =
+      await Promise.all([
+        supabase.auth.admin.listUsers({ perPage: 200 }),
+        supabase.from("app_users").select("email, display_name, role, is_active")
+      ]);
     if (authError) return NextResponse.json({ error: authError.message }, { status: 500 });
     if (appUsersError) return NextResponse.json({ error: appUsersError.message }, { status: 500 });
 

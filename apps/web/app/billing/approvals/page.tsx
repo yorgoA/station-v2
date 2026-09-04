@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -26,7 +26,9 @@ function formatManagerNote(note?: string) {
 export default function BillingApprovalsPage() {
   const [monthFilter, setMonthFilter] = useState<"all" | string>("all");
   const [regionFilter, setRegionFilter] = useState<"all" | "mrah" | "printania">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending_review" | "changes_requested" | "approved_posted">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "pending_review" | "changes_requested" | "approved_posted"
+  >("all");
   const [serverQueue, setServerQueue] = useState<
     Array<{
       id: string;
@@ -85,7 +87,7 @@ export default function BillingApprovalsPage() {
         ...batch,
         submittedBy: "System",
         itemsCount: 0,
-        totalAmount: 0,
+        totalAmount: 0
       })),
     [serverQueue]
   );
@@ -94,10 +96,7 @@ export default function BillingApprovalsPage() {
   const approvedCount = filteredQueue.filter((batch) => batch.status === "approved_posted").length;
 
   return (
-    <AppShell
-      title="Billing Approvals"
-      subtitle="Manager review queue"
-    >
+    <AppShell title="Billing Approvals" subtitle="Manager review queue">
       <div className="status-legend status-legend-page" aria-label="approvals color code">
         <span className="status-legend-item danger">Red: pending review</span>
         <span className="status-legend-item changes">Orange: changes requested</span>
@@ -180,10 +179,7 @@ export default function BillingApprovalsPage() {
             Review: {batch.monthKey} - {batch.regionCode}
           </h3>
           <p>
-            Status:{" "}
-            <span style={{ color: badgeColor(batch.status), fontWeight: 600 }}>
-              {batch.status}
-            </span>
+            Status: <span style={{ color: badgeColor(batch.status), fontWeight: 600 }}>{batch.status}</span>
           </p>
           <p>
             Submitted by {"submittedBy" in batch ? batch.submittedBy : "System"} at {batch.submittedAt ?? "-"}
@@ -200,7 +196,9 @@ export default function BillingApprovalsPage() {
       ))}
       {filteredQueue.length === 0 && (
         <div className="card">
-          <p className="muted" style={{ margin: 0 }}>No approval batches found for current filters.</p>
+          <p className="muted" style={{ margin: 0 }}>
+            No approval batches found for current filters.
+          </p>
         </div>
       )}
     </AppShell>

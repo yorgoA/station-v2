@@ -82,8 +82,8 @@ export default function EmployeeReviewQrPage() {
       const response = await fetch(`/api/qr-collections/${log.id}/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-    });
+        body: JSON.stringify({})
+      });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
         setMessage(payload.error ?? "Failed to validate cash handover.");
@@ -121,8 +121,8 @@ export default function EmployeeReviewQrPage() {
           monthKey: editMonthKey,
           collectedAmount: parsedAmount,
           currency: editCurrency,
-          modificationReason: modificationReason.trim(),
-        }),
+          modificationReason: modificationReason.trim()
+        })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -184,11 +184,7 @@ export default function EmployeeReviewQrPage() {
           </label>
           <label htmlFor="review-qr-month">
             Month
-            <select
-              id="review-qr-month"
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-            >
+            <select id="review-qr-month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
               <option value="all">All</option>
               {months.map((month) => (
                 <option key={month} value={month}>
@@ -232,7 +228,9 @@ export default function EmployeeReviewQrPage() {
                     {short ? " (partial)" : ""}
                   </td>
                   <td>
-                    {log.status === "validated_by_employee" ? "Validated by employee" : "Pending employee validation"}
+                    {log.status === "validated_by_employee"
+                      ? "Validated by employee"
+                      : "Pending employee validation"}
                   </td>
                 </tr>
               );
@@ -309,7 +307,9 @@ export default function EmployeeReviewQrPage() {
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
-              <p className="muted" style={{ marginBottom: 4 }}>Receipt image (read-only)</p>
+              <p className="muted" style={{ marginBottom: 4 }}>
+                Receipt image (read-only)
+              </p>
               <p style={{ marginTop: 0 }}>{selectedLog.employeeReceiptImageName ?? "-"}</p>
             </div>
             {selectedLog.status !== "validated_by_employee" && (
@@ -384,11 +384,19 @@ export default function EmployeeReviewQrPage() {
                   Done
                 </button>
               ) : modifyMode ? (
-                <button type="button" className="success-btn" onClick={() => validateWithModifications(selectedLog)}>
+                <button
+                  type="button"
+                  className="success-btn"
+                  onClick={() => validateWithModifications(selectedLog)}
+                >
                   توثيق مع تعديل — Validate with changes
                 </button>
               ) : (
-                <button type="button" className="success-btn" onClick={() => validateCashHandover(selectedLog)}>
+                <button
+                  type="button"
+                  className="success-btn"
+                  onClick={() => validateCashHandover(selectedLog)}
+                >
                   توثيق — Validate
                 </button>
               )}

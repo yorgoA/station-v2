@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { employeeNavItems } from "../../_components/role-nav";
-import { type EmployeeBillingType, type EmployeeRegion, type EmployeeStatus } from "../../../lib/types/employee";
+import {
+  type EmployeeBillingType,
+  type EmployeeRegion,
+  type EmployeeStatus
+} from "../../../lib/types/employee";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
 import { formatLbp } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
@@ -98,7 +102,17 @@ export default function EmployeeCustomersPage() {
           bySearch
         );
       }),
-    [balanceStatus, billingType, boxNumber, building, employeeCustomers, paymentStatus, region, search, status]
+    [
+      balanceStatus,
+      billingType,
+      boxNumber,
+      building,
+      employeeCustomers,
+      paymentStatus,
+      region,
+      search,
+      status
+    ]
   );
 
   function resetAllFilters() {
@@ -185,11 +199,7 @@ export default function EmployeeCustomersPage() {
             Show All Customers
           </button>
         </div>
-        <button
-          type="button"
-          className="link-btn"
-          onClick={() => setShowAdvancedFilters((v) => !v)}
-        >
+        <button type="button" className="link-btn" onClick={() => setShowAdvancedFilters((v) => !v)}>
           {showAdvancedFilters ? "Hide more filters" : "More filters"}
         </button>
         {showAdvancedFilters && (
@@ -237,9 +247,7 @@ export default function EmployeeCustomersPage() {
               <select
                 id="customer-billing-type-filter"
                 value={billingType}
-                onChange={(e) =>
-                  setBillingType(e.target.value as "all" | EmployeeBillingType | "free")
-                }
+                onChange={(e) => setBillingType(e.target.value as "all" | EmployeeBillingType | "free")}
               >
                 <option value="all">All</option>
                 <option value="both">Both</option>
@@ -296,9 +304,7 @@ export default function EmployeeCustomersPage() {
               <select
                 id="customer-balance-status-filter"
                 value={balanceStatus}
-                onChange={(e) =>
-                  setBalanceStatus(e.target.value as "all" | "has-balance" | "no-balance")
-                }
+                onChange={(e) => setBalanceStatus(e.target.value as "all" | "has-balance" | "no-balance")}
               >
                 <option value="all">All</option>
                 <option value="has-balance">Has balance</option>
@@ -313,10 +319,7 @@ export default function EmployeeCustomersPage() {
               {showColumns ? "Hide Columns" : "Columns"}
             </button>{" "}
             {showAdvancedFilters && (
-              <button
-                type="button"
-                onClick={resetAllFilters}
-              >
+              <button type="button" onClick={resetAllFilters}>
                 Reset Filters
               </button>
             )}
@@ -327,16 +330,12 @@ export default function EmployeeCustomersPage() {
         </div>
         {showColumns && (
           <div className="columns-panel">
-            {(
-              Object.keys(visibleColumns) as Array<keyof typeof visibleColumns>
-            ).map((key) => (
+            {(Object.keys(visibleColumns) as Array<keyof typeof visibleColumns>).map((key) => (
               <label key={key}>
                 <input
                   type="checkbox"
                   checked={visibleColumns[key]}
-                  onChange={(e) =>
-                    setVisibleColumns((prev) => ({ ...prev, [key]: e.target.checked }))
-                  }
+                  onChange={(e) => setVisibleColumns((prev) => ({ ...prev, [key]: e.target.checked }))}
                 />{" "}
                 {key}
               </label>
@@ -386,12 +385,8 @@ export default function EmployeeCustomersPage() {
                 {visibleColumns.box && <td>{c.boxNumber}</td>}
                 {visibleColumns.building && <td>{c.building}</td>}
                 {visibleColumns.status && <td>{c.status}</td>}
-                {visibleColumns.paidThisMonth && (
-                  <td>{c.paidThisMonth ? "Yes" : "No"}</td>
-                )}
-                {visibleColumns.ongoingBalance && (
-                  <td>{formatLbp(c.ongoingBalance)}</td>
-                )}
+                {visibleColumns.paidThisMonth && <td>{c.paidThisMonth ? "Yes" : "No"}</td>}
+                {visibleColumns.ongoingBalance && <td>{formatLbp(c.ongoingBalance)}</td>}
               </tr>
             ))}
           </tbody>

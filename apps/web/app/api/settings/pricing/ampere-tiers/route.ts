@@ -26,12 +26,10 @@ export async function PUT(request: Request) {
     }
 
     const supabase = createSupabaseAdminClient();
-    const { error } = await supabase
-      .from("ampere_price_tiers")
-      .upsert(
-        body.tiers.map((tier) => ({ amp: tier.amp, price: tier.price })),
-        { onConflict: "amp" }
-      );
+    const { error } = await supabase.from("ampere_price_tiers").upsert(
+      body.tiers.map((tier) => ({ amp: tier.amp, price: tier.price })),
+      { onConflict: "amp" }
+    );
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });

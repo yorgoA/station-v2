@@ -72,7 +72,7 @@ export async function POST(request: Request, context: Context) {
         batch_item_id: decision.rowId,
         decision: decision.state,
         note: decision.note?.trim() || null,
-        actor_user_id: actorUserId,
+        actor_user_id: actorUserId
       }));
     if (reviewRows.length > 0) {
       const { error: reviewsError } = await supabase
@@ -87,7 +87,7 @@ export async function POST(request: Request, context: Context) {
         status: targetStatus,
         manager_note: note,
         reviewed_by_user_id: actorUserId,
-        reviewed_at: new Date().toISOString(),
+        reviewed_at: new Date().toISOString()
       })
       .eq("id", batchId);
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
@@ -96,7 +96,7 @@ export async function POST(request: Request, context: Context) {
       batch_id: batchId,
       to_status: targetStatus,
       actor_user_id: actorUserId,
-      note,
+      note
     });
     if (eventError) return NextResponse.json({ error: eventError.message }, { status: 500 });
 

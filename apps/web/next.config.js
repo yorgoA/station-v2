@@ -19,8 +19,8 @@ const nextConfig = {
     NEXT_PUBLIC_APP_COMMIT: shortSha(),
     NEXT_PUBLIC_APP_ENV: process.env.VERCEL_ENV || "local",
     NEXT_PUBLIC_APP_BRANCH: process.env.VERCEL_GIT_COMMIT_REF || "",
-    NEXT_PUBLIC_APP_BUILT_AT: new Date().toISOString(),
-  },
+    NEXT_PUBLIC_APP_BUILT_AT: new Date().toISOString()
+  }
 };
 
 module.exports = nextConfig;

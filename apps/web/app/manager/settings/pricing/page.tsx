@@ -84,7 +84,9 @@ export default function ManagerPricingSettingsPage() {
   function handleTierPriceChange(amp: number, price: string) {
     const parsed = Number(price);
     setAmpereTiers((prev) =>
-      prev.map((tier) => (tier.amp === amp ? { ...tier, price: Number.isFinite(parsed) ? parsed : tier.price } : tier))
+      prev.map((tier) =>
+        tier.amp === amp ? { ...tier, price: Number.isFinite(parsed) ? parsed : tier.price } : tier
+      )
     );
   }
 
@@ -100,7 +102,9 @@ export default function ManagerPricingSettingsPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Failed to save ampere prices.");
-      setBanner("Ampere prices saved. This only affects future approvals — already-approved bills keep the price they were approved with.");
+      setBanner(
+        "Ampere prices saved. This only affects future approvals — already-approved bills keep the price they were approved with."
+      );
       await loadPricing();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save ampere prices.");
@@ -157,16 +161,25 @@ export default function ManagerPricingSettingsPage() {
         ← Back to Settings
       </Link>
 
-      {banner ? <p className="muted" role="status">{banner}</p> : null}
-      {error ? <p style={{ color: "var(--danger)" }} role="alert">{error}</p> : null}
+      {banner ? (
+        <p className="muted" role="status">
+          {banner}
+        </p>
+      ) : null}
+      {error ? (
+        <p style={{ color: "var(--danger)" }} role="alert">
+          {error}
+        </p>
+      ) : null}
       {loading ? <p className="muted">Loading current pricing…</p> : null}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Ampere Prices (LBP)</h3>
         <p className="muted">
           Each amperage tier has a fixed price, used for amp-only and combined billing. These are the
-          <em> current</em> prices — there&apos;s no monthly re-entry needed. Editing a price here only affects batches
-          approved after the change; every already-approved bill keeps the price it was approved with, permanently.
+          <em> current</em> prices — there&apos;s no monthly re-entry needed. Editing a price here only
+          affects batches approved after the change; every already-approved bill keeps the price it was
+          approved with, permanently.
         </p>
         <table>
           <thead>
@@ -196,7 +209,12 @@ export default function ManagerPricingSettingsPage() {
             ))}
             <tr>
               <td>
-                <input type="number" placeholder="Amp" value={newAmp} onChange={(e) => setNewAmp(e.target.value)} />
+                <input
+                  type="number"
+                  placeholder="Amp"
+                  value={newAmp}
+                  onChange={(e) => setNewAmp(e.target.value)}
+                />
               </td>
               <td>
                 <input
@@ -224,9 +242,10 @@ export default function ManagerPricingSettingsPage() {
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Monthly kWh Tariff</h3>
         <p className="muted">
-          Set once the real fuel-cost price for a month is known. A batch for that month can only be approved once
-          its price is set here — this is deliberate: if readings come in before the new price is confirmed, the
-          batch simply waits in review rather than getting priced with a stale or guessed number.
+          Set once the real fuel-cost price for a month is known. A batch for that month can only be approved
+          once its price is set here — this is deliberate: if readings come in before the new price is
+          confirmed, the batch simply waits in review rather than getting priced with a stale or guessed
+          number.
         </p>
         <div className="filters-grid filters-grid-pro">
           <label htmlFor="monthly-tariff-month">
@@ -263,7 +282,12 @@ export default function ManagerPricingSettingsPage() {
           The USD rate only drives the USD line on the printed bill. Leave it blank to print LBP only.
         </p>
         <div className="card-actions-right">
-          <button type="button" className="success-btn" onClick={handleMonthlyTariffSave} disabled={tariffSaving}>
+          <button
+            type="button"
+            className="success-btn"
+            onClick={handleMonthlyTariffSave}
+            disabled={tariffSaving}
+          >
             {tariffSaving ? "Saving…" : "Save Monthly Tariff"}
           </button>
         </div>

@@ -41,8 +41,11 @@ export async function GET(request: Request) {
         "id, customer_number, full_name, is_free_customer, monitor_id, fixed_monthly_amount, regions!inner(code), billing_types(key)"
       );
 
-    const [{ data: bills, error: billsError }, { data: payments, error: paymentsError }, { data: customers, error: customersError }] =
-      await Promise.all([billsQuery, paymentsQuery, customersQuery]);
+    const [
+      { data: bills, error: billsError },
+      { data: payments, error: paymentsError },
+      { data: customers, error: customersError }
+    ] = await Promise.all([billsQuery, paymentsQuery, customersQuery]);
 
     if (billsError) return NextResponse.json({ error: billsError.message }, { status: 500 });
     if (paymentsError) return NextResponse.json({ error: paymentsError.message }, { status: 500 });
@@ -144,7 +147,7 @@ export async function GET(request: Request) {
         id: String(data.id ?? ""),
         fullName: String(data.full_name ?? ""),
         billingType: readBillingTypeKey(data.billing_types),
-        fixedMonthlyAmount: Number(data.fixed_monthly_amount ?? 0),
+        fixedMonthlyAmount: Number(data.fixed_monthly_amount ?? 0)
       });
       linkedByMonitorId.set(monitorId, list);
     }
@@ -153,7 +156,7 @@ export async function GET(request: Request) {
       .map((row) => {
         const data = row as Record<string, unknown>;
         const monitorId = data.monitor_id ? String(data.monitor_id) : "";
-        const linked = monitorId ? linkedByMonitorId.get(monitorId) ?? [] : [];
+        const linked = monitorId ? (linkedByMonitorId.get(monitorId) ?? []) : [];
         // Only fixed-monthly linked customers contribute -- they're the ones this
         // report is for (their kWh isn't metered, so it's implied from what they
         // actually pay this month, using this month's posted bill amount where
@@ -168,7 +171,8 @@ export async function GET(request: Request) {
           region: (readRegionCode(data.regions) || "mrah") as RegionCode,
           monitorUsageKwh: monthKwhByCustomerId.get(String(data.id ?? "")) ?? 0,
           linkedFixedMonthlyTotal,
-          linkedObligatoryCustomer: linked.length > 0 ? linked.map((c) => c.fullName).join(", ") : "Missing link",
+          linkedObligatoryCustomer:
+            linked.length > 0 ? linked.map((c) => c.fullName).join(", ") : "Missing link"
         };
       });
     const freeCustomers = filteredCustomers.filter((row) =>
@@ -187,7 +191,7 @@ export async function GET(request: Request) {
         amount,
         currency: "LBP" as const,
         status: remaining <= 0 ? ("paid" as const) : ("unpaid" as const),
-        billingType: isFree ? "fixed-monthly" : "metered",
+        billingType: isFree ? "fixed-monthly" : "metered"
       };
     });
 
@@ -199,7 +203,7 @@ export async function GET(request: Request) {
         date: String((row as Record<string, unknown>).payment_date ?? ""),
         amount: formatLbp(Number((row as Record<string, unknown>).amount ?? 0)),
         method: String((row as Record<string, unknown>).method ?? "manual"),
-        receiptRef: String((row as Record<string, unknown>).receipt_image_url ?? "-"),
+        receiptRef: String((row as Record<string, unknown>).receipt_image_url ?? "-")
       };
     });
 
@@ -212,7 +216,7 @@ export async function GET(request: Request) {
           region: (readRegionCode(customer?.regions) || "mrah") as RegionCode,
           consumedKwh: Number((row as Record<string, unknown>).consumption_kwh ?? 0),
           reason: "Free customer",
-          subscribedAmpere: 0,
+          subscribedAmpere: 0
         };
       });
 
@@ -228,7 +232,7 @@ export async function GET(request: Request) {
         lossPercent,
         monitorCustomers,
         freeCustomers,
-        totalCustomers: filteredCustomers.length,
+        totalCustomers: filteredCustomers.length
       },
       moneyOverview: {
         totalCustomers: filteredCustomers.length,
@@ -236,17 +240,17 @@ export async function GET(request: Request) {
         collected,
         unpaidCurrent,
         previousUnpaid,
-        unpaidTillToday,
+        unpaidTillToday
       },
       kwhOverview: {
         totalKwhProduced,
         payingKwh,
-        freeKwh: Math.max(0, totalKwhProduced - payingKwh),
+        freeKwh: Math.max(0, totalKwhProduced - payingKwh)
       },
       bills: billRows,
       payments: paymentRows,
       freeCustomers: freeCustomerRows,
-      monitors: monitorRows,
+      monitors: monitorRows
     });
   } catch (error) {
     return serverError(error);

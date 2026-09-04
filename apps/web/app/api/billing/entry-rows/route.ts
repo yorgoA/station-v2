@@ -85,15 +85,12 @@ export async function GET(request: Request) {
         previousCounter:
           latestCounterByCustomerId.get(customer.id as string) ?? Number(customer.starting_counter ?? 0),
         billingType: (billingTypeById.get(customer.billing_type_id as string) ?? "metered") as
-          | "metered"
-          | "amp-only"
-          | "both"
-          | "fixed-monthly",
+          "metered" | "amp-only" | "both" | "fixed-monthly",
         subscribedAmpere: customer.subscribed_ampere != null ? Number(customer.subscribed_ampere) : null,
         fixedMonthlyAmount: customer.fixed_monthly_amount != null ? Number(customer.fixed_monthly_amount) : 0,
         isFreeCustomer: Boolean(customer.is_free_customer),
         isMonitor,
-        obligatoryLinkedToCustomerNumber,
+        obligatoryLinkedToCustomerNumber
       };
     });
 

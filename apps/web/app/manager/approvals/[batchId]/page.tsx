@@ -24,7 +24,9 @@ export default function ManagerApprovalBatchPage() {
   const [serverItems, setServerItems] = useState<BillingEntryRow[] | null>(null);
   const [rowStates, setRowStates] = useState<Record<string, "approved" | "changes_needed">>({});
   const [rowNotes, setRowNotes] = useState<Record<string, string>>({});
-  const [employeeChangeSummaryByRowId, setEmployeeChangeSummaryByRowId] = useState<Record<string, string>>({});
+  const [employeeChangeSummaryByRowId, setEmployeeChangeSummaryByRowId] = useState<Record<string, string>>(
+    {}
+  );
   const [fixProposalByRowId, setFixProposalByRowId] = useState<
     Record<
       string,
@@ -37,7 +39,9 @@ export default function ManagerApprovalBatchPage() {
     >
   >({});
   const [fixProposalBusyRowId, setFixProposalBusyRowId] = useState<string | null>(null);
-  const [initialReviewStates, setInitialReviewStates] = useState<Record<string, "approved" | "changes_needed">>({});
+  const [initialReviewStates, setInitialReviewStates] = useState<
+    Record<string, "approved" | "changes_needed">
+  >({});
   const [pendingModificationRows, setPendingModificationRows] = useState<Record<string, boolean>>({});
   const [modificationStartNotes, setModificationStartNotes] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState("");
@@ -58,7 +62,7 @@ export default function ManagerApprovalBatchPage() {
             ...serverBatch,
             submittedBy: "System",
             itemsCount: serverItems?.length ?? 0,
-            totalAmount: 0,
+            totalAmount: 0
           }
         : null,
     [serverBatch, serverItems]
@@ -72,10 +76,7 @@ export default function ManagerApprovalBatchPage() {
   const allApproved = activeRows.length > 0 && activeRows.every((row) => rowStates[row.id] === "approved");
   const hasUndecidedFixProposal = Object.values(fixProposalByRowId).some((p) => !p.decision);
   const zeroAmountFixedRows = activeRows.filter(
-    (row) =>
-      row.billingType === "fixed-monthly" &&
-      !row.isFreeCustomer &&
-      (row.fixedMonthlyAmount ?? 0) <= 0
+    (row) => row.billingType === "fixed-monthly" && !row.isFreeCustomer && (row.fixedMonthlyAmount ?? 0) <= 0
   );
   const toImageHref = (value?: string) => {
     const raw = String(value ?? "").trim();
@@ -134,7 +135,7 @@ export default function ManagerApprovalBatchPage() {
             billingType: item.billingType ?? "metered",
             isFreeCustomer: Boolean(item.isFreeCustomer),
             fixedMonthlyAmount: Number(item.currentFixedMonthlyAmount ?? 0),
-            isMonitor: false,
+            isMonitor: false
           }))
         );
         setEmployeeChangeSummaryByRowId(
@@ -154,8 +155,8 @@ export default function ManagerApprovalBatchPage() {
                   currentAmount: Number(item.currentFixedMonthlyAmount ?? 0),
                   proposedAmount: Number(item.proposedFixedMonthlyAmount),
                   note: item.proposedFixedMonthlyNote,
-                  decision: item.proposedFixedMonthlyDecision,
-                },
+                  decision: item.proposedFixedMonthlyDecision
+                }
               ])
           )
         );
@@ -200,7 +201,7 @@ export default function ManagerApprovalBatchPage() {
       const response = await fetch(`/api/billing/batches/${batchId}/fixed-amount-proposal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: rowId, decision }),
+        body: JSON.stringify({ itemId: rowId, decision })
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -325,7 +326,7 @@ export default function ManagerApprovalBatchPage() {
       const response = await fetch("/api/settings/pricing/kwh-tariff", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ monthKey: selectedBatch.monthKey, kwhPrice: price, usdRate }),
+        body: JSON.stringify({ monthKey: selectedBatch.monthKey, kwhPrice: price, usdRate })
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -363,12 +364,12 @@ export default function ManagerApprovalBatchPage() {
       const decisions = activeRows.map((row) => ({
         rowId: row.id,
         state: rowStates[row.id] ?? "approved",
-        note: rowNotes[row.id]?.trim() || undefined,
+        note: rowNotes[row.id]?.trim() || undefined
       }));
       const response = await fetch(`/api/billing/batches/${batchId}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decisions }),
+        body: JSON.stringify({ decisions })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -384,7 +385,11 @@ export default function ManagerApprovalBatchPage() {
 
   if (!selectedBatch) {
     return (
-      <AppShell title="Batch Not Found" subtitle="No approval batch matches this id" navItems={managerNavItems}>
+      <AppShell
+        title="Batch Not Found"
+        subtitle="No approval batch matches this id"
+        navItems={managerNavItems}
+      >
         <Link href="/manager/approvals" className="back-link">
           ← Back to Approvals
         </Link>
@@ -418,224 +423,226 @@ export default function ManagerApprovalBatchPage() {
         </div>
       ) : (
         activeRows.map((row) => (
-        <div
-          className={`card ${rowStates[row.id] === "approved" ? "row-approved" : ""} ${rowStates[row.id] === "changes_needed" ? "row-needs-change" : ""}`}
-          key={row.id}
-          style={
-            rowStates[row.id] === "changes_needed"
-              ? { background: "#fff7ed", borderColor: "#fdba74" }
-              : undefined
-          }
-        >
-          {canEdit && rowStates[row.id] === "approved" && initialReviewStates[row.id] !== "approved" && (
-            <div className="card-actions-right" style={{ marginTop: 0 }}>
-              <button type="button" className="warning-btn" onClick={() => startModification(row.id)}>
-                Modify
-              </button>
-            </div>
-          )}
-          {canEdit && rowStates[row.id] === "changes_needed" && !pendingModificationRows[row.id] && initialReviewStates[row.id] !== "approved" && (
-            <div className="card-actions-right" style={{ marginTop: 0, display: "flex", gap: 8 }}>
-              <button
-                type="button"
-                className="success-btn"
-                onClick={() => {
-                  setRowStates((prev) => ({ ...prev, [row.id]: "approved" }));
-                  setBanner("");
-                }}
-                title="Accept the employee's fix for this row"
-              >
-                Approve
-              </button>
-              <button
-                type="button"
-                className="warning-btn"
-                onClick={() => startModification(row.id)}
-              >
-                Modify
-              </button>
-            </div>
-          )}
-          <p style={{ marginTop: 0 }}>
-            <strong>
-              {row.customerName} ({row.customerNumber})
-            </strong>
-          </p>
-          {billingTypeNeedsMeterReading(row.billingType) ? (
-            <>
-              <p className="muted">Previous counter: {row.previousCounter}</p>
-              <p className="muted">Current counter: {row.newCounter ?? "-"}</p>
-            </>
-          ) : row.billingType === "fixed-monthly" ? (
-            <p className="muted">
-              Flat monthly charge — billed the customer&apos;s set amount:{" "}
-              <strong>
-                {formatLbp(fixProposalByRowId[row.id]?.currentAmount ?? row.fixedMonthlyAmount ?? 0)}
-              </strong>
-            </p>
-          ) : (
-            <p className="muted">
-              Flat monthly charge ({row.billingType}) — no meter reading; billed the customer&apos;s
-              set monthly amount.
-            </p>
-          )}
-          {fixProposalByRowId[row.id] ? (
-            <div
-              className="card"
-              style={{ marginTop: 6, marginBottom: 6, background: "#fff7ed", borderColor: "#fdba74" }}
-            >
-              <p style={{ marginTop: 0, marginBottom: 4 }}>
-                <strong>Employee proposes a fixed-monthly correction</strong>
-              </p>
-              <p className="muted" style={{ margin: "0 0 4px" }}>
-                {formatLbp(fixProposalByRowId[row.id].currentAmount)} →{" "}
-                {formatLbp(fixProposalByRowId[row.id].proposedAmount)}
-              </p>
-              {fixProposalByRowId[row.id].note ? (
-                <p className="muted" style={{ margin: "0 0 4px" }}>
-                  Reason: {fixProposalByRowId[row.id].note}
-                </p>
-              ) : null}
-              {fixProposalByRowId[row.id].decision === "approved" ? (
-                <p style={{ margin: 0, color: "var(--success)" }}>
-                  Approved — customer&apos;s amount updated to{" "}
-                  {formatLbp(fixProposalByRowId[row.id].proposedAmount)}. This bill will use it.
-                </p>
-              ) : fixProposalByRowId[row.id].decision === "rejected" ? (
-                <p style={{ margin: 0, color: "var(--danger)" }}>
-                  Rejected — customer&apos;s amount stays at{" "}
-                  {formatLbp(fixProposalByRowId[row.id].currentAmount)}.
-                </p>
-              ) : selectedBatch.status === "pending_review" || selectedBatch.status === "changes_requested" ? (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+          <div
+            className={`card ${rowStates[row.id] === "approved" ? "row-approved" : ""} ${rowStates[row.id] === "changes_needed" ? "row-needs-change" : ""}`}
+            key={row.id}
+            style={
+              rowStates[row.id] === "changes_needed"
+                ? { background: "#fff7ed", borderColor: "#fdba74" }
+                : undefined
+            }
+          >
+            {canEdit && rowStates[row.id] === "approved" && initialReviewStates[row.id] !== "approved" && (
+              <div className="card-actions-right" style={{ marginTop: 0 }}>
+                <button type="button" className="warning-btn" onClick={() => startModification(row.id)}>
+                  Modify
+                </button>
+              </div>
+            )}
+            {canEdit &&
+              rowStates[row.id] === "changes_needed" &&
+              !pendingModificationRows[row.id] &&
+              initialReviewStates[row.id] !== "approved" && (
+                <div className="card-actions-right" style={{ marginTop: 0, display: "flex", gap: 8 }}>
                   <button
                     type="button"
                     className="success-btn"
-                    disabled={fixProposalBusyRowId === row.id}
-                    onClick={() => decideFixProposal(row.id, "approved")}
+                    onClick={() => {
+                      setRowStates((prev) => ({ ...prev, [row.id]: "approved" }));
+                      setBanner("");
+                    }}
+                    title="Accept the employee's fix for this row"
                   >
-                    Approve change
+                    Approve
                   </button>
-                  <button
-                    type="button"
-                    className="danger-btn"
-                    disabled={fixProposalBusyRowId === row.id}
-                    onClick={() => decideFixProposal(row.id, "rejected")}
-                  >
-                    Reject change
+                  <button type="button" className="warning-btn" onClick={() => startModification(row.id)}>
+                    Modify
                   </button>
                 </div>
-              ) : (
-                <p className="muted" style={{ margin: 0 }}>Not decided.</p>
               )}
-            </div>
-          ) : null}
-          {employeeChangeSummaryByRowId[row.id] ? (
-            <p className="muted" style={{ marginTop: 0, marginBottom: 6 }}>
-              Employee modifications: {employeeChangeSummaryByRowId[row.id]}
+            <p style={{ marginTop: 0 }}>
+              <strong>
+                {row.customerName} ({row.customerNumber})
+              </strong>
             </p>
-          ) : selectedBatch.status === "pending_review" && initialReviewStates[row.id] === "changes_needed" ? (
-            <p className="muted" style={{ marginTop: 0, marginBottom: 6 }}>
-              Employee modifications: re-submitted after previous manager note (legacy details unavailable for this cycle).
-            </p>
-          ) : null}
-          {billingTypeNeedsMeterReading(row.billingType) && (
-          <p className="muted" style={{ marginBottom: 6 }}>
-            Counter image:
-          </p>
-          )}
-          {billingTypeNeedsMeterReading(row.billingType) && row.counterImageName ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
-              {toImageHref(row.counterImageName) ? (
-                <>
-                  <img
-                    src={toImageHref(row.counterImageName)}
-                    alt={`Counter ${row.customerNumber}`}
-                    title="Click to preview"
-                    onClick={() => setImageModalSrc(toImageHref(row.counterImageName))}
-                    style={{
-                      width: 160,
-                      height: "auto",
-                      borderRadius: 6,
-                      border: "1px solid #d1d5db",
-                      cursor: "pointer",
-                    }}
-                  />
-                </>
-              ) : (
-                <p className="muted" style={{ margin: 0 }}>
-                  Image unavailable in this batch row.
+            {billingTypeNeedsMeterReading(row.billingType) ? (
+              <>
+                <p className="muted">Previous counter: {row.previousCounter}</p>
+                <p className="muted">Current counter: {row.newCounter ?? "-"}</p>
+              </>
+            ) : row.billingType === "fixed-monthly" ? (
+              <p className="muted">
+                Flat monthly charge — billed the customer&apos;s set amount:{" "}
+                <strong>
+                  {formatLbp(fixProposalByRowId[row.id]?.currentAmount ?? row.fixedMonthlyAmount ?? 0)}
+                </strong>
+              </p>
+            ) : (
+              <p className="muted">
+                Flat monthly charge ({row.billingType}) — no meter reading; billed the customer&apos;s set
+                monthly amount.
+              </p>
+            )}
+            {fixProposalByRowId[row.id] ? (
+              <div
+                className="card"
+                style={{ marginTop: 6, marginBottom: 6, background: "#fff7ed", borderColor: "#fdba74" }}
+              >
+                <p style={{ marginTop: 0, marginBottom: 4 }}>
+                  <strong>Employee proposes a fixed-monthly correction</strong>
                 </p>
-              )}
-            </div>
-          ) : null}
-          {canEdit && !rowStates[row.id] && !pendingModificationRows[row.id] ? (
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                className="success-btn"
-                type="button"
-                onClick={() => setRowStates((prev) => ({ ...prev, [row.id]: "approved" }))}
-              >
-                Approve
-              </button>
-              <button
-                className="warning-btn"
-                type="button"
-                onClick={() => startModification(row.id)}
-              >
-                Modify
-              </button>
-            </div>
-          ) : null}
-          {canEdit && pendingModificationRows[row.id] && (
-            <div className="card" style={{ marginTop: 8 }}>
-              <label style={{ display: "block", marginTop: 0 }}>
-                Manager note
-                <input
-                  value={rowNotes[row.id] ?? ""}
-                  onChange={(e) => setRowNotes((prev) => ({ ...prev, [row.id]: e.target.value }))}
-                  placeholder="Required: describe what needs to be fixed"
-                />
-              </label>
-              <div className="card-actions-right" style={{ marginTop: 8 }}>
-                <button type="button" onClick={() => cancelModification(row.id)}>
-                  Cancel
-                </button>{" "}
-                {((rowNotes[row.id] ?? "").trim() !== (modificationStartNotes[row.id] ?? "").trim()) ? (
-                  <button
-                    type="button"
-                    className="warning-btn"
-                    onClick={() => validateModification(row.id)}
-                  >
-                    Validate Modification
-                  </button>
+                <p className="muted" style={{ margin: "0 0 4px" }}>
+                  {formatLbp(fixProposalByRowId[row.id].currentAmount)} →{" "}
+                  {formatLbp(fixProposalByRowId[row.id].proposedAmount)}
+                </p>
+                {fixProposalByRowId[row.id].note ? (
+                  <p className="muted" style={{ margin: "0 0 4px" }}>
+                    Reason: {fixProposalByRowId[row.id].note}
+                  </p>
+                ) : null}
+                {fixProposalByRowId[row.id].decision === "approved" ? (
+                  <p style={{ margin: 0, color: "var(--success)" }}>
+                    Approved — customer&apos;s amount updated to{" "}
+                    {formatLbp(fixProposalByRowId[row.id].proposedAmount)}. This bill will use it.
+                  </p>
+                ) : fixProposalByRowId[row.id].decision === "rejected" ? (
+                  <p style={{ margin: 0, color: "var(--danger)" }}>
+                    Rejected — customer&apos;s amount stays at{" "}
+                    {formatLbp(fixProposalByRowId[row.id].currentAmount)}.
+                  </p>
+                ) : selectedBatch.status === "pending_review" ||
+                  selectedBatch.status === "changes_requested" ? (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                    <button
+                      type="button"
+                      className="success-btn"
+                      disabled={fixProposalBusyRowId === row.id}
+                      onClick={() => decideFixProposal(row.id, "approved")}
+                    >
+                      Approve change
+                    </button>
+                    <button
+                      type="button"
+                      className="danger-btn"
+                      disabled={fixProposalBusyRowId === row.id}
+                      onClick={() => decideFixProposal(row.id, "rejected")}
+                    >
+                      Reject change
+                    </button>
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    className="success-btn"
-                    onClick={() => cancelNoteAndValidate(row.id)}
-                  >
-                    Cancel Note and Validate
-                  </button>
+                  <p className="muted" style={{ margin: 0 }}>
+                    Not decided.
+                  </p>
                 )}
               </div>
-            </div>
-          )}
-          {rowStates[row.id] === "changes_needed" && !pendingModificationRows[row.id] && (
-            <div className="card" style={{ marginTop: 8 }}>
-              <p className="muted" style={{ marginTop: 0, marginBottom: 4 }}>
-                Previous manager note
+            ) : null}
+            {employeeChangeSummaryByRowId[row.id] ? (
+              <p className="muted" style={{ marginTop: 0, marginBottom: 6 }}>
+                Employee modifications: {employeeChangeSummaryByRowId[row.id]}
               </p>
-              <p style={{ marginTop: 0 }}>{rowNotes[row.id] ?? "-"}</p>
-            </div>
-          )}
-          {rowStates[row.id] === "approved" && (
-            <div className="card" style={{ marginTop: 8 }}>
-              <span className="notify-chip">Approved ✓</span>
-            </div>
-          )}
-        </div>
-      ))
+            ) : selectedBatch.status === "pending_review" &&
+              initialReviewStates[row.id] === "changes_needed" ? (
+              <p className="muted" style={{ marginTop: 0, marginBottom: 6 }}>
+                Employee modifications: re-submitted after previous manager note (legacy details unavailable
+                for this cycle).
+              </p>
+            ) : null}
+            {billingTypeNeedsMeterReading(row.billingType) && (
+              <p className="muted" style={{ marginBottom: 6 }}>
+                Counter image:
+              </p>
+            )}
+            {billingTypeNeedsMeterReading(row.billingType) && row.counterImageName ? (
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}
+              >
+                {toImageHref(row.counterImageName) ? (
+                  <>
+                    <img
+                      src={toImageHref(row.counterImageName)}
+                      alt={`Counter ${row.customerNumber}`}
+                      title="Click to preview"
+                      onClick={() => setImageModalSrc(toImageHref(row.counterImageName))}
+                      style={{
+                        width: 160,
+                        height: "auto",
+                        borderRadius: 6,
+                        border: "1px solid #d1d5db",
+                        cursor: "pointer"
+                      }}
+                    />
+                  </>
+                ) : (
+                  <p className="muted" style={{ margin: 0 }}>
+                    Image unavailable in this batch row.
+                  </p>
+                )}
+              </div>
+            ) : null}
+            {canEdit && !rowStates[row.id] && !pendingModificationRows[row.id] ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  className="success-btn"
+                  type="button"
+                  onClick={() => setRowStates((prev) => ({ ...prev, [row.id]: "approved" }))}
+                >
+                  Approve
+                </button>
+                <button className="warning-btn" type="button" onClick={() => startModification(row.id)}>
+                  Modify
+                </button>
+              </div>
+            ) : null}
+            {canEdit && pendingModificationRows[row.id] && (
+              <div className="card" style={{ marginTop: 8 }}>
+                <label style={{ display: "block", marginTop: 0 }}>
+                  Manager note
+                  <input
+                    value={rowNotes[row.id] ?? ""}
+                    onChange={(e) => setRowNotes((prev) => ({ ...prev, [row.id]: e.target.value }))}
+                    placeholder="Required: describe what needs to be fixed"
+                  />
+                </label>
+                <div className="card-actions-right" style={{ marginTop: 8 }}>
+                  <button type="button" onClick={() => cancelModification(row.id)}>
+                    Cancel
+                  </button>{" "}
+                  {(rowNotes[row.id] ?? "").trim() !== (modificationStartNotes[row.id] ?? "").trim() ? (
+                    <button
+                      type="button"
+                      className="warning-btn"
+                      onClick={() => validateModification(row.id)}
+                    >
+                      Validate Modification
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="success-btn"
+                      onClick={() => cancelNoteAndValidate(row.id)}
+                    >
+                      Cancel Note and Validate
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {rowStates[row.id] === "changes_needed" && !pendingModificationRows[row.id] && (
+              <div className="card" style={{ marginTop: 8 }}>
+                <p className="muted" style={{ marginTop: 0, marginBottom: 4 }}>
+                  Previous manager note
+                </p>
+                <p style={{ marginTop: 0 }}>{rowNotes[row.id] ?? "-"}</p>
+              </div>
+            )}
+            {rowStates[row.id] === "approved" && (
+              <div className="card" style={{ marginTop: 8 }}>
+                <span className="notify-chip">Approved ✓</span>
+              </div>
+            )}
+          </div>
+        ))
       )}
       <div className="card">
         {canEdit ? (
@@ -705,8 +712,8 @@ export default function ManagerApprovalBatchPage() {
               </button>
             </div>
             <p className="muted" style={{ marginTop: 8 }}>
-              This month has no kWh price yet. Set it here to post the batch without leaving this
-              review — it saves to the same place as Settings → Pricing.
+              This month has no kWh price yet. Set it here to post the batch without leaving this review — it
+              saves to the same place as Settings → Pricing.
             </p>
             <label style={{ display: "block", marginTop: 8 }}>
               Price per kWh (LBP)

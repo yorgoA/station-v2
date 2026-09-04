@@ -19,7 +19,7 @@ export function ReportTable<T>({
   columns,
   rows,
   getRowKey,
-  emptyMessage = "No rows found.",
+  emptyMessage = "No rows found."
 }: ReportTableProps<T>) {
   return (
     <table>

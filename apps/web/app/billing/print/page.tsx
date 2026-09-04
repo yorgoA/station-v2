@@ -41,7 +41,7 @@ export default function BillingPrintPage() {
             id: batch.id,
             monthKey: batch.monthKey,
             region: batch.regionCode,
-            status: batch.status,
+            status: batch.status
           });
         }
         setBatches(mapped);
@@ -65,10 +65,7 @@ export default function BillingPrintPage() {
   );
 
   return (
-    <AppShell
-      title="Billing Print"
-      subtitle="Print is available only for manager-approved monthly batches"
-    >
+    <AppShell title="Billing Print" subtitle="Print is available only for manager-approved monthly batches">
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
           Each card shows a month/region print status. PDF print is enabled only after manager confirmation.

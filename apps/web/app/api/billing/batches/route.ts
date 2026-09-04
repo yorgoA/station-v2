@@ -34,10 +34,11 @@ export async function GET(request: Request) {
     const mapped = (batches ?? []).map((row) => ({
       id: row.id,
       monthKey: row.month_key,
-      regionCode: readRegion(row.regions as { code: string } | Array<{ code: string }> | null)?.code ?? "unknown",
+      regionCode:
+        readRegion(row.regions as { code: string } | Array<{ code: string }> | null)?.code ?? "unknown",
       status: row.status,
       submittedAt: row.submitted_at,
-      managerNote: row.manager_note,
+      managerNote: row.manager_note
     }));
 
     return NextResponse.json({ batches: mapped });

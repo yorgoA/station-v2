@@ -12,7 +12,10 @@ export interface UploadReceiptResult {
   downloadUrl?: string;
 }
 
-export async function uploadReceiptImage(buffer: Buffer, inputMimeType: string): Promise<UploadReceiptResult> {
+export async function uploadReceiptImage(
+  buffer: Buffer,
+  inputMimeType: string
+): Promise<UploadReceiptResult> {
   const { buffer: out, mimeType, ext } = await optimizeReceiptImageBuffer(buffer, inputMimeType);
   const filename = `receipts/receipt_${Date.now()}.${ext}`;
 

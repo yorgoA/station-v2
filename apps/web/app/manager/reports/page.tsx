@@ -54,7 +54,9 @@ export default function ManagerReportsPage() {
         </div>
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Monitors Data</h3>
-          <p className="muted">Track monitor-linked customers, exceptions, and high-consumption indicators.</p>
+          <p className="muted">
+            Track monitor-linked customers, exceptions, and high-consumption indicators.
+          </p>
           <Link href={`/manager/reports/monitors?${defaultScope}`} className="action-link-btn">
             Open Monitors Data
           </Link>

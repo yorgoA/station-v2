@@ -79,7 +79,7 @@ export async function POST(request: Request, context: Context) {
     return NextResponse.json({
       ok: true,
       decision: body.decision,
-      appliedAmount: body.decision === "approved" ? proposedAmount : undefined,
+      appliedAmount: body.decision === "approved" ? proposedAmount : undefined
     });
   } catch (error) {
     return serverError(error);

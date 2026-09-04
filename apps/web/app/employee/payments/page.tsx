@@ -119,8 +119,8 @@ export default function EmployeePaymentsPage() {
           regionCode: selectedCustomer.region,
           monthKey,
           amount: parsedAmount,
-          receiptImageUrl: uploadPayload.url,
-        }),
+          receiptImageUrl: uploadPayload.url
+        })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -160,7 +160,11 @@ export default function EmployeePaymentsPage() {
         <div className="filters-grid">
           <label htmlFor="payment-customer">
             Customer
-            <select id="payment-customer" value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)}>
+            <select
+              id="payment-customer"
+              value={selectedCustomerId}
+              onChange={(e) => setSelectedCustomerId(e.target.value)}
+            >
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
                   {customer.fullName} ({customer.customerNumber})
@@ -204,8 +208,8 @@ export default function EmployeePaymentsPage() {
           </div>
         </div>
         <p className="muted" style={{ marginTop: 8, marginBottom: 8 }}>
-          Total due includes unpaid bills from earlier months until they are paid. Partial payment is
-          allowed; any unpaid remainder stays on the bill.
+          Total due includes unpaid bills from earlier months until they are paid. Partial payment is allowed;
+          any unpaid remainder stays on the bill.
         </p>
         <label htmlFor="payment-receipt">
           Receipt image
@@ -281,11 +285,7 @@ export default function EmployeePaymentsPage() {
           </thead>
           <tbody>
             {filteredPayments.map((p) => (
-              <tr
-                key={p.id}
-                className="clickable-row"
-                onClick={() => openCustomerFromPayment(p.customerId)}
-              >
+              <tr key={p.id} className="clickable-row" onClick={() => openCustomerFromPayment(p.customerId)}>
                 <td>{p.date}</td>
                 <td>{p.customerName}</td>
                 <td>{p.region}</td>

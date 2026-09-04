@@ -88,7 +88,7 @@ function CollectorScanContent() {
   const billAmount = useMemo(() => {
     if (!customer) return 0;
     const monthDue = customer.ongoingBalanceThisMonth ?? 0;
-    return monthDue > 0 ? monthDue : customer.ongoingBalance ?? 0;
+    return monthDue > 0 ? monthDue : (customer.ongoingBalance ?? 0);
   }, [customer]);
 
   // Prefill the collected amount with the bill; the collector confirms it or
@@ -132,8 +132,8 @@ function CollectorScanContent() {
           expectedAmount: billAmount > 0 ? billAmount : undefined,
           currency,
           billScanImageName: `bill-scan-${customer.customerNumber}-${monthKey}.png`,
-          employeeReceiptImageName: `receipt-${customer.customerNumber}-${monthKey}.jpg`,
-        }),
+          employeeReceiptImageName: `receipt-${customer.customerNumber}-${monthKey}.jpg`
+        })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -219,7 +219,11 @@ function CollectorScanContent() {
 
           {saved ? (
             <div className="card-actions-right" style={{ marginTop: 12 }}>
-              <button type="button" className="success-btn" onClick={() => router.push("/collector/dashboard")}>
+              <button
+                type="button"
+                className="success-btn"
+                onClick={() => router.push("/collector/dashboard")}
+              >
                 العودة إلى اللوحة
               </button>
             </div>

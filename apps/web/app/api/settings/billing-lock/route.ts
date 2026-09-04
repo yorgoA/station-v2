@@ -38,7 +38,10 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "A valid monthKey (YYYY-MM) is required." }, { status: 400 });
     }
     if (!body.action || !["force_open", "force_close", "clear"].includes(body.action)) {
-      return NextResponse.json({ error: "action must be force_open, force_close, or clear." }, { status: 400 });
+      return NextResponse.json(
+        { error: "action must be force_open, force_close, or clear." },
+        { status: 400 }
+      );
     }
 
     const supabase = createSupabaseAdminClient();

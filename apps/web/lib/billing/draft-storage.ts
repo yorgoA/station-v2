@@ -43,7 +43,7 @@ export function normalizeCounterImageNameForDraft(value?: string): string | unde
 export function toStorableDraftRows(rows: BillingEntryRow[]): BillingEntryRow[] {
   return rows.map((row) => ({
     ...row,
-    counterImageName: normalizeCounterImageNameForDraft(row.counterImageName),
+    counterImageName: normalizeCounterImageNameForDraft(row.counterImageName)
   }));
 }
 
@@ -92,7 +92,7 @@ export function writeBillingDraftRows(monthKey: string, region: string, rows: Bi
       obligatoryLinkedToCustomerNumber: row.obligatoryLinkedToCustomerNumber,
       fixedMonthlyAmount: row.fixedMonthlyAmount,
       proposedFixedMonthlyAmount: row.proposedFixedMonthlyAmount,
-      proposedFixedMonthlyNote: row.proposedFixedMonthlyNote,
+      proposedFixedMonthlyNote: row.proposedFixedMonthlyNote
     }));
     try {
       window.localStorage.setItem(key, JSON.stringify(minimal));

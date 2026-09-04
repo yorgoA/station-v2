@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../../_components/app-shell";
 import { managerNavItems } from "../../_components/role-nav";
-import { type EmployeeBillingType, type EmployeeRegion, type EmployeeStatus } from "../../../lib/types/employee";
+import {
+  type EmployeeBillingType,
+  type EmployeeRegion,
+  type EmployeeStatus
+} from "../../../lib/types/employee";
 import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
 import { formatLbp } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
@@ -87,7 +91,17 @@ export default function ManagerCustomersPage() {
         bySearch
       );
     });
-  }, [balanceStatus, billingType, boxNumber, building, managerCustomers, paymentStatus, region, search, status]);
+  }, [
+    balanceStatus,
+    billingType,
+    boxNumber,
+    building,
+    managerCustomers,
+    paymentStatus,
+    region,
+    search,
+    status
+  ]);
 
   function resetAllFilters() {
     setSearch("");
@@ -126,11 +140,7 @@ export default function ManagerCustomersPage() {
             Show All Customers
           </button>
         </div>
-        <button
-          type="button"
-          className="link-btn"
-          onClick={() => setShowAdvancedFilters((v) => !v)}
-        >
+        <button type="button" className="link-btn" onClick={() => setShowAdvancedFilters((v) => !v)}>
           {showAdvancedFilters ? "Hide more filters" : "More filters"}
         </button>
         {showAdvancedFilters && (
@@ -235,9 +245,7 @@ export default function ManagerCustomersPage() {
               <select
                 id="manager-customers-balance-status-filter"
                 value={balanceStatus}
-                onChange={(e) =>
-                  setBalanceStatus(e.target.value as "all" | "has-balance" | "no-balance")
-                }
+                onChange={(e) => setBalanceStatus(e.target.value as "all" | "has-balance" | "no-balance")}
               >
                 <option value="all">All</option>
                 <option value="has-balance">Has balance</option>

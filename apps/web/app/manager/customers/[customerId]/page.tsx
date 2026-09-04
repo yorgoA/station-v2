@@ -65,7 +65,14 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
   const [boxNumber, setBoxNumber] = useState("");
   const [building, setBuilding] = useState("");
   const [allCustomers, setAllCustomers] = useState<
-    Array<{ id: string; fullName: string; customerNumber: string; boxNumber?: string; building?: string; isMonitor?: boolean }>
+    Array<{
+      id: string;
+      fullName: string;
+      customerNumber: string;
+      boxNumber?: string;
+      building?: string;
+      isMonitor?: boolean;
+    }>
   >([]);
   const [selectedLinkedIds, setSelectedLinkedIds] = useState<string[]>([]);
   const [boxMode, setBoxMode] = useState<"existing" | "new">("existing");
@@ -181,9 +188,9 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         modifiedAt: new Date().toLocaleString(),
         section,
         rowKey,
-        changes,
+        changes
       },
-      ...prev,
+      ...prev
     ]);
   }
 
@@ -221,23 +228,40 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
     }
     const before = customer;
     const changes: AuditChange[] = [];
-    if (fullName !== before.fullName) changes.push({ field: "fullName", before: before.fullName, after: fullName });
-    if (customerNumber !== before.customerNumber) changes.push({ field: "customerNumber", before: before.customerNumber, after: customerNumber });
-    if (phone !== (before.phone ?? "")) changes.push({ field: "phone", before: before.phone ?? "", after: phone });
-    if (boxNumber !== (before.boxNumber ?? "")) changes.push({ field: "boxNumber", before: before.boxNumber ?? "", after: boxNumber });
-    if (building !== (before.building ?? "")) changes.push({ field: "building", before: before.building ?? "", after: building });
+    if (fullName !== before.fullName)
+      changes.push({ field: "fullName", before: before.fullName, after: fullName });
+    if (customerNumber !== before.customerNumber)
+      changes.push({ field: "customerNumber", before: before.customerNumber, after: customerNumber });
+    if (phone !== (before.phone ?? ""))
+      changes.push({ field: "phone", before: before.phone ?? "", after: phone });
+    if (boxNumber !== (before.boxNumber ?? ""))
+      changes.push({ field: "boxNumber", before: before.boxNumber ?? "", after: boxNumber });
+    if (building !== (before.building ?? ""))
+      changes.push({ field: "building", before: before.building ?? "", after: building });
     if (status !== before.status) changes.push({ field: "status", before: before.status, after: status });
     if (billingPlan !== before.billingType) {
       changes.push({ field: "billingType", before: before.billingType, after: billingPlan });
     }
     if (subscribedAmpere !== String(before.subscribedAmpere ?? "")) {
-      changes.push({ field: "subscribedAmpere", before: String(before.subscribedAmpere ?? ""), after: subscribedAmpere });
+      changes.push({
+        field: "subscribedAmpere",
+        before: String(before.subscribedAmpere ?? ""),
+        after: subscribedAmpere
+      });
     }
     if (fixedMonthlyAmount !== String(before.fixedMonthlyAmount || "")) {
-      changes.push({ field: "fixedMonthlyAmount", before: String(before.fixedMonthlyAmount || ""), after: fixedMonthlyAmount });
+      changes.push({
+        field: "fixedMonthlyAmount",
+        before: String(before.fixedMonthlyAmount || ""),
+        after: fixedMonthlyAmount
+      });
     }
     if (startingCounter !== String(before.startingCounter ?? 0)) {
-      changes.push({ field: "startingCounter", before: String(before.startingCounter ?? 0), after: startingCounter });
+      changes.push({
+        field: "startingCounter",
+        before: String(before.startingCounter ?? 0),
+        after: startingCounter
+      });
     }
 
     const response = await fetch(`/api/customers/${params.customerId}`, {
@@ -255,9 +279,10 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         subscribedAmpere:
           billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
         fixedMonthlyAmount: billingPlan === "fixed-monthly" ? Number(fixedMonthlyAmount) : 0,
-        startingCounter: customer.isMonitor || billingPlan === "both" ? Number(startingCounter || "0") : undefined,
-        linkedCustomerIds: customer.isMonitor ? selectedLinkedIds : undefined,
-      }),
+        startingCounter:
+          customer.isMonitor || billingPlan === "both" ? Number(startingCounter || "0") : undefined,
+        linkedCustomerIds: customer.isMonitor ? selectedLinkedIds : undefined
+      })
     });
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) {
@@ -275,13 +300,16 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
             building,
             status,
             billingType: billingPlan,
-            subscribedAmpere: billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
+            subscribedAmpere:
+              billingPlan === "amp-only" || billingPlan === "both" ? Number(subscribedAmpere) : null,
             fixedMonthlyAmount: billingPlan === "fixed-monthly" ? Number(fixedMonthlyAmount) : 0,
             startingCounter:
-              customer.isMonitor || billingPlan === "both" ? Number(startingCounter || "0") : prev.startingCounter,
+              customer.isMonitor || billingPlan === "both"
+                ? Number(startingCounter || "0")
+                : prev.startingCounter,
             linkedCustomers: customer.isMonitor
               ? linkableCustomerOptions.filter((c) => selectedLinkedIds.includes(c.id))
-              : prev.linkedCustomers,
+              : prev.linkedCustomers
           }
         : prev
     );
@@ -300,11 +328,28 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
     const before = bills.find((b) => b.id === editingBillId);
     if (!before) return;
     const changes: AuditChange[] = [];
-    if (billDraft.previousCounter !== before.previousCounter) changes.push({ field: "previousCounter", before: String(before.previousCounter), after: String(billDraft.previousCounter) });
-    if (billDraft.newCounter !== before.newCounter) changes.push({ field: "newCounter", before: String(before.newCounter), after: String(billDraft.newCounter) });
-    if (billDraft.amount !== before.amount) changes.push({ field: "amount", before: String(before.amount), after: String(billDraft.amount) });
-    if (billDraft.remainingAmount !== before.remainingAmount) changes.push({ field: "remainingAmount", before: String(before.remainingAmount), after: String(billDraft.remainingAmount) });
-    if (billDraft.status !== before.status) changes.push({ field: "status", before: before.status, after: billDraft.status });
+    if (billDraft.previousCounter !== before.previousCounter)
+      changes.push({
+        field: "previousCounter",
+        before: String(before.previousCounter),
+        after: String(billDraft.previousCounter)
+      });
+    if (billDraft.newCounter !== before.newCounter)
+      changes.push({
+        field: "newCounter",
+        before: String(before.newCounter),
+        after: String(billDraft.newCounter)
+      });
+    if (billDraft.amount !== before.amount)
+      changes.push({ field: "amount", before: String(before.amount), after: String(billDraft.amount) });
+    if (billDraft.remainingAmount !== before.remainingAmount)
+      changes.push({
+        field: "remainingAmount",
+        before: String(before.remainingAmount),
+        after: String(billDraft.remainingAmount)
+      });
+    if (billDraft.status !== before.status)
+      changes.push({ field: "status", before: before.status, after: billDraft.status });
 
     const response = await fetch(`/api/customers/${params.customerId}`, {
       method: "PATCH",
@@ -316,15 +361,21 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         newCounter: billDraft.newCounter,
         amount: billDraft.amount,
         remainingAmount: billDraft.remainingAmount,
-        status: billDraft.status,
-      }),
+        status: billDraft.status
+      })
     });
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) {
       setMessage(payload.error ?? "Failed to save bill.");
       return;
     }
-    setBills((prev) => prev.map((b) => (b.id === editingBillId ? { ...billDraft, consumptionKwh: Math.max(0, billDraft.newCounter - billDraft.previousCounter) } : b)));
+    setBills((prev) =>
+      prev.map((b) =>
+        b.id === editingBillId
+          ? { ...billDraft, consumptionKwh: Math.max(0, billDraft.newCounter - billDraft.previousCounter) }
+          : b
+      )
+    );
     addAudit("bill_row", before.monthKey, changes);
     setEditingBillId(null);
     setBillDraft(null);
@@ -341,9 +392,12 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
     const before = payments.find((p) => p.id === editingPaymentId);
     if (!before) return;
     const changes: AuditChange[] = [];
-    if (paymentDraft.amount !== before.amount) changes.push({ field: "amount", before: String(before.amount), after: String(paymentDraft.amount) });
-    if (paymentDraft.paymentDate !== before.paymentDate) changes.push({ field: "paymentDate", before: before.paymentDate, after: paymentDraft.paymentDate });
-    if (paymentDraft.receiptRef !== before.receiptRef) changes.push({ field: "receiptRef", before: before.receiptRef, after: paymentDraft.receiptRef });
+    if (paymentDraft.amount !== before.amount)
+      changes.push({ field: "amount", before: String(before.amount), after: String(paymentDraft.amount) });
+    if (paymentDraft.paymentDate !== before.paymentDate)
+      changes.push({ field: "paymentDate", before: before.paymentDate, after: paymentDraft.paymentDate });
+    if (paymentDraft.receiptRef !== before.receiptRef)
+      changes.push({ field: "receiptRef", before: before.receiptRef, after: paymentDraft.receiptRef });
 
     const response = await fetch(`/api/customers/${params.customerId}`, {
       method: "PATCH",
@@ -353,8 +407,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         paymentId: paymentDraft.id,
         amount: paymentDraft.amount,
         paymentDate: paymentDraft.paymentDate,
-        receiptRef: paymentDraft.receiptRef,
-      }),
+        receiptRef: paymentDraft.receiptRef
+      })
     });
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) {
@@ -382,9 +436,18 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
         <h3 style={{ marginTop: 0 }}>Customer Information</h3>
         {isEditingInfo ? (
           <div className="filters-grid filters-grid-pro">
-            <label>Name<input value={fullName} onChange={(e) => setFullName(e.target.value)} /></label>
-            <label>Number<input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} /></label>
-            <label>Phone<input value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
+            <label>
+              Name
+              <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            </label>
+            <label>
+              Number
+              <input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} />
+            </label>
+            <label>
+              Phone
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </label>
             <label>
               Box
               {boxMode === "existing" ? (
@@ -397,7 +460,11 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                   ))}
                 </select>
               ) : (
-                <input value={boxNumber} onChange={(e) => setBoxNumber(e.target.value)} placeholder="New box" />
+                <input
+                  value={boxNumber}
+                  onChange={(e) => setBoxNumber(e.target.value)}
+                  placeholder="New box"
+                />
               )}
               <button
                 type="button"
@@ -436,7 +503,11 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                   ))}
                 </select>
               ) : (
-                <input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder="New building" />
+                <input
+                  value={building}
+                  onChange={(e) => setBuilding(e.target.value)}
+                  placeholder="New building"
+                />
               )}
               <button
                 type="button"
@@ -470,7 +541,7 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                   options={linkableCustomerOptions.map((option) => ({
                     id: option.id,
                     label: option.fullName,
-                    sublabel: option.customerNumber,
+                    sublabel: option.customerNumber
                   }))}
                   selectedIds={selectedLinkedIds}
                   onChange={setSelectedLinkedIds}
@@ -542,13 +613,34 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
           </div>
         ) : (
           <div className="info-grid">
-            <div><p className="muted">Name</p><p>{customer.fullName}</p></div>
-            <div><p className="muted">Number</p><p>{customer.customerNumber}</p></div>
-            <div><p className="muted">Phone</p><p>{customer.phone || "-"}</p></div>
-            <div><p className="muted">Region</p><p>{customer.region}</p></div>
-            <div><p className="muted">Box</p><p>{customer.boxNumber || "-"}</p></div>
-            <div><p className="muted">Building</p><p>{customer.building || "-"}</p></div>
-            <div><p className="muted">Billing Type</p><p>{customer.billingType}</p></div>
+            <div>
+              <p className="muted">Name</p>
+              <p>{customer.fullName}</p>
+            </div>
+            <div>
+              <p className="muted">Number</p>
+              <p>{customer.customerNumber}</p>
+            </div>
+            <div>
+              <p className="muted">Phone</p>
+              <p>{customer.phone || "-"}</p>
+            </div>
+            <div>
+              <p className="muted">Region</p>
+              <p>{customer.region}</p>
+            </div>
+            <div>
+              <p className="muted">Box</p>
+              <p>{customer.boxNumber || "-"}</p>
+            </div>
+            <div>
+              <p className="muted">Building</p>
+              <p>{customer.building || "-"}</p>
+            </div>
+            <div>
+              <p className="muted">Billing Type</p>
+              <p>{customer.billingType}</p>
+            </div>
             {customer.isMonitor ? (
               <div>
                 <p className="muted">Linked To</p>
@@ -560,15 +652,27 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               </div>
             ) : null}
             {customer.billingType === "amp-only" || customer.billingType === "both" ? (
-              <div><p className="muted">Subscribed Ampere</p><p>{customer.subscribedAmpere ?? "not set"}</p></div>
+              <div>
+                <p className="muted">Subscribed Ampere</p>
+                <p>{customer.subscribedAmpere ?? "not set"}</p>
+              </div>
             ) : null}
             {customer.billingType === "fixed-monthly" ? (
-              <div><p className="muted">Fixed Monthly Amount</p><p>{formatLbp(customer.fixedMonthlyAmount)}</p></div>
+              <div>
+                <p className="muted">Fixed Monthly Amount</p>
+                <p>{formatLbp(customer.fixedMonthlyAmount)}</p>
+              </div>
             ) : null}
             {customer.isMonitor || customer.billingType === "both" ? (
-              <div><p className="muted">Starting Counter</p><p>{formatNumber(customer.startingCounter ?? 0)} kWh</p></div>
+              <div>
+                <p className="muted">Starting Counter</p>
+                <p>{formatNumber(customer.startingCounter ?? 0)} kWh</p>
+              </div>
             ) : null}
-            <div><p className="muted">Status</p><p>{customer.status}</p></div>
+            <div>
+              <p className="muted">Status</p>
+              <p>{customer.status}</p>
+            </div>
           </div>
         )}
         {message ? <p className="muted">{message}</p> : null}
@@ -580,8 +684,12 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 className="danger-btn"
                 onClick={() => {
                   setBillingPlan(customer.billingType);
-                  setSubscribedAmpere(customer.subscribedAmpere != null ? String(customer.subscribedAmpere) : "");
-                  setFixedMonthlyAmount(customer.fixedMonthlyAmount ? String(customer.fixedMonthlyAmount) : "");
+                  setSubscribedAmpere(
+                    customer.subscribedAmpere != null ? String(customer.subscribedAmpere) : ""
+                  );
+                  setFixedMonthlyAmount(
+                    customer.fixedMonthlyAmount ? String(customer.fixedMonthlyAmount) : ""
+                  );
                   setIsEditingInfo(false);
                 }}
               >
@@ -592,7 +700,11 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 className="success-btn"
                 onClick={saveCustomerInfo}
                 disabled={boxNameBlocking || buildingNameBlocking}
-                title={boxNameBlocking || buildingNameBlocking ? "Confirm the new box/building name above first" : undefined}
+                title={
+                  boxNameBlocking || buildingNameBlocking
+                    ? "Confirm the new box/building name above first"
+                    : undefined
+                }
               >
                 Save Info
               </button>
@@ -602,7 +714,9 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               type="button"
               onClick={() => {
                 setBillingPlan(customer.billingType);
-                setSubscribedAmpere(customer.subscribedAmpere != null ? String(customer.subscribedAmpere) : "");
+                setSubscribedAmpere(
+                  customer.subscribedAmpere != null ? String(customer.subscribedAmpere) : ""
+                );
                 setFixedMonthlyAmount(customer.fixedMonthlyAmount ? String(customer.fixedMonthlyAmount) : "");
                 setIsEditingInfo(true);
               }}
@@ -634,7 +748,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               const href = (() => {
                 const raw = String(row.counterImageUrl ?? "").trim();
                 if (raw.startsWith("data:image/")) return raw;
-                if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/")) return raw;
+                if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/"))
+                  return raw;
                 return "";
               })();
               return (
@@ -653,13 +768,23 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                         alt={`Counter ${row.monthKey}`}
                         title="Click to enlarge"
                         onClick={() => setImageModalSrc(href)}
-                        style={{ width: 56, height: "auto", borderRadius: 4, border: "1px solid #d1d5db", cursor: "pointer" }}
+                        style={{
+                          width: 56,
+                          height: "auto",
+                          borderRadius: 4,
+                          border: "1px solid #d1d5db",
+                          cursor: "pointer"
+                        }}
                       />
                     ) : (
                       <span className="muted">—</span>
                     )}
                   </td>
-                  <td><button type="button" onClick={() => openBillEdit(row)}>Modify</button></td>
+                  <td>
+                    <button type="button" onClick={() => openBillEdit(row)}>
+                      Modify
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -697,7 +822,11 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                 <td>{row.paymentDate}</td>
                 <td>{row.amount}</td>
                 <td>{row.receiptRef || "-"}</td>
-                <td><button type="button" onClick={() => openPaymentEdit(row)}>Modify</button></td>
+                <td>
+                  <button type="button" onClick={() => openPaymentEdit(row)}>
+                    Modify
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -718,7 +847,11 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
           </thead>
           <tbody>
             {auditEntries.length === 0 ? (
-              <tr><td colSpan={5} className="muted">No modifications logged yet.</td></tr>
+              <tr>
+                <td colSpan={5} className="muted">
+                  No modifications logged yet.
+                </td>
+              </tr>
             ) : (
               auditEntries.map((entry) => (
                 <tr key={entry.id}>
@@ -726,7 +859,11 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
                   <td>{entry.section}</td>
                   <td>{entry.rowKey ?? "-"}</td>
                   <td>{entry.changes.length}</td>
-                  <td><button type="button" onClick={() => setSelectedAudit(entry)}>View</button></td>
+                  <td>
+                    <button type="button" onClick={() => setSelectedAudit(entry)}>
+                      View
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -739,21 +876,69 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
           <div className="modal-card">
             <h3 style={{ marginTop: 0 }}>Modify Bill ({billDraft.monthKey})</h3>
             <div className="filters-grid filters-grid-pro">
-              <label>Previous Counter<input type="number" value={billDraft.previousCounter} onChange={(e) => setBillDraft((p) => (p ? { ...p, previousCounter: Number(e.target.value) } : p))} /></label>
-              <label>Current Counter<input type="number" value={billDraft.newCounter} onChange={(e) => setBillDraft((p) => (p ? { ...p, newCounter: Number(e.target.value) } : p))} /></label>
-              <label>Amount<input type="number" value={billDraft.amount} onChange={(e) => setBillDraft((p) => (p ? { ...p, amount: Number(e.target.value) } : p))} /></label>
-              <label>Remaining<input type="number" value={billDraft.remainingAmount} onChange={(e) => setBillDraft((p) => (p ? { ...p, remainingAmount: Number(e.target.value) } : p))} /></label>
+              <label>
+                Previous Counter
+                <input
+                  type="number"
+                  value={billDraft.previousCounter}
+                  onChange={(e) =>
+                    setBillDraft((p) => (p ? { ...p, previousCounter: Number(e.target.value) } : p))
+                  }
+                />
+              </label>
+              <label>
+                Current Counter
+                <input
+                  type="number"
+                  value={billDraft.newCounter}
+                  onChange={(e) =>
+                    setBillDraft((p) => (p ? { ...p, newCounter: Number(e.target.value) } : p))
+                  }
+                />
+              </label>
+              <label>
+                Amount
+                <input
+                  type="number"
+                  value={billDraft.amount}
+                  onChange={(e) => setBillDraft((p) => (p ? { ...p, amount: Number(e.target.value) } : p))}
+                />
+              </label>
+              <label>
+                Remaining
+                <input
+                  type="number"
+                  value={billDraft.remainingAmount}
+                  onChange={(e) =>
+                    setBillDraft((p) => (p ? { ...p, remainingAmount: Number(e.target.value) } : p))
+                  }
+                />
+              </label>
               <label>
                 Status
-                <select value={billDraft.status} onChange={(e) => setBillDraft((p) => (p ? { ...p, status: e.target.value } : p))}>
+                <select
+                  value={billDraft.status}
+                  onChange={(e) => setBillDraft((p) => (p ? { ...p, status: e.target.value } : p))}
+                >
                   <option value="paid">paid</option>
                   <option value="unpaid">unpaid</option>
                 </select>
               </label>
             </div>
             <div className="card-actions-right">
-              <button type="button" className="danger-btn" onClick={() => { setEditingBillId(null); setBillDraft(null); }}>Cancel</button>{" "}
-              <button type="button" className="success-btn" onClick={saveBillEdit}>Save Bill</button>
+              <button
+                type="button"
+                className="danger-btn"
+                onClick={() => {
+                  setEditingBillId(null);
+                  setBillDraft(null);
+                }}
+              >
+                Cancel
+              </button>{" "}
+              <button type="button" className="success-btn" onClick={saveBillEdit}>
+                Save Bill
+              </button>
             </div>
           </div>
         </div>
@@ -764,13 +949,44 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
           <div className="modal-card">
             <h3 style={{ marginTop: 0 }}>Modify Payment</h3>
             <div className="filters-grid filters-grid-pro">
-              <label>Amount<input type="number" value={paymentDraft.amount} onChange={(e) => setPaymentDraft((p) => (p ? { ...p, amount: Number(e.target.value) } : p))} /></label>
-              <label>Date<input type="date" value={paymentDraft.paymentDate} onChange={(e) => setPaymentDraft((p) => (p ? { ...p, paymentDate: e.target.value } : p))} /></label>
-              <label>Receipt Ref<input value={paymentDraft.receiptRef} onChange={(e) => setPaymentDraft((p) => (p ? { ...p, receiptRef: e.target.value } : p))} /></label>
+              <label>
+                Amount
+                <input
+                  type="number"
+                  value={paymentDraft.amount}
+                  onChange={(e) => setPaymentDraft((p) => (p ? { ...p, amount: Number(e.target.value) } : p))}
+                />
+              </label>
+              <label>
+                Date
+                <input
+                  type="date"
+                  value={paymentDraft.paymentDate}
+                  onChange={(e) => setPaymentDraft((p) => (p ? { ...p, paymentDate: e.target.value } : p))}
+                />
+              </label>
+              <label>
+                Receipt Ref
+                <input
+                  value={paymentDraft.receiptRef}
+                  onChange={(e) => setPaymentDraft((p) => (p ? { ...p, receiptRef: e.target.value } : p))}
+                />
+              </label>
             </div>
             <div className="card-actions-right">
-              <button type="button" className="danger-btn" onClick={() => { setEditingPaymentId(null); setPaymentDraft(null); }}>Cancel</button>{" "}
-              <button type="button" className="success-btn" onClick={savePaymentEdit}>Save Payment</button>
+              <button
+                type="button"
+                className="danger-btn"
+                onClick={() => {
+                  setEditingPaymentId(null);
+                  setPaymentDraft(null);
+                }}
+              >
+                Cancel
+              </button>{" "}
+              <button type="button" className="success-btn" onClick={savePaymentEdit}>
+                Save Payment
+              </button>
             </div>
           </div>
         </div>
@@ -781,7 +997,8 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
           <div className="modal-card">
             <h3 style={{ marginTop: 0 }}>Modification Details</h3>
             <p className="muted">
-              {selectedAudit.modifiedAt} • {selectedAudit.section} {selectedAudit.rowKey ? `• ${selectedAudit.rowKey}` : ""}
+              {selectedAudit.modifiedAt} • {selectedAudit.section}{" "}
+              {selectedAudit.rowKey ? `• ${selectedAudit.rowKey}` : ""}
             </p>
             <table>
               <thead>
@@ -802,7 +1019,9 @@ export default function ManagerCustomerDetailsPage({ params }: Props) {
               </tbody>
             </table>
             <div className="card-actions-right">
-              <button type="button" className="danger-btn" onClick={() => setSelectedAudit(null)}>Close</button>
+              <button type="button" className="danger-btn" onClick={() => setSelectedAudit(null)}>
+                Close
+              </button>
             </div>
           </div>
         </div>

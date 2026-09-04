@@ -32,12 +32,12 @@ type CollectionStatus = "to_collect" | "pending" | "validated";
 const STATUS_LABEL: Record<CollectionStatus, string> = {
   to_collect: "To collect",
   pending: "Scanned — awaiting employee validation",
-  validated: "Validated",
+  validated: "Validated"
 };
 const STATUS_COLOR: Record<CollectionStatus, string> = {
   to_collect: "var(--danger)",
   pending: "var(--warning)",
-  validated: "var(--success)",
+  validated: "var(--success)"
 };
 const STATUS_ORDER: Record<CollectionStatus, number> = { to_collect: 0, pending: 1, validated: 2 };
 
@@ -45,7 +45,7 @@ function CollectModal({
   customer,
   monthKey,
   onClose,
-  onDone,
+  onDone
 }: {
   customer: CollectorCustomer;
   monthKey: string;
@@ -94,8 +94,8 @@ function CollectModal({
           expectedAmount: bill > 0 ? bill : undefined,
           currency,
           billScanImageName: `bill-scan-${customer.customerNumber}-${monthKey}.png`,
-          employeeReceiptImageName: `receipt-${customer.customerNumber}-${monthKey}.jpg`,
-        }),
+          employeeReceiptImageName: `receipt-${customer.customerNumber}-${monthKey}.jpg`
+        })
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -222,7 +222,7 @@ export default function CollectorDashboardPage() {
             priceToPay: customer.ongoingBalance ?? 0,
             billThisMonth: customer.ongoingBalanceThisMonth ?? 0,
             paidThisMonth: customer.paidThisMonth,
-            isMonitor: Boolean(customer.isMonitor),
+            isMonitor: Boolean(customer.isMonitor)
           }))
         );
       })
@@ -313,9 +313,7 @@ export default function CollectorDashboardPage() {
         setCameraMsg("That QR doesn't contain a customer number.");
         return;
       }
-      const match = customers.find(
-        (c) => c.customerNumber.toLowerCase() === customerNumber.toLowerCase()
-      );
+      const match = customers.find((c) => c.customerNumber.toLowerCase() === customerNumber.toLowerCase());
       if (!match) {
         setCameraMsg(`Customer ${customerNumber} isn't in the list for ${monthKey} / ${regionFilter}.`);
         return;
@@ -377,16 +375,28 @@ export default function CollectorDashboardPage() {
         </div>
         <div className="kpi-grid" style={{ marginTop: 4 }}>
           <div>
-            <p className="muted" style={{ marginBottom: 4 }}>To collect</p>
-            <p className="kpi-value" style={{ marginTop: 0, color: "var(--danger)" }}>{toCollectCount}</p>
+            <p className="muted" style={{ marginBottom: 4 }}>
+              To collect
+            </p>
+            <p className="kpi-value" style={{ marginTop: 0, color: "var(--danger)" }}>
+              {toCollectCount}
+            </p>
           </div>
           <div>
-            <p className="muted" style={{ marginBottom: 4 }}>Awaiting validation</p>
-            <p className="kpi-value" style={{ marginTop: 0, color: "var(--warning)" }}>{pendingCount}</p>
+            <p className="muted" style={{ marginBottom: 4 }}>
+              Awaiting validation
+            </p>
+            <p className="kpi-value" style={{ marginTop: 0, color: "var(--warning)" }}>
+              {pendingCount}
+            </p>
           </div>
           <div>
-            <p className="muted" style={{ marginBottom: 4 }}>Validated</p>
-            <p className="kpi-value" style={{ marginTop: 0, color: "var(--success)" }}>{validatedCount}</p>
+            <p className="muted" style={{ marginBottom: 4 }}>
+              Validated
+            </p>
+            <p className="kpi-value" style={{ marginTop: 0, color: "var(--success)" }}>
+              {validatedCount}
+            </p>
           </div>
         </div>
         <div className="card-actions-right">
@@ -428,11 +438,7 @@ export default function CollectorDashboardPage() {
                 <td style={{ color: STATUS_COLOR[row.status] }}>{STATUS_LABEL[row.status]}</td>
                 <td>
                   {row.status === "to_collect" ? (
-                    <button
-                      type="button"
-                      className="action-link-btn"
-                      onClick={() => setCollectTarget(row)}
-                    >
+                    <button type="button" className="action-link-btn" onClick={() => setCollectTarget(row)}>
                       Open
                     </button>
                   ) : null}

@@ -79,16 +79,24 @@ export default function ManagerBillingCalendarSettingsPage() {
         ← Back to Settings
       </Link>
 
-      {message ? <p className="muted" role="status">{message}</p> : null}
-      {error ? <p style={{ color: "var(--danger)" }} role="alert">{error}</p> : null}
+      {message ? (
+        <p className="muted" role="status">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p style={{ color: "var(--danger)" }} role="alert">
+          {error}
+        </p>
+      ) : null}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Entry Window</h3>
         <p className="muted">
-          By default a month is open for billing entry from its own 27th through the 26th of the
-          next month (e.g. July: 27 Jul – 26 Aug), so a reading walk that runs into the first days
-          of the following month is never locked out. Use this to force a month open earlier -- for
-          testing, or any other exception -- or force it closed.
+          By default a month is open for billing entry from its own 27th through the 26th of the next month
+          (e.g. July: 27 Jul – 26 Aug), so a reading walk that runs into the first days of the following month
+          is never locked out. Use this to force a month open earlier -- for testing, or any other exception
+          -- or force it closed.
         </p>
         <div className="filters-grid filters-grid-pro">
           <label htmlFor="billing-calendar-month">
@@ -122,10 +130,20 @@ export default function ManagerBillingCalendarSettingsPage() {
         ) : null}
 
         <div className="card-actions-right" style={{ marginTop: 12 }}>
-          <button type="button" className="success-btn" disabled={saving} onClick={() => applyAction("force_open")}>
+          <button
+            type="button"
+            className="success-btn"
+            disabled={saving}
+            onClick={() => applyAction("force_open")}
+          >
             Force Open Now
           </button>
-          <button type="button" className="danger-btn" disabled={saving} onClick={() => applyAction("force_close")}>
+          <button
+            type="button"
+            className="danger-btn"
+            disabled={saving}
+            onClick={() => applyAction("force_close")}
+          >
             Force Closed
           </button>
           <button type="button" disabled={saving} onClick={() => applyAction("clear")}>

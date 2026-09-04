@@ -18,7 +18,13 @@ type SimilarValueGuardProps = {
  * otherwise silently create a near-duplicate. Never hard-blocks: the employee
  * can always confirm "no, this is genuinely new" and continue.
  */
-export function SimilarValueGuard({ label, value, candidates, onUseExisting, onBlockingChange }: SimilarValueGuardProps) {
+export function SimilarValueGuard({
+  label,
+  value,
+  candidates,
+  onUseExisting,
+  onBlockingChange
+}: SimilarValueGuardProps) {
   const [acknowledgedValue, setAcknowledgedValue] = useState<string | null>(null);
 
   const matches = useMemo(() => findSimilarValues(value, candidates), [value, candidates]);

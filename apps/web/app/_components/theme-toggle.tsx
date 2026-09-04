@@ -21,7 +21,14 @@ function SunIcon() {
 
 function MoonIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
     </svg>
   );
@@ -33,7 +40,8 @@ export function ThemeToggle({ fixed = false }: { fixed?: boolean }) {
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-    const initial: ThemeMode = saved === "light" || saved === "dark" ? saved : systemPrefersDark() ? "dark" : "light";
+    const initial: ThemeMode =
+      saved === "light" || saved === "dark" ? saved : systemPrefersDark() ? "dark" : "light";
     setMode(initial);
     document.documentElement.setAttribute("data-theme", initial);
   }, []);
@@ -49,7 +57,12 @@ export function ThemeToggle({ fixed = false }: { fixed?: boolean }) {
 
   if (mode === null) {
     // Avoid rendering the wrong icon for a frame before we've read localStorage.
-    return <div className={fixed ? "theme-toggle-row theme-toggle-fixed" : "theme-toggle-row"} style={{ height: 33 }} />;
+    return (
+      <div
+        className={fixed ? "theme-toggle-row theme-toggle-fixed" : "theme-toggle-row"}
+        style={{ height: 33 }}
+      />
+    );
   }
 
   return (

@@ -10,9 +10,7 @@ function levenshteinDistance(a: string, b: string): number {
     const currRow = [i];
     for (let j = 1; j <= n; j++) {
       currRow[j] =
-        a[i - 1] === b[j - 1]
-          ? prevRow[j - 1]
-          : 1 + Math.min(prevRow[j - 1], prevRow[j], currRow[j - 1]);
+        a[i - 1] === b[j - 1] ? prevRow[j - 1] : 1 + Math.min(prevRow[j - 1], prevRow[j], currRow[j - 1]);
     }
     prevRow = currRow;
   }

@@ -22,7 +22,7 @@ export function MultiSelect({
   selectedIds,
   onChange,
   searchPlaceholder = "Search...",
-  emptyMessage = "No options available.",
+  emptyMessage = "No options available."
 }: MultiSelectProps) {
   const [query, setQuery] = useState("");
 
@@ -35,7 +35,9 @@ export function MultiSelect({
   }, [options, query]);
 
   function toggle(id: string) {
-    onChange(selectedIds.includes(id) ? selectedIds.filter((existing) => existing !== id) : [...selectedIds, id]);
+    onChange(
+      selectedIds.includes(id) ? selectedIds.filter((existing) => existing !== id) : [...selectedIds, id]
+    );
   }
 
   return (

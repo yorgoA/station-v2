@@ -39,10 +39,7 @@ type PatchBody =
       receiptRef?: string;
     };
 
-export async function GET(
-  _request: Request,
-  { params }: { params: { customerId: string } }
-) {
+export async function GET(_request: Request, { params }: { params: { customerId: string } }) {
   try {
     const auth = await requireRole(["manager", "employee"]);
     if ("response" in auth) return auth.response;
@@ -69,7 +66,7 @@ export async function GET(
         .from("payments")
         .select("id, amount, payment_date, receipt_image_url")
         .eq("customer_id", customerId)
-        .order("payment_date", { ascending: false }),
+        .order("payment_date", { ascending: false })
     ]);
 
     // Counter photo per batch for this customer (bills don't store it; the
@@ -121,7 +118,7 @@ export async function GET(
       linkedCustomers = (linkedRows ?? []).map((row) => ({
         id: String(row.id ?? ""),
         fullName: String(row.full_name ?? ""),
-        customerNumber: String(row.customer_number ?? ""),
+        customerNumber: String(row.customer_number ?? "")
       }));
     }
 
@@ -140,7 +137,7 @@ export async function GET(
         fixedMonthlyAmount: c.fixed_monthly_amount != null ? Number(c.fixed_monthly_amount) : 0,
         startingCounter: c.starting_counter != null ? Number(c.starting_counter) : 0,
         isMonitor,
-        linkedCustomers,
+        linkedCustomers
       },
       bills:
         (billsRes.data ?? []).map((b) => ({
@@ -153,26 +150,23 @@ export async function GET(
           remainingAmount: Number(b.remaining_amount ?? 0),
           status: String(b.status ?? "unpaid"),
           counterImageUrl: b.billing_batch_id
-            ? counterImageByBatchId.get(String(b.billing_batch_id)) ?? null
-            : null,
+            ? (counterImageByBatchId.get(String(b.billing_batch_id)) ?? null)
+            : null
         })) ?? [],
       payments:
         (paymentsRes.data ?? []).map((p) => ({
           id: p.id,
           amount: Number(p.amount ?? 0),
           paymentDate: String(p.payment_date ?? ""),
-          receiptRef: String(p.receipt_image_url ?? ""),
-        })) ?? [],
+          receiptRef: String(p.receipt_image_url ?? "")
+        })) ?? []
     });
   } catch (error) {
     return serverError(error);
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { customerId: string } }
-) {
+export async function PATCH(request: Request, { params }: { params: { customerId: string } }) {
   try {
     const auth = await requireRole(["manager", "employee"]);
     if ("response" in auth) return auth.response;
@@ -193,7 +187,9 @@ export async function PATCH(
       const disallowed = requestedFields.filter((key) => !EMPLOYEE_EDITABLE_CUSTOMER_FIELDS.has(key));
       if (disallowed.length > 0) {
         return NextResponse.json(
-          { error: `Employees can only edit phone, boxNumber, building, and status. Not allowed: ${disallowed.join(", ")}.` },
+          {
+            error: `Employees can only edit phone, boxNumber, building, and status. Not allowed: ${disallowed.join(", ")}.`
+          },
           { status: 403 }
         );
       }
@@ -211,7 +207,10 @@ export async function PATCH(
       if (body.building !== undefined) payload.building = body.building;
       if (body.status !== undefined) payload.status = body.status;
       if (body.billingPlan !== undefined) {
-        if ((body.billingPlan === "amp-only" || body.billingPlan === "both") && !(Number(body.subscribedAmpere) > 0)) {
+        if (
+          (body.billingPlan === "amp-only" || body.billingPlan === "both") &&
+          !(Number(body.subscribedAmpere) > 0)
+        ) {
           return NextResponse.json(
             { error: "subscribedAmpere is required (and must be > 0) for amp-only/both billing." },
             { status: 400 }
@@ -285,7 +284,7 @@ export async function PATCH(
               .insert({
                 region_id: selfRow.region_id ?? desiredCustomers[0]?.region_id,
                 name: "Monitor",
-                is_active: true,
+                is_active: true
               })
               .select("id")
               .single();
@@ -347,7 +346,11 @@ export async function PATCH(
       if (body.amount !== undefined) payload.amount = body.amount;
       if (body.remainingAmount !== undefined) payload.remaining_amount = body.remainingAmount;
       if (body.status !== undefined) payload.status = body.status;
-      const { error } = await supabase.from("bills").update(payload).eq("id", body.billId).eq("customer_id", customerId);
+      const { error } = await supabase
+        .from("bills")
+        .update(payload)
+        .eq("id", body.billId)
+        .eq("customer_id", customerId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ ok: true });
     }
@@ -357,7 +360,11 @@ export async function PATCH(
       if (body.amount !== undefined) payload.amount = body.amount;
       if (body.paymentDate !== undefined) payload.payment_date = body.paymentDate;
       if (body.receiptRef !== undefined) payload.receipt_image_url = body.receiptRef;
-      const { error } = await supabase.from("payments").update(payload).eq("id", body.paymentId).eq("customer_id", customerId);
+      const { error } = await supabase
+        .from("payments")
+        .update(payload)
+        .eq("id", body.paymentId)
+        .eq("customer_id", customerId);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ ok: true });
     }

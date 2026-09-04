@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -9,9 +9,9 @@ import { CURRENT_MONTH_KEY } from "../../../lib/constants/months";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
 export default function EmployeeDashboardPage() {
-  const [notifications, setNotifications] = useState<
-    Array<{ id: string; message: string; href: string }>
-  >([]);
+  const [notifications, setNotifications] = useState<Array<{ id: string; message: string; href: string }>>(
+    []
+  );
   const [regionFilter, setRegionFilter] = useState<"all" | EmployeeRegion>("all");
   const [monthKey, setMonthKey] = useState(CURRENT_MONTH_KEY);
   const months = useAvailableMonths();
@@ -36,7 +36,10 @@ export default function EmployeeDashboardPage() {
     const params = new URLSearchParams();
     params.set("month", monthKey);
     if (regionFilter !== "all") params.set("region", regionFilter);
-    Promise.all([fetch(`/api/customers?month=${monthKey}&region=${regionFilter}`), fetch(`/api/billing/batches?${params.toString()}`)])
+    Promise.all([
+      fetch(`/api/customers?month=${monthKey}&region=${regionFilter}`),
+      fetch(`/api/billing/batches?${params.toString()}`)
+    ])
       .then(async ([customersResponse, batchesResponse]) => {
         if (!customersResponse.ok) throw new Error("Failed to load customer stats.");
         if (!batchesResponse.ok) throw new Error("Failed to load batch stats.");
@@ -51,7 +54,9 @@ export default function EmployeeDashboardPage() {
           ["pending_review", "changes_requested", "approved_posted"].includes(batch.status)
         );
         setFilteredCustomersCount(rows.length);
-        setPendingEntriesCount(hasOpenWorkflow ? 0 : rows.filter((row) => row.billEnteredThisMonth !== true).length);
+        setPendingEntriesCount(
+          hasOpenWorkflow ? 0 : rows.filter((row) => row.billEnteredThisMonth !== true).length
+        );
       })
       .catch(() => {
         setFilteredCustomersCount(0);
@@ -208,7 +213,10 @@ export default function EmployeeDashboardPage() {
         <div className="card row-needs-change">
           <h3 style={{ marginTop: 0 }}>Billing Corrections Needed</h3>
           <p>Manager requested changes on {changeRequestedCount} batch(es).</p>
-          <Link href={`/employee/billing/preview?month=${monthKey}&region=${regionFilter}`} className="action-link-btn">
+          <Link
+            href={`/employee/billing/preview?month=${monthKey}&region=${regionFilter}`}
+            className="action-link-btn"
+          >
             Open Billing Preview
           </Link>
         </div>

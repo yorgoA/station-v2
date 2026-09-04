@@ -46,7 +46,14 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
   const [boxNumber, setBoxNumber] = useState("");
   const [building, setBuilding] = useState("");
   const [allCustomers, setAllCustomers] = useState<
-    Array<{ id: string; fullName: string; customerNumber: string; boxNumber?: string; building?: string; isMonitor?: boolean }>
+    Array<{
+      id: string;
+      fullName: string;
+      customerNumber: string;
+      boxNumber?: string;
+      building?: string;
+      isMonitor?: boolean;
+    }>
   >([]);
   const [boxMode, setBoxMode] = useState<"existing" | "new">("existing");
   const [buildingMode, setBuildingMode] = useState<"existing" | "new">("existing");
@@ -131,7 +138,11 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
 
   if (!customer) {
     return (
-      <AppShell title="Customer Not Found" subtitle={`No customer data for ${params.customerId}`} navItems={employeeNavItems}>
+      <AppShell
+        title="Customer Not Found"
+        subtitle={`No customer data for ${params.customerId}`}
+        navItems={employeeNavItems}
+      >
         <Link href="/employee/customers" className="back-link">
           ← Back to Customers
         </Link>
@@ -154,8 +165,8 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
       body: JSON.stringify({
         section: "customer",
         boxNumber,
-        building,
-      }),
+        building
+      })
     });
     const res = (await response.json()) as { error?: string };
     if (!response.ok) {
@@ -169,8 +180,8 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
             customer: {
               ...prev.customer,
               boxNumber,
-              building,
-            },
+              building
+            }
           }
         : prev
     );
@@ -231,7 +242,11 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                   ))}
                 </select>
               ) : (
-                <input value={boxNumber} onChange={(e) => setBoxNumber(e.target.value)} placeholder="New box" />
+                <input
+                  value={boxNumber}
+                  onChange={(e) => setBoxNumber(e.target.value)}
+                  placeholder="New box"
+                />
               )}
               <button
                 type="button"
@@ -270,7 +285,11 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                   ))}
                 </select>
               ) : (
-                <input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder="New building" />
+                <input
+                  value={building}
+                  onChange={(e) => setBuilding(e.target.value)}
+                  placeholder="New building"
+                />
               )}
               <button
                 type="button"
@@ -300,8 +319,14 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
           </div>
         ) : (
           <div className="info-grid">
-            <div><p className="muted">Name</p><p>{customer.fullName}</p></div>
-            <div><p className="muted">Number</p><p>{customer.customerNumber}</p></div>
+            <div>
+              <p className="muted">Name</p>
+              <p>{customer.fullName}</p>
+            </div>
+            <div>
+              <p className="muted">Number</p>
+              <p>{customer.customerNumber}</p>
+            </div>
             {customer.isMonitor ? (
               <div>
                 <p className="muted">Linked To</p>
@@ -312,12 +337,30 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                 </p>
               </div>
             ) : null}
-            <div><p className="muted">Phone</p><p>{customer.phone || "-"}</p></div>
-            <div><p className="muted">Region</p><p>{customer.region}</p></div>
-            <div><p className="muted">Billing Type</p><p>{customer.billingType}</p></div>
-            <div><p className="muted">Status</p><p>{customer.status}</p></div>
-            <div><p className="muted">Box</p><p>{customer.boxNumber || "-"}</p></div>
-            <div><p className="muted">Building</p><p>{customer.building || "-"}</p></div>
+            <div>
+              <p className="muted">Phone</p>
+              <p>{customer.phone || "-"}</p>
+            </div>
+            <div>
+              <p className="muted">Region</p>
+              <p>{customer.region}</p>
+            </div>
+            <div>
+              <p className="muted">Billing Type</p>
+              <p>{customer.billingType}</p>
+            </div>
+            <div>
+              <p className="muted">Status</p>
+              <p>{customer.status}</p>
+            </div>
+            <div>
+              <p className="muted">Box</p>
+              <p>{customer.boxNumber || "-"}</p>
+            </div>
+            <div>
+              <p className="muted">Building</p>
+              <p>{customer.building || "-"}</p>
+            </div>
           </div>
         )}
         {message ? <p className="muted">{message}</p> : null}
@@ -332,7 +375,11 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                 className="success-btn"
                 onClick={saveBasicInfo}
                 disabled={boxNameBlocking || buildingNameBlocking}
-                title={boxNameBlocking || buildingNameBlocking ? "Confirm the new box/building name above first" : undefined}
+                title={
+                  boxNameBlocking || buildingNameBlocking
+                    ? "Confirm the new box/building name above first"
+                    : undefined
+                }
               >
                 Save
               </button>
@@ -392,7 +439,7 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                               height: "auto",
                               borderRadius: 4,
                               border: "1px solid #d1d5db",
-                              cursor: "pointer",
+                              cursor: "pointer"
                             }}
                           />
                         ) : (
@@ -450,14 +497,38 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
             <h3 style={{ marginTop: 0 }}>{selectedBill ? "Bill Details" : "Receipt / Payment Details"}</h3>
             {selectedBill ? (
               <div className="info-grid">
-                <div><p className="muted">Month</p><p>{selectedBill.monthKey}</p></div>
-                <div><p className="muted">Previous Counter</p><p>{selectedBill.previousCounter}</p></div>
-                <div><p className="muted">New Counter</p><p>{selectedBill.newCounter}</p></div>
-                <div><p className="muted">Consumption (kWh)</p><p>{selectedBill.consumptionKwh}</p></div>
-                <div><p className="muted">Amount</p><p>{formatLbp(selectedBill.amount)}</p></div>
-                <div><p className="muted">Remaining</p><p>{formatLbp(selectedBill.remainingAmount)}</p></div>
-                <div><p className="muted">Status</p><p>{selectedBill.status}</p></div>
-                <div><p className="muted">Bill ID</p><p>{selectedBill.id}</p></div>
+                <div>
+                  <p className="muted">Month</p>
+                  <p>{selectedBill.monthKey}</p>
+                </div>
+                <div>
+                  <p className="muted">Previous Counter</p>
+                  <p>{selectedBill.previousCounter}</p>
+                </div>
+                <div>
+                  <p className="muted">New Counter</p>
+                  <p>{selectedBill.newCounter}</p>
+                </div>
+                <div>
+                  <p className="muted">Consumption (kWh)</p>
+                  <p>{selectedBill.consumptionKwh}</p>
+                </div>
+                <div>
+                  <p className="muted">Amount</p>
+                  <p>{formatLbp(selectedBill.amount)}</p>
+                </div>
+                <div>
+                  <p className="muted">Remaining</p>
+                  <p>{formatLbp(selectedBill.remainingAmount)}</p>
+                </div>
+                <div>
+                  <p className="muted">Status</p>
+                  <p>{selectedBill.status}</p>
+                </div>
+                <div>
+                  <p className="muted">Bill ID</p>
+                  <p>{selectedBill.id}</p>
+                </div>
                 {toImageHref(selectedBill.counterImageUrl) ? (
                   <div style={{ gridColumn: "1 / -1" }}>
                     <p className="muted">Counter photo</p>
@@ -465,17 +536,35 @@ export default function EmployeeCustomerDetailsPage({ params }: Props) {
                       src={toImageHref(selectedBill.counterImageUrl)}
                       alt="Counter"
                       onClick={() => setImageModalSrc(toImageHref(selectedBill.counterImageUrl))}
-                      style={{ maxWidth: 220, height: "auto", borderRadius: 6, border: "1px solid #d1d5db", cursor: "pointer" }}
+                      style={{
+                        maxWidth: 220,
+                        height: "auto",
+                        borderRadius: 6,
+                        border: "1px solid #d1d5db",
+                        cursor: "pointer"
+                      }}
                     />
                   </div>
                 ) : null}
               </div>
             ) : selectedPayment ? (
               <div className="info-grid">
-                <div><p className="muted">Date</p><p>{selectedPayment.paymentDate || "-"}</p></div>
-                <div><p className="muted">Amount</p><p>{formatLbp(selectedPayment.amount)}</p></div>
-                <div><p className="muted">Receipt Ref</p><p>{selectedPayment.receiptRef || "-"}</p></div>
-                <div><p className="muted">Payment ID</p><p>{selectedPayment.id}</p></div>
+                <div>
+                  <p className="muted">Date</p>
+                  <p>{selectedPayment.paymentDate || "-"}</p>
+                </div>
+                <div>
+                  <p className="muted">Amount</p>
+                  <p>{formatLbp(selectedPayment.amount)}</p>
+                </div>
+                <div>
+                  <p className="muted">Receipt Ref</p>
+                  <p>{selectedPayment.receiptRef || "-"}</p>
+                </div>
+                <div>
+                  <p className="muted">Payment ID</p>
+                  <p>{selectedPayment.id}</p>
+                </div>
               </div>
             ) : null}
             <div className="card-actions-right">

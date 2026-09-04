@@ -20,7 +20,9 @@ export default function EmployeeAddCustomerPage() {
   const [startingCounter, setStartingCounter] = useState("0");
   const [boxNumber, setBoxNumber] = useState("");
   const [building, setBuilding] = useState("");
-  const [allCustomers, setAllCustomers] = useState<Array<{ fullName?: string; boxNumber?: string; building?: string }>>([]);
+  const [allCustomers, setAllCustomers] = useState<
+    Array<{ fullName?: string; boxNumber?: string; building?: string }>
+  >([]);
   const [boxMode, setBoxMode] = useState<"existing" | "new">("existing");
   const [buildingMode, setBuildingMode] = useState<"existing" | "new">("existing");
   const [message, setMessage] = useState("");
@@ -93,8 +95,8 @@ export default function EmployeeAddCustomerPage() {
           subscribedAmpere:
             billingType === "amp-only" || billingType === "both" ? Number(subscribedAmpere) : undefined,
           fixedMonthlyAmount: billingType === "fixed-monthly" ? Number(fixedMonthlyAmount) : undefined,
-          startingCounter: billingType === "both" ? Number(startingCounter || "0") : undefined,
-        }),
+          startingCounter: billingType === "both" ? Number(startingCounter || "0") : undefined
+        })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -193,7 +195,11 @@ export default function EmployeeAddCustomerPage() {
                 ))}
               </select>
             ) : (
-              <input value={boxNumber} onChange={(e) => setBoxNumber(e.target.value)} placeholder="New box value" />
+              <input
+                value={boxNumber}
+                onChange={(e) => setBoxNumber(e.target.value)}
+                placeholder="New box value"
+              />
             )}
             <button
               type="button"
@@ -232,7 +238,11 @@ export default function EmployeeAddCustomerPage() {
                 ))}
               </select>
             ) : (
-              <input value={building} onChange={(e) => setBuilding(e.target.value)} placeholder="New building value" />
+              <input
+                value={building}
+                onChange={(e) => setBuilding(e.target.value)}
+                placeholder="New building value"
+              />
             )}
             <button
               type="button"

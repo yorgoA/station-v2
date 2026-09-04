@@ -73,9 +73,7 @@ function sumUnpaidRemaining(
 ) {
   return unpaidBills.reduce((sum, bill) => {
     if (bill.customerId !== customerId) return sum;
-    const inScope = beforeMonthOnly
-      ? bill.monthKey < throughMonthKey
-      : bill.monthKey <= throughMonthKey;
+    const inScope = beforeMonthOnly ? bill.monthKey < throughMonthKey : bill.monthKey <= throughMonthKey;
     return inScope ? sum + bill.remainingAmount : sum;
   }, 0);
 }
@@ -113,12 +111,15 @@ export async function GET(request: Request) {
       : { data: [], error: null };
     if (billsError) return NextResponse.json({ error: billsError.message }, { status: 500 });
 
-    const billByCustomerId = new Map<string, { remainingAmount: number; consumptionKwh: number; amount: number }>();
+    const billByCustomerId = new Map<
+      string,
+      { remainingAmount: number; consumptionKwh: number; amount: number }
+    >();
     for (const bill of monthBills ?? []) {
       billByCustomerId.set(String((bill as Record<string, unknown>).customer_id ?? ""), {
         remainingAmount: Number((bill as Record<string, unknown>).remaining_amount ?? 0),
         consumptionKwh: Number((bill as Record<string, unknown>).consumption_kwh ?? 0),
-        amount: Number((bill as Record<string, unknown>).amount ?? 0),
+        amount: Number((bill as Record<string, unknown>).amount ?? 0)
       });
     }
 
@@ -134,7 +135,7 @@ export async function GET(request: Request) {
     const unpaidBills = (unpaidBillsRaw ?? []).map((bill) => ({
       customerId: String((bill as Record<string, unknown>).customer_id ?? ""),
       monthKey: String((bill as Record<string, unknown>).month_key ?? ""),
-      remainingAmount: Number((bill as Record<string, unknown>).remaining_amount ?? 0),
+      remainingAmount: Number((bill as Record<string, unknown>).remaining_amount ?? 0)
     }));
 
     const { data: monthBatchItems, error: monthBatchItemsError } = customerIds.length
@@ -184,7 +185,13 @@ export async function GET(request: Request) {
 
     const linkedByMonitorId = new Map<
       string,
-      Array<{ id: string; fullName: string; customerNumber: string; billingType: string; fixedMonthlyAmount: number }>
+      Array<{
+        id: string;
+        fullName: string;
+        customerNumber: string;
+        billingType: string;
+        fixedMonthlyAmount: number;
+      }>
     >();
     for (const row of customers ?? []) {
       const data = row as Record<string, unknown>;
@@ -218,7 +225,7 @@ export async function GET(request: Request) {
         const monitorId = readMonitorId(data);
         const customerNumber = String(data.customer_number ?? "");
         const isMonitor = customerNumber.startsWith("M-");
-        const linkedList = monitorId ? linkedByMonitorId.get(monitorId) ?? [] : [];
+        const linkedList = monitorId ? (linkedByMonitorId.get(monitorId) ?? []) : [];
         const monitorCategory = isMonitor ? readMonitorCategory(data.notes) : "-";
         const billInfo = billByCustomerId.get(id);
         const hasBillThisMonth = Boolean(billInfo);
@@ -249,7 +256,8 @@ export async function GET(request: Request) {
           // e.g. a vacant unit) -- only fall back to the draft batch item when
           // no bill exists yet for this month at all.
           const billedConsumption = billByCustomerId.get(linked.id)?.consumptionKwh;
-          const tracked = billedConsumption !== undefined ? billedConsumption : monthConsumptionByCustomerId.get(linked.id);
+          const tracked =
+            billedConsumption !== undefined ? billedConsumption : monthConsumptionByCustomerId.get(linked.id);
           if (tracked !== undefined) linkedDataFound = true;
           return sum + (tracked ?? 0);
         }, 0);
@@ -262,7 +270,10 @@ export async function GET(request: Request) {
         // comparison, with a tolerance (5 kWh, or 10% of the linked figure) to
         // absorb rounding/meter-timing noise.
         const monitorOverBudget =
-          isMonitor && linkedDataFound && monitorKwh > 0 && monitorMatchKwh > Math.max(5, linkedIncludedKwh * 0.1);
+          isMonitor &&
+          linkedDataFound &&
+          monitorKwh > 0 &&
+          monitorMatchKwh > Math.max(5, linkedIncludedKwh * 0.1);
         return {
           id,
           customerNumber,
@@ -300,7 +311,7 @@ export async function GET(request: Request) {
           paidThisMonth: hasBillThisMonth && remainingThisMonth <= 0,
           ongoingBalance: Math.max(0, ongoingBalance),
           ongoingBalanceCarryOver: Math.max(0, ongoingBalanceCarryOver),
-          ongoingBalanceThisMonth: Math.max(0, remainingThisMonth),
+          ongoingBalanceThisMonth: Math.max(0, remainingThisMonth)
         };
       })
       .filter((row) => (view === "all" ? true : view === "monitors" ? row.isMonitor : !row.isMonitor))
@@ -326,10 +337,7 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as CreateCustomerBody;
     if (!body.fullName?.trim() || !body.region) {
-      return NextResponse.json(
-        { error: "fullName and region are required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "fullName and region are required." }, { status: 400 });
     }
     if (
       (body.billingType === "amp-only" || body.billingType === "both") &&
@@ -349,11 +357,11 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (body.startingCounter !== undefined && (!Number.isFinite(body.startingCounter) || body.startingCounter < 0)) {
-      return NextResponse.json(
-        { error: "startingCounter must be a number >= 0." },
-        { status: 400 }
-      );
+    if (
+      body.startingCounter !== undefined &&
+      (!Number.isFinite(body.startingCounter) || body.startingCounter < 0)
+    ) {
+      return NextResponse.json({ error: "startingCounter must be a number >= 0." }, { status: 400 });
     }
 
     const supabase = createSupabaseAdminClient();
@@ -369,7 +377,7 @@ export async function POST(request: Request) {
     const [{ data: region, error: regionError }, { data: billingType, error: billingError }] =
       await Promise.all([
         supabase.from("regions").select("id").eq("code", body.region).single(),
-        supabase.from("billing_types").select("id").eq("key", billingKey).single(),
+        supabase.from("billing_types").select("id").eq("key", billingKey).single()
       ]);
 
     if (regionError || !region) {
@@ -382,9 +390,14 @@ export async function POST(request: Request) {
     let regionId = region.id as string;
     let monitorId: string | null = null;
     if (body.mode === "monitor") {
-      const linkedIds = Array.from(new Set((body.linkedCustomerIds ?? []).map((v) => v.trim()).filter(Boolean)));
+      const linkedIds = Array.from(
+        new Set((body.linkedCustomerIds ?? []).map((v) => v.trim()).filter(Boolean))
+      );
       if (linkedIds.length === 0) {
-        return NextResponse.json({ error: "At least one linked customer is required for monitor mode." }, { status: 400 });
+        return NextResponse.json(
+          { error: "At least one linked customer is required for monitor mode." },
+          { status: 400 }
+        );
       }
       const { data: linkedCustomers, error: linkedCustomerError } = await supabase
         .from("customers")
@@ -404,7 +417,7 @@ export async function POST(request: Request) {
           .insert({
             region_id: regionId,
             name: monitorName,
-            is_active: true,
+            is_active: true
           })
           .select("id")
           .single();
@@ -447,9 +460,7 @@ export async function POST(request: Request) {
         is_free_customer: body.billingType === "free",
         status: body.status?.toLowerCase() === "paused" ? "paused" : "active",
         notes:
-          body.mode === "monitor" && body.monitorCategory
-            ? `monitorCategory:${body.monitorCategory}`
-            : null,
+          body.mode === "monitor" && body.monitorCategory ? `monitorCategory:${body.monitorCategory}` : null
       })
       .select("id, customer_number")
       .single();

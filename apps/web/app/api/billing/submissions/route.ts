@@ -49,7 +49,8 @@ export async function POST(request: Request) {
       .eq("code", body.regionCode)
       .maybeSingle();
     if (regionError) return NextResponse.json({ error: regionError.message }, { status: 500 });
-    if (!region) return NextResponse.json({ error: `Region '${body.regionCode}' not found.` }, { status: 400 });
+    if (!region)
+      return NextResponse.json({ error: `Region '${body.regionCode}' not found.` }, { status: 400 });
 
     const { data: existingBatch, error: existingBatchError } = await supabase
       .from("billing_batches")
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
       region_id: region.id,
       status: "pending_review" as const,
       submitted_by_user_id: actorUserId,
-      submitted_at: new Date().toISOString(),
+      submitted_at: new Date().toISOString()
     };
 
     const { data: batch, error: batchError } = await supabase
@@ -99,7 +100,9 @@ export async function POST(request: Request) {
       .from("billing_types")
       .select("id, key");
     if (billingTypesError) return NextResponse.json({ error: billingTypesError.message }, { status: 500 });
-    const billingTypeByKey = new Map((billingTypes ?? []).map((row) => [row.key as string, row.id as string]));
+    const billingTypeByKey = new Map(
+      (billingTypes ?? []).map((row) => [row.key as string, row.id as string])
+    );
 
     const employeeChangeSummaries: Array<{ customerNumber: string; summary: string }> = [];
     for (const row of body.rows) {
@@ -140,7 +143,9 @@ export async function POST(request: Request) {
         (!Number.isFinite(proposedRaw) || proposedRaw <= 0)
       ) {
         return NextResponse.json(
-          { error: `Proposed fixed-monthly amount for '${row.customerNumber || row.customerName}' must be a positive number.` },
+          {
+            error: `Proposed fixed-monthly amount for '${row.customerNumber || row.customerName}' must be a positive number.`
+          },
           { status: 400 }
         );
       }
@@ -155,7 +160,8 @@ export async function POST(request: Request) {
         .select("id")
         .eq("customer_number", row.customerNumber)
         .maybeSingle();
-      if (existingCustomerError) return NextResponse.json({ error: existingCustomerError.message }, { status: 500 });
+      if (existingCustomerError)
+        return NextResponse.json({ error: existingCustomerError.message }, { status: 500 });
 
       let customerId = existingCustomer?.id as string | undefined;
       if (!customerId) {
@@ -167,7 +173,7 @@ export async function POST(request: Request) {
             region_id: region.id,
             billing_type_id: billingTypeByKey.get(row.billingType) ?? null,
             is_free_customer: Boolean(row.isFreeCustomer),
-            status: "active",
+            status: "active"
           })
           .select("id")
           .single();
@@ -213,7 +219,7 @@ export async function POST(request: Request) {
         }
         employeeChangeSummaries.push({
           customerNumber: row.customerNumber,
-          summary: parts.join("; "),
+          summary: parts.join("; ")
         });
       }
       const { error: itemError } = await supabase.from("billing_batch_items").upsert(
@@ -231,7 +237,7 @@ export async function POST(request: Request) {
           proposed_fixed_monthly_note: proposedFixedMonthlyNote,
           // Every (re)submit resets the manager's decision -- they re-decide
           // against whatever the customer's amount is at review time.
-          proposed_fixed_monthly_decision: null,
+          proposed_fixed_monthly_decision: null
         },
         { onConflict: "batch_id,customer_id" }
       );
@@ -247,7 +253,7 @@ export async function POST(request: Request) {
       from_status: existingBatch?.status ?? "draft",
       to_status: "pending_review",
       actor_user_id: actorUserId,
-      note: `Submitted from V2 billing entry API${changesNote}`,
+      note: `Submitted from V2 billing entry API${changesNote}`
     });
     if (eventError) return NextResponse.json({ error: eventError.message }, { status: 500 });
 
@@ -296,7 +302,10 @@ export async function GET(request: Request) {
     if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
 
     const readCustomer = (
-      value: { customer_number: string; full_name: string } | Array<{ customer_number: string; full_name: string }> | null
+      value:
+        | { customer_number: string; full_name: string }
+        | Array<{ customer_number: string; full_name: string }>
+        | null
     ) => {
       if (Array.isArray(value)) return value[0] ?? null;
       return value;
@@ -318,7 +327,7 @@ export async function GET(request: Request) {
         counterImageName: row.counter_image_url,
         proposedFixedMonthlyAmount:
           row.proposed_fixed_monthly_amount != null ? Number(row.proposed_fixed_monthly_amount) : undefined,
-        proposedFixedMonthlyNote: row.proposed_fixed_monthly_note ?? undefined,
+        proposedFixedMonthlyNote: row.proposed_fixed_monthly_note ?? undefined
       };
     });
 

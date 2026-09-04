@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       currency: row.currency ?? "LBP",
       reason: row.modification_reason ?? "",
       region: readRegion(row.regions as { code: string } | Array<{ code: string }> | null)?.code ?? "mrah",
-      modifiedAt: row.validated_by_employee_at ?? row.scanned_at,
+      modifiedAt: row.validated_by_employee_at ?? row.scanned_at
     }));
 
     return NextResponse.json({ tickets });

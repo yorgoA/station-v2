@@ -284,7 +284,9 @@ export default function BillingPrintBatchPage() {
                             </div>
                             <div>
                               <span className="k">سعر KW:</span> <N>{num(bill.kwhPriceSnapshot ?? 0)}</N> {LL}
-                              {hasUsd ? <span className="usd">${num(toUsd(bill.kwhPriceSnapshot ?? 0) ?? 0, 4)}</span> : null}
+                              {hasUsd ? (
+                                <span className="usd">${num(toUsd(bill.kwhPriceSnapshot ?? 0) ?? 0, 4)}</span>
+                              ) : null}
                             </div>
                             {hasUsd ? (
                               <div>
@@ -295,93 +297,93 @@ export default function BillingPrintBatchPage() {
                         </div>
 
                         <table className="reads">
-                        <thead>
-                          <tr>
-                            <th>السابق</th>
-                            <th>الحالي</th>
-                            <th>كيلووات</th>
-                            <th>السعر</th>
-                            <th>الاشتراك</th>
-                            <th>المجموع</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>
-                              <N>{num(bill.previousCounter)}</N>
-                            </td>
-                            <td>
-                              <N>{num(bill.newCounter)}</N>
-                            </td>
-                            <td>
-                              <N>{num(bill.consumptionKwh, 1)}</N>
-                            </td>
-                            <td>
-                              <N>{num(consumptionCharge)}</N> {LL}
-                              {usdCell(consumptionCharge)}
-                            </td>
-                            <td>
-                              <N>{num(ampereFee)}</N> {LL}
-                              {usdCell(ampereFee)}
-                            </td>
-                            <td>
-                              <N>{num(bill.amount)}</N> {LL}
-                              {usdCell(bill.amount)}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>
-                              <N>{dateOnly(bill.previousReadingAt)}</N>
-                            </td>
-                            <td>
-                              <N>{dateOnly(bill.currentReadingAt)}</N>
-                            </td>
-                            <td />
-                            <td />
-                            <td>المجموع</td>
-                            <td>
-                              <strong>
+                          <thead>
+                            <tr>
+                              <th>السابق</th>
+                              <th>الحالي</th>
+                              <th>كيلووات</th>
+                              <th>السعر</th>
+                              <th>الاشتراك</th>
+                              <th>المجموع</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>
+                                <N>{num(bill.previousCounter)}</N>
+                              </td>
+                              <td>
+                                <N>{num(bill.newCounter)}</N>
+                              </td>
+                              <td>
+                                <N>{num(bill.consumptionKwh, 1)}</N>
+                              </td>
+                              <td>
+                                <N>{num(consumptionCharge)}</N> {LL}
+                                {usdCell(consumptionCharge)}
+                              </td>
+                              <td>
+                                <N>{num(ampereFee)}</N> {LL}
+                                {usdCell(ampereFee)}
+                              </td>
+                              <td>
                                 <N>{num(bill.amount)}</N> {LL}
+                                {usdCell(bill.amount)}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <N>{dateOnly(bill.previousReadingAt)}</N>
+                              </td>
+                              <td>
+                                <N>{dateOnly(bill.currentReadingAt)}</N>
+                              </td>
+                              <td />
+                              <td />
+                              <td>المجموع</td>
+                              <td>
+                                <strong>
+                                  <N>{num(bill.amount)}</N> {LL}
+                                </strong>
+                                {usdCell(bill.amount)}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <N>{timeOnly(bill.previousReadingAt)}</N>
+                              </td>
+                              <td>
+                                <N>{timeOnly(bill.currentReadingAt)}</N>
+                              </td>
+                              <td />
+                              <td />
+                              <td>السعر بالدولار</td>
+                              <td>{hasUsd ? <N>{num(usd ?? 0, 2)} USD</N> : "—"}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <div className="total-line">
+                          <span className="k">المجموع المستحق:</span>
+                          <strong>
+                            <N>{num(bill.amount)}</N> {LL}
+                          </strong>
+                          {hasUsd ? (
+                            <>
+                              <span className="k">=</span>
+                              <strong>
+                                <N>{num(usd ?? 0, 2)} USD</N>
                               </strong>
-                              {usdCell(bill.amount)}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>
-                              <N>{timeOnly(bill.previousReadingAt)}</N>
-                            </td>
-                            <td>
-                              <N>{timeOnly(bill.currentReadingAt)}</N>
-                            </td>
-                            <td />
-                            <td />
-                            <td>السعر بالدولار</td>
-                            <td>{hasUsd ? <N>{num(usd ?? 0, 2)} USD</N> : "—"}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            </>
+                          ) : null}
+                        </div>
 
-                      <div className="total-line">
-                        <span className="k">المجموع المستحق:</span>
-                        <strong>
-                          <N>{num(bill.amount)}</N> {LL}
-                        </strong>
-                        {hasUsd ? (
-                          <>
-                            <span className="k">=</span>
-                            <strong>
-                              <N>{num(usd ?? 0, 2)} USD</N>
-                            </strong>
-                          </>
-                        ) : null}
-                      </div>
+                        <div className="words">المجموع {amountToArabicWords(bill.amount)}</div>
 
-                      <div className="words">المجموع {amountToArabicWords(bill.amount)}</div>
-
-                      <div className="note">
-                        ملاحظة: الرجاء تسديد الفاتورة قبل <N>10</N> من الشهر والالتزام بالتاريخ تفاديًا من
-                        قطع الاشتراك. للصيانة الاتصال على الرقم <N>{MAINTENANCE_PHONE}</N>
-                      </div>
+                        <div className="note">
+                          ملاحظة: الرجاء تسديد الفاتورة قبل <N>10</N> من الشهر والالتزام بالتاريخ تفاديًا من
+                          قطع الاشتراك. للصيانة الاتصال على الرقم <N>{MAINTENANCE_PHONE}</N>
+                        </div>
                       </div>
 
                       <div className="cut-v">

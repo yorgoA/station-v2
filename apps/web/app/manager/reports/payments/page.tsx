@@ -13,14 +13,16 @@ import { formatLbp, formatNumber } from "../../../../lib/format";
 function ManagerPaymentsReportContent() {
   const searchParams = useSearchParams();
   const { monthKey, setMonthKey, region, setRegion } = useReportScope({ searchParams });
-  const [paymentRows, setPaymentRows] = useState<Array<{
-    customer: string;
-    region: string;
-    date: string;
-    amount: string;
-    method: string;
-    receiptRef: string;
-  }>>([]);
+  const [paymentRows, setPaymentRows] = useState<
+    Array<{
+      customer: string;
+      region: string;
+      date: string;
+      amount: string;
+      method: string;
+      receiptRef: string;
+    }>
+  >([]);
 
   useEffect(() => {
     fetch(`/api/reports/manager?month=${monthKey}&region=${region}`)
@@ -43,7 +45,11 @@ function ManagerPaymentsReportContent() {
   }, [paymentRows]);
 
   return (
-    <AppShell title="Payments" subtitle="Collection performance and recent payment activity" navItems={managerNavItems}>
+    <AppShell
+      title="Payments"
+      subtitle="Collection performance and recent payment activity"
+      navItems={managerNavItems}
+    >
       <Link href="/manager/reports" className="back-link">
         ← Back to Reports
       </Link>
@@ -75,7 +81,7 @@ function ManagerPaymentsReportContent() {
             { key: "date", header: "Date", render: (row) => row.date },
             { key: "amount", header: "Amount", render: (row) => row.amount },
             { key: "method", header: "Method", render: (row) => row.method },
-            { key: "receiptRef", header: "Receipt Ref", render: (row) => row.receiptRef },
+            { key: "receiptRef", header: "Receipt Ref", render: (row) => row.receiptRef }
           ]}
         />
       </div>

@@ -40,7 +40,7 @@ export default function EmployeeAddMonitorPage() {
             fullName: customer.fullName,
             customerNumber: customer.customerNumber,
             region: customer.region ?? "-",
-            boxNumber: customer.boxNumber ?? "-",
+            boxNumber: customer.boxNumber ?? "-"
           }))
         );
       })
@@ -77,8 +77,8 @@ export default function EmployeeAddMonitorPage() {
           monitorName,
           monitorCategory,
           linkedCustomerIds,
-          startingCounter: Number(startingCounter || "0"),
-        }),
+          startingCounter: Number(startingCounter || "0")
+        })
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -102,7 +102,11 @@ export default function EmployeeAddMonitorPage() {
         <div className="filters-grid filters-grid-pro">
           <label>
             Monitor Name
-            <input value={monitorName} onChange={(e) => setMonitorName(e.target.value)} placeholder="Building Elevator Monitor" />
+            <input
+              value={monitorName}
+              onChange={(e) => setMonitorName(e.target.value)}
+              placeholder="Building Elevator Monitor"
+            />
           </label>
           <label style={{ gridColumn: "1 / -1" }}>
             Linked Customers
@@ -110,7 +114,7 @@ export default function EmployeeAddMonitorPage() {
               options={customerOptions.map((customer) => ({
                 id: customer.id,
                 label: customer.fullName,
-                sublabel: customer.customerNumber,
+                sublabel: customer.customerNumber
               }))}
               selectedIds={linkedCustomerIds}
               onChange={setLinkedCustomerIds}
@@ -152,7 +156,8 @@ export default function EmployeeAddMonitorPage() {
               placeholder="0"
             />
             <p className="muted" style={{ margin: "4px 0 0" }}>
-              Leave at 0 for a brand-new monitor. Set to its real current meter reading if it&apos;s already running.
+              Leave at 0 for a brand-new monitor. Set to its real current meter reading if it&apos;s already
+              running.
             </p>
           </label>
         </div>

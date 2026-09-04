@@ -58,7 +58,7 @@ function ManagerMonitorsReportContent() {
             linkedIncludedKwh,
             matchKwh,
             overuseKwh,
-            status: overuseKwh > 0 ? "Overusing" : "Within allowance",
+            status: overuseKwh > 0 ? "Overusing" : "Within allowance"
           };
         }),
     [baseRows, kwhPrice, region]
@@ -87,8 +87,8 @@ function ManagerMonitorsReportContent() {
       </div>
       {kwhPrice === 0 ? (
         <p className="muted">
-          No kWh price is set for {monthKey} yet (Settings → Pricing) — linked included kWh below will show as 0
-          until it is.
+          No kWh price is set for {monthKey} yet (Settings → Pricing) — linked included kWh below will show as
+          0 until it is.
         </p>
       ) : null}
       <KpiGrid>
@@ -113,24 +113,24 @@ function ManagerMonitorsReportContent() {
             {
               key: "linkedIncludedKwh",
               header: "Linked included kWh",
-              render: (row) => formatNumber(row.linkedIncludedKwh, { maxDecimals: 1 }),
+              render: (row) => formatNumber(row.linkedIncludedKwh, { maxDecimals: 1 })
             },
             {
               key: "matchKwh",
               header: "Match (monitor - linked)",
-              render: (row) => formatNumber(row.matchKwh, { maxDecimals: 1 }),
+              render: (row) => formatNumber(row.matchKwh, { maxDecimals: 1 })
             },
             {
               key: "overuseKwh",
               header: "Overuse kWh",
-              render: (row) => formatNumber(row.overuseKwh, { maxDecimals: 1 }),
+              render: (row) => formatNumber(row.overuseKwh, { maxDecimals: 1 })
             },
             { key: "status", header: "Assessment", render: (row) => row.status },
             {
               key: "linkedObligatoryCustomer",
               header: "Linked obligatory customer",
-              render: (row) => row.linkedObligatoryCustomer,
-            },
+              render: (row) => row.linkedObligatoryCustomer
+            }
           ]}
         />
       </div>

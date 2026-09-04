@@ -18,11 +18,7 @@ export type BillingEntryRow = {
   counterImageName?: string;
 };
 
-export type BillingBatchStatus =
-  | "draft"
-  | "pending_review"
-  | "changes_requested"
-  | "approved_posted";
+export type BillingBatchStatus = "draft" | "pending_review" | "changes_requested" | "approved_posted";
 
 export type BillingApprovalBatch = {
   id: string;

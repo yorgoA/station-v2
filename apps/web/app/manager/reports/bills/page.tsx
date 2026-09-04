@@ -7,10 +7,7 @@ import { AppShell } from "../../../_components/app-shell";
 import { managerNavItems } from "../../../_components/role-nav";
 import { KpiCard, KpiGrid } from "../_components/kpi-components";
 import { ReportTable } from "../_components/report-table";
-import {
-  type BillReportRow,
-  type BillStatus,
-} from "../../../../lib/types/reports";
+import { type BillReportRow, type BillStatus } from "../../../../lib/types/reports";
 import { ReportScopeFilters, useReportScope } from "../_components/report-scope-controls";
 import { formatNumber } from "../../../../lib/format";
 
@@ -49,7 +46,11 @@ function ManagerBillsReportContent() {
   const completion = billsIssued > 0 ? `${((billsPaid / billsIssued) * 100).toFixed(1)}%` : "0.0%";
 
   return (
-    <AppShell title="Bills" subtitle="Issued bills, paid/unpaid status, and billing completion KPIs" navItems={managerNavItems}>
+    <AppShell
+      title="Bills"
+      subtitle="Issued bills, paid/unpaid status, and billing completion KPIs"
+      navItems={managerNavItems}
+    >
       <Link href="/manager/reports" className="back-link">
         ← Back to Reports
       </Link>
@@ -92,9 +93,13 @@ function ManagerBillsReportContent() {
             { key: "customer", header: "Customer", render: (row) => row.customer },
             { key: "region", header: "Region", render: (row) => row.region },
             { key: "monthKey", header: "Bill Month", render: (row) => row.monthKey },
-            { key: "amount", header: "Bill Amount", render: (row) => `${formatNumber(row.amount)} ${row.currency}` },
+            {
+              key: "amount",
+              header: "Bill Amount",
+              render: (row) => `${formatNumber(row.amount)} ${row.currency}`
+            },
             { key: "status", header: "Status", render: (row) => (row.status === "paid" ? "Paid" : "Unpaid") },
-            { key: "billingType", header: "Billing Type", render: (row) => row.billingType },
+            { key: "billingType", header: "Billing Type", render: (row) => row.billingType }
           ]}
         />
       </div>

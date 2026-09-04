@@ -40,9 +40,7 @@ export async function PUT(request: Request) {
     };
     if (usdRateProvided) payload.usd_rate = body.usdRate ?? null;
 
-    const { error } = await supabase
-      .from("monthly_kwh_tariffs")
-      .upsert(payload, { onConflict: "month_key" });
+    const { error } = await supabase.from("monthly_kwh_tariffs").upsert(payload, { onConflict: "month_key" });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });

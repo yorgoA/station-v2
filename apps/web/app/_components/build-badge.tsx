@@ -7,7 +7,7 @@ const BUILT_AT = process.env.NEXT_PUBLIC_APP_BUILT_AT ?? "";
 const ENV_LABEL: Record<string, string> = {
   production: "prod",
   preview: "staging",
-  local: "local",
+  local: "local"
 };
 
 function builtAtLabel(): string {
@@ -23,7 +23,7 @@ export function BuildBadge() {
     `v${VERSION}`,
     COMMIT,
     envLabel + (BRANCH && envLabel === "staging" ? `:${BRANCH}` : ""),
-    builtAtLabel(),
+    builtAtLabel()
   ].filter(Boolean);
 
   return (

@@ -20,7 +20,10 @@ export function resolveAmperePrice(tiers: AmpereTier[], subscribedAmpere: number
 }
 
 export async function getAllAmpereTiers(supabase: SupabaseClient): Promise<AmpereTier[]> {
-  const { data, error } = await supabase.from("ampere_price_tiers").select("amp, price").order("amp", { ascending: true });
+  const { data, error } = await supabase
+    .from("ampere_price_tiers")
+    .select("amp, price")
+    .order("amp", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => ({ amp: row.amp as number, price: Number(row.price) }));
 }
@@ -46,7 +49,10 @@ export async function getAllMonthlyTariffs(supabase: SupabaseClient): Promise<Mo
  * Returns null (not a fallback constant) when no price has been entered for
  * that month yet — a missing price must be visible, never silently guessed.
  */
-export async function getKwhPriceForMonth(supabase: SupabaseClient, monthKey: string): Promise<number | null> {
+export async function getKwhPriceForMonth(
+  supabase: SupabaseClient,
+  monthKey: string
+): Promise<number | null> {
   const { data, error } = await supabase
     .from("monthly_kwh_tariffs")
     .select("kwh_price")
@@ -85,7 +91,11 @@ export function calculateBillAmount(input: BillAmountInput): BillAmountResult {
   switch (input.billingTypeKey) {
     case "metered": {
       if (input.kwhPrice == null) throw new Error("kWh price is required for metered billing.");
-      return { amount: input.consumptionKwh * input.kwhPrice, ampereSnapshot: null, kwhSnapshot: input.kwhPrice };
+      return {
+        amount: input.consumptionKwh * input.kwhPrice,
+        ampereSnapshot: null,
+        kwhSnapshot: input.kwhPrice
+      };
     }
     case "amp-only": {
       if (input.ampereTierPrice == null) throw new Error("Ampere price is required for amp-only billing.");

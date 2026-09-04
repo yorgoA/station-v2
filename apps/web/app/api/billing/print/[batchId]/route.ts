@@ -36,7 +36,7 @@ export async function GET(_request: Request, context: Context) {
       );
     }
 
-    const readOne = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
+    const readOne = <T>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
     const region = readOne(
       batch.regions as { code: string; name: string | null } | { code: string; name: string | null }[] | null
     );
@@ -63,7 +63,7 @@ export async function GET(_request: Request, context: Context) {
           .eq("region_id", batch.region_id)
           .eq("status", "approved_posted")
           .maybeSingle();
-      })(),
+      })()
     ]);
     if (billsError) return NextResponse.json({ error: billsError.message }, { status: 500 });
 
@@ -76,10 +76,7 @@ export async function GET(_request: Request, context: Context) {
         .select("customer_id, counter_image_uploaded_at")
         .eq("batch_id", batch.id);
       for (const item of items ?? []) {
-        currentReadingByCustomer.set(
-          String(item.customer_id),
-          String(item.counter_image_uploaded_at ?? "")
-        );
+        currentReadingByCustomer.set(String(item.customer_id), String(item.counter_image_uploaded_at ?? ""));
       }
     }
     const previousReadingByCustomer = new Map<string, string>();
@@ -90,10 +87,7 @@ export async function GET(_request: Request, context: Context) {
         .select("customer_id, counter_image_uploaded_at")
         .eq("batch_id", prevBatchId);
       for (const item of prevItems ?? []) {
-        previousReadingByCustomer.set(
-          String(item.customer_id),
-          String(item.counter_image_uploaded_at ?? "")
-        );
+        previousReadingByCustomer.set(String(item.customer_id), String(item.counter_image_uploaded_at ?? ""));
       }
     }
 
@@ -125,11 +119,10 @@ export async function GET(_request: Request, context: Context) {
           consumptionKwh: Number(bill.consumption_kwh),
           amount: Number(bill.amount),
           remainingAmount: Number(bill.remaining_amount),
-          amperePriceSnapshot:
-            bill.ampere_price_snapshot != null ? Number(bill.ampere_price_snapshot) : null,
+          amperePriceSnapshot: bill.ampere_price_snapshot != null ? Number(bill.ampere_price_snapshot) : null,
           kwhPriceSnapshot: bill.kwh_price_snapshot != null ? Number(bill.kwh_price_snapshot) : null,
           previousReadingAt: previousReadingByCustomer.get(customerId) || null,
-          currentReadingAt: currentReadingByCustomer.get(customerId) || null,
+          currentReadingAt: currentReadingByCustomer.get(customerId) || null
         };
       })
       .sort((a, b) => a.customerNumber.localeCompare(b.customerNumber, undefined, { numeric: true }));
@@ -139,13 +132,13 @@ export async function GET(_request: Request, context: Context) {
         monthKey: batch.month_key,
         regionCode: region?.code ?? "unknown",
         regionName: region?.name ?? null,
-        printedAt: new Date().toISOString(),
+        printedAt: new Date().toISOString()
       },
       pricing: {
         kwhPrice: tariff?.kwh_price != null ? Number(tariff.kwh_price) : null,
-        usdRate: tariff?.usd_rate != null ? Number(tariff.usd_rate) : null,
+        usdRate: tariff?.usd_rate != null ? Number(tariff.usd_rate) : null
       },
-      bills: rows,
+      bills: rows
     });
   } catch (error) {
     return serverError(error);

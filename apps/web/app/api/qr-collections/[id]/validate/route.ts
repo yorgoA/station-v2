@@ -24,7 +24,9 @@ export async function POST(request: Request, context: Context) {
 
     const { data: log, error: logError } = await supabase
       .from("qr_collection_logs")
-      .select("id, customer_id, customer_number, customer_name, region_id, month_key, collected_amount, currency, employee_receipt_image_name")
+      .select(
+        "id, customer_id, customer_number, customer_name, region_id, month_key, collected_amount, currency, employee_receipt_image_name"
+      )
       .eq("id", logId)
       .maybeSingle();
     if (logError) return NextResponse.json({ error: logError.message }, { status: 500 });
@@ -55,7 +57,7 @@ export async function POST(request: Request, context: Context) {
         status: "validated_by_employee",
         modified_by_employee: wasModified,
         modification_reason: wasModified ? body.modificationReason?.trim() : null,
-        validated_by_employee_at: new Date().toISOString(),
+        validated_by_employee_at: new Date().toISOString()
       })
       .eq("id", logId);
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
