@@ -36,7 +36,9 @@ export async function GET(request: Request) {
       );
     const customersQuery = supabase
       .from("customers")
-      .select("id, customer_number, full_name, is_free_customer, monitor_id, fixed_monthly_amount, regions!inner(code)");
+      .select(
+        "id, customer_number, full_name, is_free_customer, monitor_id, fixed_monthly_amount, regions!inner(code), billing_types(key)"
+      );
 
     const [{ data: bills, error: billsError }, { data: payments, error: paymentsError }, { data: customers, error: customersError }] =
       await Promise.all([billsQuery, paymentsQuery, customersQuery]);
@@ -52,6 +54,10 @@ export async function GET(request: Request) {
     const readCustomer = (node: unknown) => {
       if (Array.isArray(node)) return (node[0] as Record<string, unknown> | undefined) ?? null;
       return (node as Record<string, unknown> | null) ?? null;
+    };
+    const readBillingTypeKey = (node: unknown): string => {
+      if (Array.isArray(node)) return String((node[0] as { key?: string } | undefined)?.key ?? "");
+      return String((node as { key?: string } | null)?.key ?? "");
     };
 
     const filteredBills = (bills ?? []).filter((row) => {
@@ -116,15 +122,16 @@ export async function GET(request: Request) {
     ).length;
 
     const monthKwhByCustomerId = new Map<string, number>();
+    const monthAmountByCustomerId = new Map<string, number>();
     for (const row of monthBills) {
-      monthKwhByCustomerId.set(
-        String((row as Record<string, unknown>).customer_id ?? ""),
-        Number((row as Record<string, unknown>).consumption_kwh ?? 0)
-      );
+      const data = row as Record<string, unknown>;
+      const customerId = String(data.customer_id ?? "");
+      monthKwhByCustomerId.set(customerId, Number(data.consumption_kwh ?? 0));
+      monthAmountByCustomerId.set(customerId, Number(data.amount ?? 0));
     }
     const linkedByMonitorId = new Map<
       string,
-      Array<{ fullName: string; fixedMonthlyAmount: number }>
+      Array<{ id: string; fullName: string; billingType: string; fixedMonthlyAmount: number }>
     >();
     for (const row of filteredCustomers) {
       const data = row as Record<string, unknown>;
@@ -133,7 +140,9 @@ export async function GET(request: Request) {
       if (!monitorId || customerNumber.startsWith("M-")) continue;
       const list = linkedByMonitorId.get(monitorId) ?? [];
       list.push({
+        id: String(data.id ?? ""),
         fullName: String(data.full_name ?? ""),
+        billingType: readBillingTypeKey(data.billing_types),
         fixedMonthlyAmount: Number(data.fixed_monthly_amount ?? 0),
       });
       linkedByMonitorId.set(monitorId, list);
@@ -144,11 +153,20 @@ export async function GET(request: Request) {
         const data = row as Record<string, unknown>;
         const monitorId = data.monitor_id ? String(data.monitor_id) : "";
         const linked = monitorId ? linkedByMonitorId.get(monitorId) ?? [] : [];
+        // Only fixed-monthly linked customers contribute -- they're the ones this
+        // report is for (their kWh isn't metered, so it's implied from what they
+        // actually pay this month, using this month's posted bill amount where
+        // it exists and falling back to their current fixed rate otherwise).
+        const linkedFixedMonthlyTotal = linked.reduce((sum, c) => {
+          if (c.billingType !== "fixed-monthly") return sum;
+          const amountThisMonth = monthAmountByCustomerId.get(c.id) ?? c.fixedMonthlyAmount ?? 0;
+          return sum + amountThisMonth;
+        }, 0);
         return {
           customer: String(data.full_name ?? "-"),
           region: (readRegionCode(data.regions) || "mrah") as RegionCode,
           monitorUsageKwh: monthKwhByCustomerId.get(String(data.id ?? "")) ?? 0,
-          linkedFixedMonthlyTotal: linked.reduce((sum, c) => sum + c.fixedMonthlyAmount, 0),
+          linkedFixedMonthlyTotal,
           linkedObligatoryCustomer: linked.length > 0 ? linked.map((c) => c.fullName).join(", ") : "Missing link",
         };
       });

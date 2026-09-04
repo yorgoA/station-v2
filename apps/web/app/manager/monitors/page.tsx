@@ -19,6 +19,7 @@ type MonitorRow = {
   monitorKwh: number;
   linkedIncludedKwh: number;
   monitorMatchKwh: number;
+  monitorOverBudget: boolean;
   startingCounter: number;
 };
 
@@ -72,6 +73,13 @@ export default function ManagerMonitorsPage() {
         <p className="muted" style={{ marginTop: 0 }}>
           Total monitor customers: <strong>{sortedRows.length}</strong>
         </p>
+        <p className="muted" style={{ marginTop: 0, fontSize: "0.85rem" }}>
+          Linked kWh for a fixed-monthly customer is implied from what they pay
+          this month divided by this month&apos;s kWh price (they never get a real
+          meter reading). Rows in red read meaningfully more on the monitor than
+          their linked pricing accounts for — their fixed price may no longer
+          match real usage.
+        </p>
         <table>
           <thead>
             <tr>
@@ -88,7 +96,7 @@ export default function ManagerMonitorsPage() {
             {sortedRows.map((row) => (
               <tr
                 key={row.id}
-                className="clickable-row"
+                className={`clickable-row${row.monitorOverBudget ? " row-needs-change" : ""}`}
                 role="link"
                 tabIndex={0}
                 onClick={() => router.push(`/manager/customers/${row.id}`)}
@@ -131,7 +139,14 @@ export default function ManagerMonitorsPage() {
                 <td>{formatNumber(row.startingCounter ?? 0)}</td>
                 <td>{formatNumber(row.monitorKwh ?? 0, { maxDecimals: 1 })}</td>
                 <td>{formatNumber(row.linkedIncludedKwh ?? 0, { maxDecimals: 1 })}</td>
-                <td>{formatNumber(row.monitorMatchKwh ?? 0, { maxDecimals: 1 })}</td>
+                <td>
+                  {formatNumber(row.monitorMatchKwh ?? 0, { maxDecimals: 1 })}
+                  {row.monitorOverBudget ? (
+                    <span className="notify-chip" style={{ marginLeft: 8 }}>
+                      Over budget
+                    </span>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -11,6 +11,9 @@ import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 export default function ManagerDashboardPage() {
   const [showPendingDetails, setShowPendingDetails] = useState(false);
   const [qrModificationTickets, setQrModificationTickets] = useState<Array<Record<string, unknown>>>([]);
+  const [monitorRows, setMonitorRows] = useState<Array<{ id: string; fullName: string; monitorOverBudget: boolean }>>(
+    []
+  );
   const [approvalBatches, setApprovalBatches] = useState<
     Array<{
       id: string;
@@ -60,6 +63,22 @@ export default function ManagerDashboardPage() {
       .catch(() => setQrModificationTickets([]));
   }, [monthKey, regionFilter]);
 
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("month", monthKey);
+    params.set("view", "monitors");
+    if (regionFilter !== "all") params.set("region", regionFilter);
+    fetch(`/api/customers?${params.toString()}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to load monitor alerts.");
+        const payload = (await response.json()) as {
+          customers?: Array<{ id: string; fullName: string; monitorOverBudget: boolean }>;
+        };
+        setMonitorRows(payload.customers ?? []);
+      })
+      .catch(() => setMonitorRows([]));
+  }, [monthKey, regionFilter]);
+
   const pendingApprovalCount = useMemo(
     () => approvalBatches.filter((batch) => batch.status === "pending_review").length,
     [approvalBatches]
@@ -86,7 +105,10 @@ export default function ManagerDashboardPage() {
     [monthKey, qrModificationTickets, regionFilter]
   );
 
-  const monitorExcessCount = 0;
+  const monitorExcessCount = useMemo(
+    () => monitorRows.filter((row) => row.monitorOverBudget).length,
+    [monitorRows]
+  );
   const hasNotifications =
     pendingApprovalCount > 0 ||
     filteredQrModificationTickets.length > 0 ||
@@ -195,7 +217,11 @@ export default function ManagerDashboardPage() {
             <li>QR modification alerts: {filteredQrModificationTickets.length}</li>
           )}
           {monitorExcessCount > 0 && (
-            <li>Monitor excess (red match): {monitorExcessCount} accounts require immediate review.</li>
+            <li>
+              Monitor excess (red match): {monitorExcessCount} account{monitorExcessCount === 1 ? "" : "s"}{" "}
+              read more on the monitor than their linked pricing accounts for —{" "}
+              <Link href="/manager/monitors">review on the Monitors page</Link>.
+            </li>
           )}
         </ul>
       </div>

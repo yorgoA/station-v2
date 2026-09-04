@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     const { data: customers, error: customersError } = await supabase
       .from("customers")
       .select(
-        "id, customer_number, full_name, phone, box_number, building, status, is_free_customer, monitor_id, notes, starting_counter, regions!inner(code), billing_types(key)"
+        "id, customer_number, full_name, phone, box_number, building, status, is_free_customer, monitor_id, notes, starting_counter, fixed_monthly_amount, regions!inner(code), billing_types(key)"
       )
       .order("full_name", { ascending: true });
     if (customersError) return NextResponse.json({ error: customersError.message }, { status: 500 });
@@ -91,17 +91,18 @@ export async function GET(request: Request) {
     const { data: monthBills, error: billsError } = customerIds.length
       ? await supabase
           .from("bills")
-          .select("customer_id, remaining_amount, consumption_kwh")
+          .select("customer_id, remaining_amount, consumption_kwh, amount")
           .eq("month_key", monthKey)
           .in("customer_id", customerIds)
       : { data: [], error: null };
     if (billsError) return NextResponse.json({ error: billsError.message }, { status: 500 });
 
-    const billByCustomerId = new Map<string, { remainingAmount: number; consumptionKwh: number }>();
+    const billByCustomerId = new Map<string, { remainingAmount: number; consumptionKwh: number; amount: number }>();
     for (const bill of monthBills ?? []) {
       billByCustomerId.set(String((bill as Record<string, unknown>).customer_id ?? ""), {
         remainingAmount: Number((bill as Record<string, unknown>).remaining_amount ?? 0),
         consumptionKwh: Number((bill as Record<string, unknown>).consumption_kwh ?? 0),
+        amount: Number((bill as Record<string, unknown>).amount ?? 0),
       });
     }
 
@@ -123,7 +124,7 @@ export async function GET(request: Request) {
     const { data: monthBatchItems, error: monthBatchItemsError } = customerIds.length
       ? await supabase
           .from("billing_batch_items")
-          .select("customer_id, consumption_kwh, billing_batches!inner(month_key)")
+          .select("customer_id, consumption_kwh, calculated_amount, billing_batches!inner(month_key)")
           .in("customer_id", customerIds)
           .eq("billing_batches.month_key", monthKey)
       : { data: [], error: null };
@@ -133,12 +134,23 @@ export async function GET(request: Request) {
 
     // Entry/review data should drive this month's monitor table even before posting to bills.
     const monthConsumptionByCustomerId = new Map<string, number>();
+    const monthAmountByCustomerId = new Map<string, number>();
     for (const item of monthBatchItems ?? []) {
-      monthConsumptionByCustomerId.set(
-        String((item as Record<string, unknown>).customer_id ?? ""),
-        Number((item as Record<string, unknown>).consumption_kwh ?? 0)
-      );
+      const data = item as Record<string, unknown>;
+      const customerId = String(data.customer_id ?? "");
+      monthConsumptionByCustomerId.set(customerId, Number(data.consumption_kwh ?? 0));
+      monthAmountByCustomerId.set(customerId, Number(data.calculated_amount ?? 0));
     }
+
+    // This month's kWh price -- needed to turn a fixed-monthly customer's flat
+    // fee back into an implied kWh figure (they never get a real meter reading).
+    const { data: tariffRow, error: tariffError } = await supabase
+      .from("monthly_kwh_tariffs")
+      .select("kwh_price")
+      .eq("month_key", monthKey)
+      .maybeSingle();
+    if (tariffError) return NextResponse.json({ error: tariffError.message }, { status: 500 });
+    const kwhPriceThisMonth = Number((tariffRow as Record<string, unknown> | null)?.kwh_price ?? 0);
 
     const readRegionCode = (node: unknown): string => {
       if (Array.isArray(node)) return String((node[0] as { code?: string } | undefined)?.code ?? "");
@@ -154,7 +166,10 @@ export async function GET(request: Request) {
       return raw === null || raw === undefined ? "" : String(raw);
     };
 
-    const linkedByMonitorId = new Map<string, Array<{ id: string; fullName: string; customerNumber: string }>>();
+    const linkedByMonitorId = new Map<
+      string,
+      Array<{ id: string; fullName: string; customerNumber: string; billingType: string; fixedMonthlyAmount: number }>
+    >();
     for (const row of customers ?? []) {
       const data = row as Record<string, unknown>;
       const monitorId = readMonitorId(data);
@@ -165,6 +180,8 @@ export async function GET(request: Request) {
         id: String(data.id ?? ""),
         fullName: String(data.full_name ?? ""),
         customerNumber,
+        billingType: readBillingTypeKey(data.billing_types),
+        fixedMonthlyAmount: Number(data.fixed_monthly_amount ?? 0)
       });
       linkedByMonitorId.set(monitorId, list);
     }
@@ -193,13 +210,39 @@ export async function GET(request: Request) {
         const ongoingBalanceCarryOver = sumUnpaidRemaining(unpaidBills, id, monthKey, true);
         const ongoingBalance = sumUnpaidRemaining(unpaidBills, id, monthKey, false);
         const monitorKwh = monthConsumptionByCustomerId.get(id) ?? billInfo?.consumptionKwh ?? 0;
-        const linkedIncludedKwh = linkedList.reduce(
-          (sum, linked) =>
-            sum + (monthConsumptionByCustomerId.get(linked.id) ?? billByCustomerId.get(linked.id)?.consumptionKwh ?? 0),
-          0
-        );
+        // Fixed-monthly customers never get a real meter reading (consumption_kwh
+        // is always stored as 0 for them) -- their kWh is implied by dividing what
+        // they actually pay this month by this month's kWh price, so a monitor
+        // linked to a flat-rate customer can still be reconciled against real usage.
+        let linkedDataFound = false;
+        const linkedIncludedKwh = linkedList.reduce((sum, linked) => {
+          if (linked.billingType === "fixed-monthly") {
+            const amountThisMonth =
+              monthAmountByCustomerId.get(linked.id) ??
+              billByCustomerId.get(linked.id)?.amount ??
+              linked.fixedMonthlyAmount ??
+              0;
+            if (amountThisMonth > 0 && kwhPriceThisMonth > 0) {
+              linkedDataFound = true;
+              return sum + amountThisMonth / kwhPriceThisMonth;
+            }
+            return sum;
+          }
+          const tracked = monthConsumptionByCustomerId.get(linked.id) ?? billByCustomerId.get(linked.id)?.consumptionKwh;
+          if (tracked !== undefined) linkedDataFound = true;
+          return sum + (tracked ?? 0);
+        }, 0);
         // Loss/discrepancy = sum(linked customers' kWh) - monitor's own kWh.
         const monitorMatchKwh = linkedIncludedKwh - monitorKwh;
+        // The point of linking a monitor to fixed-price customers is to catch
+        // when real usage has outgrown what they're paying for. Flag it only
+        // once we actually have both sides of the comparison, with a tolerance
+        // (5 kWh, or 10% of the linked figure) to absorb rounding/meter-timing noise.
+        const monitorOverBudget =
+          isMonitor &&
+          linkedDataFound &&
+          monitorKwh > 0 &&
+          monitorKwh - linkedIncludedKwh > Math.max(5, linkedIncludedKwh * 0.1);
         return {
           id,
           customerNumber,
@@ -223,6 +266,7 @@ export async function GET(request: Request) {
           monitorKwh,
           linkedIncludedKwh,
           monitorMatchKwh,
+          monitorOverBudget,
           startingCounter: Number(data.starting_counter ?? 0),
           // billing_types.key is already the real lowercase-hyphenated key
           // (metered/amp-only/both/fixed-monthly) — no remapping needed here.
