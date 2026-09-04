@@ -59,8 +59,9 @@
   font-family: var(--font-sans);
 }
 
+/* Auto dark mode follows the OS, unless the toggle (data-theme) overrides it. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b0d10;
     --surface: #15181d;
     --surface-2: #1c2027;
@@ -97,6 +98,45 @@
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.6);
   }
+}
+
+/* Explicit toggle wins over the OS setting in both directions. */
+:root[data-theme="dark"] {
+  --bg: #0b0d10;
+  --surface: #15181d;
+  --surface-2: #1c2027;
+  --surface-3: #232833;
+  --border: #262b33;
+  --border-strong: #363c47;
+
+  --text: #e6e8ec;
+  --text-muted: #9aa4b2;
+  --text-subtle: #6b7482;
+
+  --accent: #5c8ef0;
+  --accent-hover: #7aa5f5;
+  --accent-fg: #0a1220;
+  --accent-muted: #182338;
+  --accent-border: #2c4269;
+
+  --success: #4ade80;
+  --success-muted: #0f2a1c;
+  --success-border: #1f6b3f;
+  --warning: #fbbf5c;
+  --warning-muted: #2a1e0a;
+  --warning-border: #6f5013;
+  --danger: #f97066;
+  --danger-muted: #2a1614;
+  --danger-border: #7a2b23;
+  --changes: #fb923c;
+  --changes-muted: #291a10;
+  --changes-border: #7c3f18;
+
+  --ring-color: rgba(76, 141, 255, 0.4);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.6);
 }
 
 /* ---------- reset / base ------------------------------------------------- */
@@ -236,8 +276,46 @@ table,
 }
 
 .app-shell.sidebar-collapsed .sidebar h2,
-.app-shell.sidebar-collapsed .sidebar .muted {
+.app-shell.sidebar-collapsed .sidebar .muted,
+.app-shell.sidebar-collapsed .sidebar .theme-toggle-row {
   display: none;
+}
+
+.theme-toggle-row {
+  margin: 10px 0 4px;
+}
+
+/* Used on pages with no sidebar to anchor to (e.g. login). */
+.theme-toggle-fixed {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 80;
+  margin: 0;
+}
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.theme-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .app-shell.sidebar-collapsed .sidebar nav {

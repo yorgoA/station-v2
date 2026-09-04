@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabasePublicClient } from "../../lib/supabase/browser-public";
 import { BuildBadge } from "../_components/build-badge";
+import { ThemeToggle } from "../_components/theme-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,6 +47,7 @@ export default function LoginPage() {
 
   return (
     <main className="page" style={{ maxWidth: 420 }}>
+      <ThemeToggle fixed />
       <div className="card">
         <h1>Station V2 Login</h1>
         <p className="muted">Sign in with your Supabase account.</p>

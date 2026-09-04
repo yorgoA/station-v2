@@ -17,11 +17,19 @@ export const metadata: Metadata = {
   description: "Electricity management V2 prototype"
 };
 
+// Applies a saved light/dark override before first paint, so switching the
+// theme (app/_components/theme-toggle.tsx) doesn't flash the wrong palette
+// on reload. Falls back to the OS setting (handled purely in CSS) otherwise.
+const NO_FLASH_THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('station_v2_theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
+
 export default function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={GeistSans.variable}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

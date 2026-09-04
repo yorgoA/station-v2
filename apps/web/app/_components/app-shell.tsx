@@ -6,6 +6,7 @@ import { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabasePublicClient } from "../../lib/supabase/browser-public";
 import { BuildBadge } from "./build-badge";
+import { ThemeToggle } from "./theme-toggle";
 
 export type NavItem = {
   href: string;
@@ -236,6 +237,7 @@ export function AppShell({
           {sidebarOpen ? "✕" : "☰"}
         </button>
         <h2>{resolvedAppName}</h2>
+        <ThemeToggle />
         <nav>
           {resolvedNavItems.map((item) => {
             const isActive = activeHref
