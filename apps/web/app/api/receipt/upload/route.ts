@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "../../../../lib/api/server-error";
 import { requireRole } from "../../../../lib/auth/require-role";
 import { inferReceiptImageMime } from "../../../../lib/receipts/receipt-image";
 import { uploadReceiptImage } from "../../../../lib/receipts/receipt-upload";
@@ -20,9 +21,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, url: result.url });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Upload failed." },
-      { status: 500 }
-    );
+    return serverError(error);
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "../../../../lib/api/server-error";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../lib/auth/require-role";
 import { getEntryLockState } from "../../../../lib/billing/entry-window";
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     const state = await getEntryLockState(supabase, monthKey);
     return NextResponse.json(state);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return serverError(error);
   }
 }
 
@@ -58,6 +59,6 @@ export async function PUT(request: Request) {
     const state = await getEntryLockState(supabase, body.monthKey);
     return NextResponse.json(state);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return serverError(error);
   }
 }

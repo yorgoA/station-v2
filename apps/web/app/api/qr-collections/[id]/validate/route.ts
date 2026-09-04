@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "../../../../../lib/api/server-error";
 import { createSupabaseAdminClient } from "../../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../../lib/auth/require-role";
 
@@ -76,6 +77,6 @@ export async function POST(request: Request, context: Context) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return serverError(error);
   }
 }

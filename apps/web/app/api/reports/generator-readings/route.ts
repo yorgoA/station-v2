@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "../../../../lib/api/server-error";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../lib/auth/require-role";
 
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
       reading: data ? { generatorKwh: Number(data.generator_kwh), enteredAt: data.entered_at } : null
     });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return serverError(error);
   }
 }
 
@@ -83,6 +84,6 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return serverError(error);
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "../../../../lib/api/server-error";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../lib/auth/require-role";
 
@@ -45,9 +46,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ tickets });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown server error." },
-      { status: 500 }
-    );
+    return serverError(error);
   }
 }

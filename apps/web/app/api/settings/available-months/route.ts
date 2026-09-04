@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverError } from "../../../../lib/api/server-error";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/server-admin";
 import { requireRole } from "../../../../lib/auth/require-role";
 import { activeEntryMonthKey, monthKeyFromDate } from "../../../../lib/constants/months";
@@ -32,6 +33,6 @@ export async function GET() {
     const sorted = Array.from(months).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
     return NextResponse.json({ months: sorted });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
+    return serverError(error);
   }
 }
