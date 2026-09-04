@@ -289,7 +289,11 @@ export async function GET(request: Request) {
 
     // Lets the monitors view explain a genuine "no data yet" month (e.g. this
     // month's price hasn't been entered) instead of looking like a bug.
-    return NextResponse.json({ customers: rows, kwhPriceAvailable: kwhPriceThisMonth > 0 });
+    return NextResponse.json({
+      customers: rows,
+      kwhPriceAvailable: kwhPriceThisMonth > 0,
+      kwhPriceThisMonth
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },

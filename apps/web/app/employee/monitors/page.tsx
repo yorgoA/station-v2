@@ -32,6 +32,7 @@ export default function EmployeeMonitorsPage() {
   const [region, setRegion] = useState<"all" | "mrah" | "printania">("all");
   const [rows, setRows] = useState<MonitorRow[]>([]);
   const [kwhPriceAvailable, setKwhPriceAvailable] = useState(true);
+  const [kwhPriceThisMonth, setKwhPriceThisMonth] = useState(0);
 
   useEffect(() => {
     fetch(`/api/customers?month=${monthKey}&region=${region}&view=monitors`)
@@ -40,9 +41,11 @@ export default function EmployeeMonitorsPage() {
         const payload = (await response.json()) as {
           customers?: MonitorRow[];
           kwhPriceAvailable?: boolean;
+          kwhPriceThisMonth?: number;
         };
         setRows(payload.customers ?? []);
         setKwhPriceAvailable(payload.kwhPriceAvailable ?? true);
+        setKwhPriceThisMonth(payload.kwhPriceThisMonth ?? 0);
       })
       .catch(() => setRows([]));
   }, [monthKey, region]);
@@ -51,6 +54,14 @@ export default function EmployeeMonitorsPage() {
     () => [...rows].sort((a, b) => a.fullName.localeCompare(b.fullName)),
     [rows]
   );
+
+  const totals = useMemo(() => {
+    const monitorKwh = sortedRows.reduce((sum, row) => sum + (row.monitorKwh ?? 0), 0);
+    const linkedIncludedKwh = sortedRows.reduce((sum, row) => sum + (row.linkedIncludedKwh ?? 0), 0);
+    return { monitorKwh, linkedIncludedKwh, matchKwh: linkedIncludedKwh - monitorKwh };
+  }, [sortedRows]);
+  const matchColor =
+    totals.matchKwh < 0 ? "var(--danger)" : totals.matchKwh > 0 ? "var(--success)" : "var(--text)";
 
   return (
     <AppShell title="Monitors" subtitle="Monitor-linked customers" navItems={employeeNavItems}>
@@ -76,6 +87,43 @@ export default function EmployeeMonitorsPage() {
           </label>
         </div>
       </div>
+
+      {sortedRows.length > 0 && (
+        <div className="kpi-grid" style={{ marginBottom: 12 }}>
+          <div className="card">
+            <p className="muted" style={{ margin: 0 }}>
+              Monitors
+            </p>
+            <p className="kpi-value">{sortedRows.length}</p>
+          </div>
+          <div className="card kpi-kwh">
+            <p className="muted" style={{ margin: 0 }}>
+              Monitor total ({monthKey})
+            </p>
+            <p className="kpi-value">{formatNumber(totals.monitorKwh, { maxDecimals: 1 })} kWh</p>
+          </div>
+          <div className="card kpi-kwh">
+            <p className="muted" style={{ margin: 0 }}>
+              Linked total
+            </p>
+            <p className="kpi-value">{formatNumber(totals.linkedIncludedKwh, { maxDecimals: 1 })} kWh</p>
+            <p className="muted" style={{ margin: 0, fontSize: "0.78rem" }}>
+              {kwhPriceAvailable
+                ? `from fixed-monthly ÷ ${formatNumber(kwhPriceThisMonth)} LBP/kWh`
+                : "no kWh price set yet"}
+            </p>
+          </div>
+          <div className="card">
+            <p className="muted" style={{ margin: 0 }}>
+              Match (linked − monitor)
+            </p>
+            <p className="kpi-value" style={{ color: matchColor }}>
+              {formatNumber(totals.matchKwh, { maxDecimals: 1 })} kWh
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <p className="muted" style={{ marginTop: 0 }}>
           Total monitor customers: <strong>{sortedRows.length}</strong>
