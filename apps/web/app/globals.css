@@ -1,8 +1,9 @@
 /* ==========================================================================
    Station V2 — design system
-   Refined-neutral palette, one blue accent, hairline borders, tabular numbers.
-   Auto light/dark via prefers-color-scheme. Every class name is stable so
-   page components need no changes.
+   Warm-neutral canvas, one distinctive indigo accent that actually gets to
+   show up (sidebar, active nav, KPI accents), hairline borders, tabular
+   numbers. Auto light/dark via prefers-color-scheme. Every class name is
+   stable so page components need no changes.
    ========================================================================== */
 
 :root {
@@ -11,24 +12,26 @@
   --font-sans: var(--font-geist-sans), "SF Pro Display", -apple-system,
     system-ui, "Segoe UI", Roboto, sans-serif;
 
-  /* neutral scale (light) — one cool-gray family */
-  --bg: #f6f7f9;
+  /* neutral scale (light) — one warm-neutral family, not blue-tinted grey */
+  --bg: #f7f6f3;
   --surface: #ffffff;
-  --surface-2: #f1f3f6;
-  --surface-3: #e9edf2;
-  --border: #e5e7eb;
-  --border-strong: #d3d8e0;
+  --surface-2: #efeeea;
+  --surface-3: #e6e4de;
+  --border: #e4e2db;
+  --border-strong: #d2cfc4;
 
-  --text: #14181f;
-  --text-muted: #4a5566;
-  --text-subtle: #737d8c;
+  --text: #1c1a17;
+  --text-muted: #5a564c;
+  --text-subtle: #837e71;
 
-  /* accent — single, slightly desaturated blue */
-  --accent: #2f68d8;
-  --accent-hover: #2557bf;
+  /* accent — a considered indigo instead of default-SaaS blue; the one color
+     allowed to show up with real presence (sidebar active state, KPI
+     accents), not just on buttons. */
+  --accent: #5850ec;
+  --accent-hover: #4740d4;
   --accent-fg: #ffffff;
-  --accent-muted: #eef3fc;
-  --accent-border: #cdd9f7;
+  --accent-muted: #eeedfd;
+  --accent-border: #d6d3fa;
 
   /* semantic */
   --success: #067647;
@@ -44,7 +47,7 @@
   --changes-muted: #fff4ed;
   --changes-border: #fdba74;
 
-  --ring-color: rgba(37, 99, 235, 0.32);
+  --ring-color: rgba(88, 80, 236, 0.32);
 
   --radius-sm: 6px;
   --radius: 8px;
@@ -62,22 +65,22 @@
 /* Auto dark mode follows the OS, unless the toggle (data-theme) overrides it. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b0d10;
-    --surface: #15181d;
-    --surface-2: #1c2027;
-    --surface-3: #232833;
-    --border: #262b33;
-    --border-strong: #363c47;
+    --bg: #0d0c10;
+    --surface: #18161c;
+    --surface-2: #1f1c23;
+    --surface-3: #27242c;
+    --border: #2b2830;
+    --border-strong: #3c3843;
 
-    --text: #e6e8ec;
-    --text-muted: #9aa4b2;
-    --text-subtle: #6b7482;
+    --text: #eae8ec;
+    --text-muted: #a29da8;
+    --text-subtle: #726d79;
 
-    --accent: #5c8ef0;
-    --accent-hover: #7aa5f5;
-    --accent-fg: #0a1220;
-    --accent-muted: #182338;
-    --accent-border: #2c4269;
+    --accent: #8b87f7;
+    --accent-hover: #a5a1fa;
+    --accent-fg: #12101f;
+    --accent-muted: #221f3a;
+    --accent-border: #3a3563;
 
     --success: #4ade80;
     --success-muted: #0f2a1c;
@@ -92,7 +95,7 @@
     --changes-muted: #291a10;
     --changes-border: #7c3f18;
 
-    --ring-color: rgba(76, 141, 255, 0.4);
+    --ring-color: rgba(139, 135, 247, 0.4);
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -102,22 +105,22 @@
 
 /* Explicit toggle wins over the OS setting in both directions. */
 :root[data-theme="dark"] {
-  --bg: #0b0d10;
-  --surface: #15181d;
-  --surface-2: #1c2027;
-  --surface-3: #232833;
-  --border: #262b33;
-  --border-strong: #363c47;
+  --bg: #0d0c10;
+  --surface: #18161c;
+  --surface-2: #1f1c23;
+  --surface-3: #27242c;
+  --border: #2b2830;
+  --border-strong: #3c3843;
 
-  --text: #e6e8ec;
-  --text-muted: #9aa4b2;
-  --text-subtle: #6b7482;
+  --text: #eae8ec;
+  --text-muted: #a29da8;
+  --text-subtle: #726d79;
 
-  --accent: #5c8ef0;
-  --accent-hover: #7aa5f5;
-  --accent-fg: #0a1220;
-  --accent-muted: #182338;
-  --accent-border: #2c4269;
+  --accent: #8b87f7;
+  --accent-hover: #a5a1fa;
+  --accent-fg: #12101f;
+  --accent-muted: #221f3a;
+  --accent-border: #3a3563;
 
   --success: #4ade80;
   --success-muted: #0f2a1c;
@@ -132,7 +135,7 @@
   --changes-muted: #291a10;
   --changes-border: #7c3f18;
 
-  --ring-color: rgba(76, 141, 255, 0.4);
+  --ring-color: rgba(139, 135, 247, 0.4);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -249,7 +252,9 @@ table,
 .sidebar {
   padding: 18px 14px;
   border-right: 1px solid var(--border);
-  background: var(--surface);
+  /* Deliberately a step off the content area's surface so the shell reads as
+     two distinct planes instead of one flat page. */
+  background: var(--surface-2);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -365,14 +370,20 @@ table,
 }
 
 .nav-link:hover {
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--text);
 }
 
 .nav-link.active {
-  background: var(--accent-muted);
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-link.active:hover {
+  background: var(--accent-hover);
+  color: var(--accent-fg);
 }
 
 .logout-btn {
@@ -1057,12 +1068,13 @@ input::placeholder {
   background: var(--success-muted);
 }
 
-.kpi-money {
-  border-color: var(--accent-border);
+.kpi-money,
+.kpi-accent {
+  border-left: 3px solid var(--accent);
 }
 
 .kpi-kwh {
-  border-color: var(--success-border);
+  border-left: 3px solid var(--success);
 }
 
 /* ---------- collector mobile ---------------------------- */

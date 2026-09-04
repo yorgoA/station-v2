@@ -46,9 +46,29 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="page" style={{ maxWidth: 420 }}>
+    <main
+      className="page"
+      style={{ maxWidth: 420, minHeight: "100dvh", display: "flex", flexDirection: "column", justifyContent: "center" }}
+    >
       <ThemeToggle fixed />
-      <div className="card">
+      <div
+        aria-hidden
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: "var(--radius)",
+          background: "var(--accent)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 16
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--accent-fg)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+        </svg>
+      </div>
+      <div className="card" style={{ borderTop: "3px solid var(--accent)" }}>
         <h1>Station V2 Login</h1>
         <p className="muted">Sign in with your Supabase account.</p>
         <form onSubmit={onSubmit}>

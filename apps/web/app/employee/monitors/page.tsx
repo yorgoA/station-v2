@@ -105,7 +105,7 @@ export default function EmployeeMonitorsPage() {
 
       {sortedRows.length > 0 && (
         <div className="kpi-grid" style={{ marginBottom: 12 }}>
-          <div className="card">
+          <div className="card kpi-accent">
             <p className="muted" style={{ margin: 0 }}>
               Monitors
             </p>
@@ -128,7 +128,7 @@ export default function EmployeeMonitorsPage() {
                 : "no kWh price set yet"}
             </p>
           </div>
-          <div className="card">
+          <div className="card" style={{ borderLeft: `3px solid ${matchColor}` }}>
             <p className="muted" style={{ margin: 0 }}>
               Match (monitor − linked)
             </p>
