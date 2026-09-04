@@ -49,6 +49,21 @@ function normalizeView(value: string | null): "all" | "customers" | "monitors" {
   return "all";
 }
 
+/**
+ * Returns the first value that's an actual positive number. Unlike `??`, this
+ * skips a legitimate-looking 0 -- needed because a stale/incomplete
+ * billing_batch_items row (e.g. a draft nobody finished, or a superseded
+ * resubmission cycle) can carry calculated_amount/consumption_kwh = 0 even
+ * after the real bill for that month posted with the true figure; `??` would
+ * stop at that 0 and never reach the posted bill.
+ */
+function firstPositive(...values: Array<number | undefined>): number | undefined {
+  for (const value of values) {
+    if (typeof value === "number" && value > 0) return value;
+  }
+  return undefined;
+}
+
 function sumUnpaidRemaining(
   unpaidBills: Array<{ customerId: string; monthKey: string; remainingAmount: number }>,
   customerId: string,
@@ -209,7 +224,7 @@ export async function GET(request: Request) {
         const remainingThisMonth = billInfo?.remainingAmount ?? 0;
         const ongoingBalanceCarryOver = sumUnpaidRemaining(unpaidBills, id, monthKey, true);
         const ongoingBalance = sumUnpaidRemaining(unpaidBills, id, monthKey, false);
-        const monitorKwh = monthConsumptionByCustomerId.get(id) ?? billInfo?.consumptionKwh ?? 0;
+        const monitorKwh = firstPositive(billInfo?.consumptionKwh, monthConsumptionByCustomerId.get(id)) ?? 0;
         // Fixed-monthly customers never get a real meter reading (consumption_kwh
         // is always stored as 0 for them) -- their kWh is implied by dividing what
         // they actually pay this month by this month's kWh price, so a monitor
@@ -218,17 +233,22 @@ export async function GET(request: Request) {
         const linkedIncludedKwh = linkedList.reduce((sum, linked) => {
           if (linked.billingType === "fixed-monthly") {
             const amountThisMonth =
-              monthAmountByCustomerId.get(linked.id) ??
-              billByCustomerId.get(linked.id)?.amount ??
-              linked.fixedMonthlyAmount ??
-              0;
+              firstPositive(
+                billByCustomerId.get(linked.id)?.amount,
+                monthAmountByCustomerId.get(linked.id),
+                linked.fixedMonthlyAmount
+              ) ?? 0;
             if (amountThisMonth > 0 && kwhPriceThisMonth > 0) {
               linkedDataFound = true;
               return sum + amountThisMonth / kwhPriceThisMonth;
             }
             return sum;
           }
-          const tracked = monthConsumptionByCustomerId.get(linked.id) ?? billByCustomerId.get(linked.id)?.consumptionKwh;
+          // A posted bill's reading is authoritative (even if it's genuinely 0,
+          // e.g. a vacant unit) -- only fall back to the draft batch item when
+          // no bill exists yet for this month at all.
+          const billedConsumption = billByCustomerId.get(linked.id)?.consumptionKwh;
+          const tracked = billedConsumption !== undefined ? billedConsumption : monthConsumptionByCustomerId.get(linked.id);
           if (tracked !== undefined) linkedDataFound = true;
           return sum + (tracked ?? 0);
         }, 0);
