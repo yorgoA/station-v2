@@ -48,6 +48,14 @@ jobs:
       - working-directory: apps/web
         run: npm ci
       - working-directory: apps/web
+        # `next build` statically imports every route module to collect page
+        # data, which runs the Supabase client modules' module-scope env var
+        # checks even though no route handler actually executes here -- so
+        # placeholder values are enough, no real credentials needed.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
         run: npm run build
 
   full-regression:
