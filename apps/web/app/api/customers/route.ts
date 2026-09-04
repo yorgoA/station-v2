@@ -265,6 +265,11 @@ export async function GET(request: Request) {
           monitorCategory,
           monitorKwh,
           linkedIncludedKwh,
+          // False when the only reason linkedIncludedKwh is 0 is missing data
+          // (no reading/bill yet, or no kWh price set for this month) rather
+          // than the linked customers genuinely using nothing -- lets the UI
+          // show "no data" instead of a misleading zero.
+          linkedKwhAvailable: linkedList.length === 0 || linkedDataFound,
           monitorMatchKwh,
           monitorOverBudget,
           startingCounter: Number(data.starting_counter ?? 0),
@@ -282,7 +287,9 @@ export async function GET(request: Request) {
       .filter((row) => (region === "all" ? true : row.region === region))
       .filter((row) => (statusFilter && statusFilter !== "all" ? row.status === statusFilter : true));
 
-    return NextResponse.json({ customers: rows });
+    // Lets the monitors view explain a genuine "no data yet" month (e.g. this
+    // month's price hasn't been entered) instead of looking like a bug.
+    return NextResponse.json({ customers: rows, kwhPriceAvailable: kwhPriceThisMonth > 0 });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
