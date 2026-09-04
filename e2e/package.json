@@ -1,0 +1,17 @@
+{
+  "name": "station-v2-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright tests against a deployed station-v2 environment (staging or prod). Not part of the Next app's own build.",
+  "scripts": {
+    "test:smoke": "playwright test --project=smoke",
+    "test:regression": "playwright test --project=regression",
+    "test:all": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.4"
+  }
+}

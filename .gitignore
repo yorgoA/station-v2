@@ -37,3 +37,9 @@ db/clone-prod-to-staging.sh
 
 # typescript
 tsconfig.tsbuildinfo
+
+# e2e (Playwright) -- saved sessions and run artifacts, never the tests themselves
+e2e/.auth/
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
