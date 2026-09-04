@@ -1,0 +1,109 @@
+name: Pre-production gate
+
+# Runs on any PR targeting main (i.e. promoting staging -> main). Add these
+# three jobs as required status checks on main's branch protection rule so a
+# PR literally cannot be merged while any of them is red.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: main-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  E2E_BASE_URL: https://station-v2-git-staging-yorgoas-projects.vercel.app
+
+jobs:
+  lint-format-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - working-directory: apps/web
+        run: npm ci
+      - working-directory: apps/web
+        run: npm run lint
+      - working-directory: apps/web
+        run: npm run format:check
+      - working-directory: apps/web
+        run: npm run typecheck
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - working-directory: apps/web
+        run: npm ci
+      - working-directory: apps/web
+        run: npm run build
+
+  full-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # The PR's head commit is whatever was last pushed to staging, so the
+      # staging deployment should already be serving it by the time a PR
+      # exists -- same wait-and-match approach as the smoke workflow.
+      - name: Wait for staging to serve this PR's commit
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "Waiting for staging to serve commit $SHORT_SHA ..."
+          for i in $(seq 1 30); do
+            BODY=$(curl -sf -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \
+              "$E2E_BASE_URL/login" || true)
+            if echo "$BODY" | grep -q "$SHORT_SHA"; then
+              echo "Staging is serving $SHORT_SHA."
+              exit 0
+            fi
+            echo "  attempt $i/30: not yet, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Staging never reported commit $SHORT_SHA after 5 minutes -- failing rather than testing a stale deploy."
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - working-directory: e2e
+        run: npm ci
+
+      - working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run full regression suite (smoke + regression)
+        working-directory: e2e
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          E2E_MANAGER_EMAIL: ${{ secrets.E2E_MANAGER_EMAIL }}
+          E2E_MANAGER_PASSWORD: ${{ secrets.E2E_MANAGER_PASSWORD }}
+          E2E_EMPLOYEE_EMAIL: ${{ secrets.E2E_EMPLOYEE_EMAIL }}
+          E2E_EMPLOYEE_PASSWORD: ${{ secrets.E2E_EMPLOYEE_PASSWORD }}
+          E2E_COLLECTOR_EMAIL: ${{ secrets.E2E_COLLECTOR_EMAIL }}
+          E2E_COLLECTOR_PASSWORD: ${{ secrets.E2E_COLLECTOR_PASSWORD }}
+        run: npm run test:all
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-regression-playwright-report
+          path: e2e/playwright-report/
+          retention-days: 30
