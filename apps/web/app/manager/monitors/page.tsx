@@ -8,6 +8,15 @@ import { ACTIVE_ENTRY_MONTH_KEY } from "../../../lib/constants/months";
 import { formatNumber } from "../../../lib/format";
 import { useAvailableMonths } from "../../../lib/hooks/use-available-months";
 
+// Positive = monitor reads more than its linked pricing accounts for (bad,
+// red); negative = linked customers pay for more than the monitor shows
+// (fine, green).
+function matchColorFor(value: number): string {
+  if (value > 0) return "var(--danger)";
+  if (value < 0) return "var(--success)";
+  return "var(--text)";
+}
+
 type MonitorRow = {
   id: string;
   fullName: string;
@@ -67,8 +76,7 @@ export default function ManagerMonitorsPage() {
     // more than the monitor shows (fine).
     return { monitorKwh, linkedIncludedKwh, matchKwh: monitorKwh - linkedIncludedKwh };
   }, [sortedRows]);
-  const matchColor =
-    totals.matchKwh > 0 ? "var(--danger)" : totals.matchKwh < 0 ? "var(--success)" : "var(--text)";
+  const matchColor = matchColorFor(totals.matchKwh);
 
   return (
     <AppShell title="Monitors" subtitle="Monitor-linked customers" navItems={managerNavItems}>
@@ -219,7 +227,13 @@ export default function ManagerMonitorsPage() {
                     : "—"}
                 </td>
                 <td>
-                  {row.linkedKwhAvailable ? formatNumber(row.monitorMatchKwh ?? 0, { maxDecimals: 1 }) : "—"}
+                  {row.linkedKwhAvailable ? (
+                    <span style={{ color: matchColorFor(row.monitorMatchKwh ?? 0), fontWeight: 600 }}>
+                      {formatNumber(row.monitorMatchKwh ?? 0, { maxDecimals: 1 })}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
                   {row.monitorOverBudget ? (
                     <span className="notify-chip" style={{ marginLeft: 8 }}>
                       Over budget
