@@ -48,6 +48,14 @@ jobs:
       - working-directory: apps/web
         run: npm ci
       - working-directory: apps/web
+        # `next build` statically imports every route module to collect page
+        # data, which runs the Supabase client modules' module-scope env var
+        # checks even though no route handler actually executes here -- so
+        # placeholder values are enough, no real credentials needed.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
         run: npm run build
 
   full-regression:
@@ -59,9 +67,18 @@ jobs:
       # The PR's head commit is whatever was last pushed to staging, so the
       # staging deployment should already be serving it by the time a PR
       # exists -- same wait-and-match approach as the smoke workflow.
+      #
+      # On a pull_request event, GITHUB_SHA is a synthetic merge commit
+      # (base + head merged for testing), not the actual commit deployed to
+      # staging -- it never shows up in the build badge, so the poll would
+      # spin for 5 minutes and fail every time. Use the PR's real head SHA
+      # instead, falling back to GITHUB_SHA for a manual workflow_dispatch
+      # run (no pull_request context to read a head SHA from).
       - name: Wait for staging to serve this PR's commit
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          SHORT_SHA="${GITHUB_SHA::7}"
+          SHORT_SHA="${HEAD_SHA::7}"
           echo "Waiting for staging to serve commit $SHORT_SHA ..."
           for i in $(seq 1 30); do
             BODY=$(curl -sf -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \

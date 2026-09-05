@@ -79,14 +79,17 @@ export default function EmployeeDashboardPage() {
   }, [monthKey, regionFilter]);
 
   useEffect(() => {
-    fetch(`/api/reports/manager?month=${monthKey}&region=${regionFilter}`)
+    const params = new URLSearchParams();
+    params.set("month", monthKey);
+    if (regionFilter !== "all") params.set("region", regionFilter);
+    fetch(`/api/payments?${params.toString()}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed to load payment receipt stats.");
         const payload = (await response.json()) as {
-          payments?: Array<{ receiptRef?: string }>;
+          payments?: Array<{ receipt?: string }>;
         };
         const count = (payload.payments ?? []).filter((payment) => {
-          const ref = String(payment.receiptRef ?? "").trim();
+          const ref = String(payment.receipt ?? "").trim();
           return !ref || ref === "-";
         }).length;
         setMissingReceiptCount(count);
