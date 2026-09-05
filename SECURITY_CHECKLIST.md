@@ -37,6 +37,13 @@ Use this checklist before production cutover.
       done; there's no per-region/per-customer ownership scoping yet — e.g. any employee can
       act on any region's customers).
 
+## Rate limiting & abuse prevention
+- [x] Rate limit every `/api/*` route (`middleware.ts` + `lib/rate-limit.ts`, Upstash Redis
+      sliding window, 60 req/60s per IP). Login itself bypasses our server (browser calls
+      Supabase Auth directly), so it's covered by Supabase's own rate limiting, not this.
+- [ ] Consider a stricter, separate limit for expensive endpoints (reports, batch review) if
+      the shared 60/60s ever proves too loose for abuse or too tight for legitimate bursts.
+
 ## Data integrity and auditability
 - [ ] Ensure mandatory manager note on rejection is enforced.
 - [ ] Ensure exactly one counter image is required per monthly reading item.
